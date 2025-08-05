@@ -1,0 +1,10 @@
+[project]
+name = "inland-consequences"
+version = "0.0.1"
+description = "Inland Consequences Estimation Methodology"
+dependencies = [
+  "mkdocs-macros-plugin",
+  "mkdocs-include-markdown-plugin",
+  "mdformat",
+  "pre-commit"
+]
