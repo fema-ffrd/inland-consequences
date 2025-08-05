@@ -1,4 +1,5 @@
 # Inland Consequences
+
 This project aims to create a unified methodology for consequence modeling that seamlessly integrates both coastal and inland approaches, providing adaptable and efficient solutions for a wide range of scenarios.
 
 ## Docs Setup
