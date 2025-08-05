@@ -7,7 +7,8 @@ This project aims to create a unified methodology for consequence modeling that 
 
 ```
 $ python -m venv venv-inland
-$ source ./venv-inland/bin/activate
+$ source ./venv-inland/bin/activate (unix OS) 
+$ source ./venv-specs/Scripts/activate (windows OS)
 (venv-inland) $
 ```
 
