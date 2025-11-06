@@ -17,3 +17,5 @@ nav:
     - tasks.md
   - User Requirements:
     - user-requirements.md
+  - Data Schemas:
+    - building_inventories.md
