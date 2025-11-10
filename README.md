@@ -2,27 +2,39 @@
 
 This project aims to create a unified methodology for consequence modeling that seamlessly integrates both coastal and inland approaches, providing adaptable and efficient solutions for a wide range of scenarios.
 
-## Docs Setup
+## Prerequisites
 
-1. Create a Python virtual environment.
+Install `uv` if you haven't already:
 
-```
-$ python -m venv venv-inland
-$ source ./venv-inland/bin/activate (unix OS) 
-$ source ./venv-specs/Scripts/activate (windows OS)
-(venv-inland) $
+**Linux/macOS:**
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-2. Install project dependencies.
-
+**Windows PowerShell:**
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
-(venv-inland) $ pip install .
-```
 
+For other installation methods, see the [uv documentation](https://docs.astral.sh/uv/getting-started/installation/).
+
+
+## Environment and Docs Setup
+
+1. Create a Python virtual environment and install dependencies
+
+```powershell
+uv sync --all-packages
+```
+2. Run tests
+
+```powershell
+uv run pytest -q
+```
 3. Run the local `mkdocs` server.
 
 ```
-(venv-inland) $ mkdocs serve
+mkdocs serve
 ```
 
 ### Optional Setup - Markdown Formatting Pre-Commit Hook
