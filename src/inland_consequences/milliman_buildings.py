@@ -16,6 +16,9 @@ class MillimanBuildings(Buildings):
     
     # Class-level schema path
     SCHEMA_PATH = Path(__file__).parent.parent.parent / "docs" / "schemas" / "milliman_schema.json"
+    
+    # Fields that are imputed/generated and also required
+    IMPUTED_REQUIRED_FIELDS = ["occupancy_type", "area"]
 
     def __init__(self, gdf: gpd.GeoDataFrame, overrides: Optional[Dict[str, str]] = None):
         """
@@ -91,8 +94,7 @@ class MillimanBuildings(Buildings):
         required_fields = self._load_required_fields_from_schema()
         
         # Add imputed fields that are also required
-        imputed_required = ["occupancy_type", "area"]
-        required_fields.extend(imputed_required)
+        required_fields.extend(self.IMPUTED_REQUIRED_FIELDS)
         
         missing_fields = []
 
@@ -115,8 +117,7 @@ class MillimanBuildings(Buildings):
         required_fields = self._load_required_fields_from_schema()
         
         # Add imputed fields that are also required
-        imputed_required = ["occupancy_type", "area"]
-        required_fields.extend(imputed_required)
+        required_fields.extend(self.IMPUTED_REQUIRED_FIELDS)
         
         missing_value_fields = []
 
