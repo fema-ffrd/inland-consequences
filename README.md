@@ -7,17 +7,18 @@ This project aims to create a unified methodology for consequence modeling that 
 Install `uv` if you haven't already:
 
 **Linux/macOS:**
+
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 **Windows PowerShell:**
+
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
 For other installation methods, see the [uv documentation](https://docs.astral.sh/uv/getting-started/installation/).
-
 
 ## Environment and Docs Setup
 
@@ -26,11 +27,13 @@ For other installation methods, see the [uv documentation](https://docs.astral.s
 ```powershell
 uv sync --all-packages
 ```
+
 2. Run tests
 
 ```powershell
 uv run pytest -q
 ```
+
 3. Run the local `mkdocs` server.
 
 ```
