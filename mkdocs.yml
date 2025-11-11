@@ -14,8 +14,7 @@ repo_url: https://github.com/fema-ffrd/inland-consequences
 nav:
   - Overview:
     - index.md
-    - tasks.md
-  - User Requirements:
-    - user-requirements.md
-  - Data Schemas:
+  - Methodlogy:
+    - inventory_methodology.md
+  - Technical Implementation:
     - building_inventories.md
