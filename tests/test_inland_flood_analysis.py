@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from inland_consequences.inland_flood_analysis import InlandFloodAnalysis
+from inland_consequences.raster_collection import RasterCollection
 from sphere.core.schemas.abstract_raster_reader import AbstractRasterReader
 
 
@@ -54,13 +55,13 @@ def test_calculate_exposure():
     that the analysis records zero uncertainty in that case.
     """
     buildings = MockBuildings([100, 200, 300])
-    raster_input = {
+    raster_collection = RasterCollection({
         10: MockRaster([1.0, 2.0, 3.0]),
         100: MockRaster([0.5, 1.5, 2.5]),
-    }
+    })
     vuln = MockVulnerability()
 
-    analysis = InlandFloodAnalysis(raster_input, buildings, vuln, calculate_aal=False)
+    analysis = InlandFloodAnalysis(raster_collection, buildings, vuln, calculate_aal=False)
     exposure = analysis._calculate_exposure()
 
     # columns are the return periods
@@ -83,10 +84,11 @@ def test_calculate_exposure_with_numeric_uncertainty():
 
     buildings = MockBuildings([10, 20])
     # Provide a numeric uncertainty (0.2) for RP=5
-    raster_input = {5: (MockRaster([2.0, 3.0]), 0.2)}
+    raster_collection = {5: {"depth": MockRaster([2.0, 3.0]), "uncertainty": 0.2}}
+    raster_collection = RasterCollection(raster_collection)
     vuln = MockVulnerability()
 
-    analysis = InlandFloodAnalysis(raster_input, buildings, vuln, calculate_aal=False)
+    analysis = InlandFloodAnalysis(raster_collection, buildings, vuln, calculate_aal=False)
     exposure = analysis._calculate_exposure()
 
     # exposure values come from depth raster
@@ -110,10 +112,11 @@ def test_calculate_exposure_with_raster_uncertainty_between_0_and_1():
     uncertainty_raster = MockRaster([0.05, 0.1, 0.2])
 
     # Provide (depth, uncertainty) tuple for RP=20
-    raster_input = {20: (depth_raster, uncertainty_raster)}
+    raster_collection = {20: {"depth": depth_raster, "uncertainty": uncertainty_raster}}
+    raster_collection = RasterCollection(raster_collection)
     vuln = MockVulnerability()
 
-    analysis = InlandFloodAnalysis(raster_input, buildings, vuln, calculate_aal=False)
+    analysis = InlandFloodAnalysis(raster_collection, buildings, vuln, calculate_aal=False)
     exposure = analysis._calculate_exposure()
 
     # check exposure matches depth raster

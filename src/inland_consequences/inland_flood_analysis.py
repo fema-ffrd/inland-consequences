@@ -1,19 +1,14 @@
-from typing import Dict, Any, Optional, Tuple, List, Union
+from typing import Dict, Any, Optional, Tuple, List
 from sphere.core.schemas.abstract_raster_reader import AbstractRasterReader
 from sphere.core.schemas.abstract_vulnerability_function import AbstractVulnerabilityFunction
+from .raster_collection import RasterCollection
 import inspect
 import numpy as np
 import pandas as pd
 
-# Types for raster_input entries. Each entry can be either:
-# - a raster-like object (e.g. AbstractRasterReader or any object exposing
-#   get_value_vectorized), or
-# - a tuple (depth_raster, uncertainty_spec) where uncertainty_spec may be:
-#     - another raster-like object (per-building uncertainty values),
-#     - a numeric value applied to all buildings, or
-#     - None (no uncertainty).
-UncertaintySpec = Optional[Union[AbstractRasterReader, float]]
-RasterSpec = Union[AbstractRasterReader, Tuple[AbstractRasterReader, UncertaintySpec]]
+# Raster inputs are provided via a RasterCollection instance which
+# enforces labeled rasters per return period (depth required, optional
+# uncertainty, velocity, duration).
 
 
 class InlandFloodAnalysis:
@@ -29,13 +24,16 @@ class InlandFloodAnalysis:
 
     def __init__(
         self,
-        raster_input: Dict[int, RasterSpec],
+        raster_collection: RasterCollection,
         buildings: Any,
         vulnerability: AbstractVulnerabilityFunction,
         calculate_aal: bool = True,
         aal_rate_limits: Optional[Tuple[float, float]] = None,
     ) -> None:
-        self.raster_input = raster_input
+        # Must be a RasterCollection instance (validated by its constructor)
+        if not isinstance(raster_collection, RasterCollection):
+            raise TypeError("raster_collection must be a RasterCollection instance")
+        self.raster_collection = raster_collection
         self.buildings = buildings
         self.vulnerability: AbstractVulnerabilityFunction = vulnerability
         self.calculate_aal = calculate_aal
@@ -59,16 +57,13 @@ class InlandFloodAnalysis:
         exposures: Dict[int, np.ndarray] = {}
         uncertainties: Dict[int, np.ndarray] = {}
 
-        for rp, raster_spec in self.raster_input.items():
-            # Support typing where raster_spec can be:
-            # - depth_raster (AbstractRasterReader)
-            # - (depth_raster, uncertainty_spec) where uncertainty_spec is AbstractRasterReader | number | None
-            if isinstance(raster_spec, (list, tuple)) and len(raster_spec) >= 1:
-                depth_raster = raster_spec[0]
-                uncertainty_spec: UncertaintySpec = raster_spec[1] if len(raster_spec) > 1 else None
-            else:
-                depth_raster = raster_spec
-                uncertainty_spec = None
+        # Iterate deterministic sorted return periods
+        for rp in self.raster_collection.return_periods():
+            spec = self.raster_collection.get(rp)
+            depth_raster = spec.get("depth")
+            uncertainty_spec = spec.get("uncertainty")
+            velocity_raster = spec.get("velocity")
+            duration_raster = spec.get("duration")
 
             # Enforce that depth_raster is an AbstractRasterReader instance
             if not isinstance(depth_raster, AbstractRasterReader):
@@ -90,7 +85,7 @@ class InlandFloodAnalysis:
             else:
                 raise ValueError(f"Uncertainty for return period {rp} must be an AbstractRasterReader, numeric, or None")
 
-            # Compute columns: mean, min, max
+            # Compute depth columns: mean, min, max
             mean_col = f"flood_depth_{rp}_mean"
             min_col = f"flood_depth_{rp}_min"
             max_col = f"flood_depth_{rp}_max"
@@ -98,6 +93,28 @@ class InlandFloodAnalysis:
             self.buildings.gdf[mean_col] = mean_values
             self.buildings.gdf[min_col] = mean_values - uvals
             self.buildings.gdf[max_col] = mean_values + uvals
+
+            # Optionally sample and attach velocity/duration if provided
+            # Always create velocity column: sample if raster provided, otherwise fill with NaN
+            vel_col = f"flood_velocity_{rp}"
+            if velocity_raster is not None:
+                vel_vals = np.asarray(velocity_raster.get_value_vectorized(geometries))
+                if vel_vals.shape[0] != len(gdf):
+                    raise ValueError(f"Velocity raster for return period {rp} returned {vel_vals.shape[0]} values but expected {len(gdf)}")
+                self.buildings.gdf[vel_col] = vel_vals
+            else:
+                # fill with NaN so downstream code can check for presence
+                self.buildings.gdf[vel_col] = np.full(len(gdf), np.nan)
+
+            # Always create duration column: sample if raster provided, otherwise fill with NaN
+            dur_col = f"flood_duration_{rp}"
+            if duration_raster is not None:
+                dur_vals = np.asarray(duration_raster.get_value_vectorized(geometries))
+                if dur_vals.shape[0] != len(gdf):
+                    raise ValueError(f"Duration raster for return period {rp} returned {dur_vals.shape[0]} values but expected {len(gdf)}")
+                self.buildings.gdf[dur_col] = dur_vals
+            else:
+                self.buildings.gdf[dur_col] = np.full(len(gdf), np.nan)
 
             exposures[rp] = mean_values
             uncertainties[rp] = uvals
