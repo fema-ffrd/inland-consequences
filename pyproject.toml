@@ -10,6 +10,7 @@ dependencies = [
   "sphere-core",
   "sphere-data",
   "sphere-flood",
+  "pandas>=2.3.3",
 ]
 
 [tool.uv.workspace]
