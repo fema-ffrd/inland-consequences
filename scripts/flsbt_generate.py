@@ -90,14 +90,18 @@ def generate_flsbt_lookup_table():
     add_row('M', merb_occs, 5, 30, 'MERB')
     
     # MECB: COM1, COM9 (3+ stories), IND1, AGR1 (3+ stories)
-    add_row('M', ['COM1', 'COM9'], 3, 30, 'MECB')
-    add_row('M', ['IND1', 'AGR1'], 3, 30, 'MECB')
+    add_row('M', ['COM1', 'COM9'], 3, 4, 'MECB')
+    add_row('M', ['COM1', 'COM9'], 5, 30, 'MECB')
     
+    add_row('M', ['IND1', 'AGR1'], 2, 4, 'MECB')
+    add_row('M', ['IND1', 'AGR1'], 5, 30, 'MECB')
+
     # MECB: Other commercial/industrial (1-30 stories)
     mecb_occs = ['COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM10',
                  'IND2', 'IND3', 'IND4', 'IND5', 'IND6',
                  'REL1', 'GOV1', 'GOV2', 'EDU1', 'EDU2']
-    add_row('M', mecb_occs, 1, 30, 'MECB')
+    add_row('M', mecb_occs, 1, 4, 'MECB')
+    add_row('M', mecb_occs, 5, 30, 'MECB')
     
     # ==================== CONCRETE (C) ====================
     
