@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Inventory Methodology - Inland Consequences</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Inventory Methodology";
+        var mkdocs_page_input_path = "inventory_methodology.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Inland Consequences
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="..">Consequence Solution</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Methodlogy</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Inventory Methodology</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#inventory-dataset-format">Inventory Dataset Format</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#inventory-attributes-used-in-analysis">Inventory Attributes Used in Analysis</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#table-1-inventory-input-data-requirements-for-inland-consequence-modeling">Table 1. Inventory Input Data Requirements for Inland Consequence Modeling</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#table-2-hazus-methodology-for-default-building-square-footage-by-occupancy-type">Table 2. Hazus Methodology for Default Building Square Footage by Occupancy Type</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#table-3-content-value-as-percent-of-building-value-by-occupancy-type">Table 3. Content Value as Percent of Building Value by Occupancy Type</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#table-4-inventory-input-data-requirements-for-coastal-consequence-modeling">Table 4. Inventory Input Data Requirements for Coastal Consequence Modeling</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#national-structures-inventory">National Structures Inventory</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#table-5-nsi-public-data-attributes-for-analysis">Table 5. NSI Public Data Attributes for Analysis</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#table-6-nsi-fema-enhanced-version-data-attributes-for-analysis">Table 6. NSI FEMA-Enhanced Version Data Attributes for Analysis</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#table-7-nsi-p_fndtype-parcel-value-mapping">Table 7. NSI P_FNDTYPE Parcel Value Mapping</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#milliman-market-baskets">Milliman Market Baskets</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#table-8-milliman-data-attributes-for-analysis">Table 8. Milliman Data Attributes for Analysis</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Technical Implementation</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../building_inventories/">Building Inventories Technical Implementation</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Inland Consequences</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Methodlogy</li>
+      <li class="breadcrumb-item active">Inventory Methodology</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/fema-ffrd/inland-consequences/edit/master/docs/inventory_methodology.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="inventory-methodology">Inventory Methodology</h1>
+<p>The <strong>Consequences Solution</strong> is designed to operate out of the box with two predefined national inventories: the <strong>National Structures Inventory (NSI)</strong> and the <strong>Milliman Market Basket Data</strong>. Users may also integrate their own <strong>custom structure inventories</strong> by defining a corresponding <strong>JSON schema</strong>. For additional guidance on configuring and loading custom inventories, refer to the <a href="../building_inventories/"><strong>Technical Implementation Documentation</strong></a>.</p>
+<hr />
+<h2 id="inventory-dataset-format">Inventory Dataset Format</h2>
+<p>The <strong>Consequences Solution</strong> currently accepts input inventory datasets in <strong>point geometry</strong> format, representing the location of each structure to be analyzed. Supported input formats include <strong>Comma-Separated Values (.csv)</strong>, <strong>Esri Shapefile (.shp)</strong>, <strong>File Geodatabase (.gdb)</strong>, and <strong>GeoPackage (.gpkg)</strong>. Each record should include the <strong>required attribute fields</strong> used in the loss calculations, and all spatial data should be stored in a <strong>projected coordinate system</strong> appropriate for the analysis extent. Using point-based inputs ensures compatibility with the <strong>consequence modeling workflow</strong> and enables efficient spatial joins with hazard and inventory datasets.</p>
+<hr />
+<h2 id="inventory-attributes-used-in-analysis">Inventory Attributes Used in Analysis</h2>
+<p>The following attributes are used in the <strong>Consequences Solution</strong> loss calculations. While providing all recommended fields from the input inventory dataset ensures more accurate loss estimates, missing attributes will automatically be populated with <strong>default values</strong>. However, reliance on these defaults may reduce the precision of results.</p>
+<p>Loss calculations for <strong>inland</strong> and <strong>coastal</strong> areas require different sets of input attributes.
+<strong>Table 1</strong> outlines the required inventory inputs for inland loss calculations, while <strong>Table 4</strong> details the corresponding inputs for coastal loss calculations.</p>
+<hr />
+<h3 id="table-1-inventory-input-data-requirements-for-inland-consequence-modeling"><strong>Table 1. Inventory Input Data Requirements for Inland Consequence Modeling</strong></h3>
+<table>
+<thead>
+<tr>
+<th><strong>Input Data</strong></th>
+<th><strong>Required / Optional</strong></th>
+<th><strong>Purpose</strong></th>
+<th><strong>Default Process If Data Not Provided</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Geometry</strong></td>
+<td>Required</td>
+<td>Locational geometry is required for spatial analysis.</td>
+<td>None, required input. If CSV option added, alt and long fields would replace this.</td>
+</tr>
+<tr>
+<td><strong>Unique ID</strong></td>
+<td>Required</td>
+<td>Used for identifying the structure throughout analysis.</td>
+<td>None, required input.</td>
+</tr>
+<tr>
+<td><strong>Occupancy Type</strong></td>
+<td>Optional</td>
+<td>Primary use is for the selection of depth damage functions in analysis. A secondary use is to provide default values if square footage/area attribution is unavailable.</td>
+<td>Defaults to <strong>RES1</strong>.</td>
+</tr>
+<tr>
+<td><strong>Building Value</strong></td>
+<td>Required</td>
+<td>Used for the calculation of structural loss.</td>
+<td>None, required input. See <em>Hazus Inventory Manual</em> if guidance is required.</td>
+</tr>
+<tr>
+<td><strong>Content Value</strong></td>
+<td>Optional</td>
+<td>Used for the calculation of content loss.</td>
+<td>If not provided, structures will be assigned a default content value based on a percentage of the building value for each Occupancy Type following the Hazus Methodology. See <strong>Table 3</strong> for percentages by occupancy type.</td>
+</tr>
+<tr>
+<td><strong>Number of Stories</strong></td>
+<td>Optional</td>
+<td>Used for the assignment of depth damage functions in analysis.</td>
+<td>Defaults to <strong>1 story</strong>. Important for <strong>RES1</strong> when available, as DDFs differ significantly. Cannot exceed <strong>3</strong> for RES1.</td>
+</tr>
+<tr>
+<td><strong>Area / Square Footage</strong></td>
+<td>Optional</td>
+<td>Used for assigning depth damage functions and for calculations such as debris and income-related losses.</td>
+<td>If not provided, structures will be assigned a default area based on typical square footage by Occupancy Type from the <em>Hazus Methodology</em> (see <strong>Table 2</strong>).</td>
+</tr>
+<tr>
+<td><strong>General Building Type</strong></td>
+<td>Optional</td>
+<td>Used for assignment of flood-specific building type for inland analysis.</td>
+<td>Defaults to <strong>W (Wood)</strong>. Hazus tract-level mapping schemes by occupancy type (<em>hzGenBldgScheme</em>) can be used to enhance inventories.</td>
+</tr>
+<tr>
+<td><strong>Foundation Type</strong></td>
+<td>Optional</td>
+<td>Used for selecting the appropriate depth damage function.</td>
+<td>Defaults to <strong>Slab</strong>. Hazus mapping schemes (also used by <strong>NSI</strong>) are available for users to enhance inventories.</td>
+</tr>
+<tr>
+<td><strong>Foundation Height</strong></td>
+<td>Optional</td>
+<td>Used to determine depth of water within a structure.</td>
+<td>Defaults: <strong>Slab = 1 ft</strong>, <strong>Shallow = 3 ft</strong>, <strong>Pile = 8 ft</strong>, <strong>Basement = 4 ft</strong>. Adjustments can be considered for pre- and post-FIRM structures.</td>
+</tr>
+<tr>
+<td><strong>Foundation Type from Parcel Data</strong></td>
+<td>Optional</td>
+<td>Used, if available, to refine foundation type assignment.</td>
+<td>--</td>
+</tr>
+<tr>
+<td><strong>Basement Type from Parcel Data</strong></td>
+<td>Optional</td>
+<td>Used, if available, to refine foundation type assignment.</td>
+<td>--</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="table-2-hazus-methodology-for-default-building-square-footage-by-occupancy-type"><strong>Table 2. Hazus Methodology for Default Building Square Footage by Occupancy Type</strong></h3>
+<table>
+<thead>
+<tr>
+<th><strong>Occupancy Type</strong></th>
+<th style="text-align: right;"><strong>Square Footage</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AGR1</td>
+<td style="text-align: right;">30,000</td>
+</tr>
+<tr>
+<td>COM1</td>
+<td style="text-align: right;">110,000</td>
+</tr>
+<tr>
+<td>COM10</td>
+<td style="text-align: right;">145,000</td>
+</tr>
+<tr>
+<td>COM2</td>
+<td style="text-align: right;">30,000</td>
+</tr>
+<tr>
+<td>COM3</td>
+<td style="text-align: right;">10,000</td>
+</tr>
+<tr>
+<td>COM4</td>
+<td style="text-align: right;">80,000</td>
+</tr>
+<tr>
+<td>COM5</td>
+<td style="text-align: right;">4,100</td>
+</tr>
+<tr>
+<td>COM6</td>
+<td style="text-align: right;">55,000</td>
+</tr>
+<tr>
+<td>COM7</td>
+<td style="text-align: right;">7,000</td>
+</tr>
+<tr>
+<td>COM8</td>
+<td style="text-align: right;">5,000</td>
+</tr>
+<tr>
+<td>COM9</td>
+<td style="text-align: right;">12,000</td>
+</tr>
+<tr>
+<td>EDU1</td>
+<td style="text-align: right;">130,000</td>
+</tr>
+<tr>
+<td>EDU2</td>
+<td style="text-align: right;">50,000</td>
+</tr>
+<tr>
+<td>GOV1</td>
+<td style="text-align: right;">11,000</td>
+</tr>
+<tr>
+<td>GOV2</td>
+<td style="text-align: right;">11,000</td>
+</tr>
+<tr>
+<td>IND1</td>
+<td style="text-align: right;">30,000</td>
+</tr>
+<tr>
+<td>IND2</td>
+<td style="text-align: right;">30,000</td>
+</tr>
+<tr>
+<td>IND3</td>
+<td style="text-align: right;">45,000</td>
+</tr>
+<tr>
+<td>IND4</td>
+<td style="text-align: right;">45,000</td>
+</tr>
+<tr>
+<td>IND5</td>
+<td style="text-align: right;">45,000</td>
+</tr>
+<tr>
+<td>IND6</td>
+<td style="text-align: right;">30,000</td>
+</tr>
+<tr>
+<td>REL1</td>
+<td style="text-align: right;">17,000</td>
+</tr>
+<tr>
+<td>RES1</td>
+<td style="text-align: right;">1,800</td>
+</tr>
+<tr>
+<td>RES2</td>
+<td style="text-align: right;">1,475</td>
+</tr>
+<tr>
+<td>RES3A</td>
+<td style="text-align: right;">2,200</td>
+</tr>
+<tr>
+<td>RES3B</td>
+<td style="text-align: right;">4,400</td>
+</tr>
+<tr>
+<td>RES3C</td>
+<td style="text-align: right;">8,000</td>
+</tr>
+<tr>
+<td>RES3D</td>
+<td style="text-align: right;">15,000</td>
+</tr>
+<tr>
+<td>RES3E</td>
+<td style="text-align: right;">40,000</td>
+</tr>
+<tr>
+<td>RES3F</td>
+<td style="text-align: right;">80,000</td>
+</tr>
+<tr>
+<td>RES4</td>
+<td style="text-align: right;">135,000</td>
+</tr>
+<tr>
+<td>RES5</td>
+<td style="text-align: right;">25,000</td>
+</tr>
+<tr>
+<td>RES6</td>
+<td style="text-align: right;">25,000</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="table-3-content-value-as-percent-of-building-value-by-occupancy-type"><strong>Table 3. Content Value as Percent of Building Value by Occupancy Type</strong></h3>
+<table>
+<thead>
+<tr>
+<th><strong>Occupancy Type</strong></th>
+<th style="text-align: right;"><strong>Content Value (%)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AGR1</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>COM1</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>COM10</td>
+<td style="text-align: right;">50%</td>
+</tr>
+<tr>
+<td>COM2</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>COM3</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>COM4</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>COM5</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>COM6</td>
+<td style="text-align: right;">150%</td>
+</tr>
+<tr>
+<td>COM7</td>
+<td style="text-align: right;">150%</td>
+</tr>
+<tr>
+<td>COM8</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>COM9</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>EDU1</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>EDU2</td>
+<td style="text-align: right;">150%</td>
+</tr>
+<tr>
+<td>GOV1</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>GOV2</td>
+<td style="text-align: right;">150%</td>
+</tr>
+<tr>
+<td>IND1</td>
+<td style="text-align: right;">150%</td>
+</tr>
+<tr>
+<td>IND2</td>
+<td style="text-align: right;">150%</td>
+</tr>
+<tr>
+<td>IND3</td>
+<td style="text-align: right;">150%</td>
+</tr>
+<tr>
+<td>IND4</td>
+<td style="text-align: right;">150%</td>
+</tr>
+<tr>
+<td>IND5</td>
+<td style="text-align: right;">150%</td>
+</tr>
+<tr>
+<td>IND6</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>REL1</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>RES1</td>
+<td style="text-align: right;">50%</td>
+</tr>
+<tr>
+<td>RES2</td>
+<td style="text-align: right;">50%</td>
+</tr>
+<tr>
+<td>RES3A</td>
+<td style="text-align: right;">50%</td>
+</tr>
+<tr>
+<td>RES3B</td>
+<td style="text-align: right;">50%</td>
+</tr>
+<tr>
+<td>RES3C</td>
+<td style="text-align: right;">50%</td>
+</tr>
+<tr>
+<td>RES3D</td>
+<td style="text-align: right;">50%</td>
+</tr>
+<tr>
+<td>RES3E</td>
+<td style="text-align: right;">50%</td>
+</tr>
+<tr>
+<td>RES3F</td>
+<td style="text-align: right;">50%</td>
+</tr>
+<tr>
+<td>RES4</td>
+<td style="text-align: right;">50%</td>
+</tr>
+<tr>
+<td>RES5</td>
+<td style="text-align: right;">50%</td>
+</tr>
+<tr>
+<td>RES6</td>
+<td style="text-align: right;">50%</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="table-4-inventory-input-data-requirements-for-coastal-consequence-modeling"><strong>Table 4. Inventory Input Data Requirements for Coastal Consequence Modeling</strong></h3>
+<table>
+<thead>
+<tr>
+<th><strong>Input Data</strong></th>
+<th><strong>Required / Optional</strong></th>
+<th><strong>Purpose</strong></th>
+<th><strong>Default Process</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Geometry</strong></td>
+<td>Required</td>
+<td>Locational geometry is required for spatial analysis.</td>
+<td>None, required input.</td>
+</tr>
+<tr>
+<td><strong>Unique ID</strong></td>
+<td>Required</td>
+<td>Used for identifying the structure throughout analysis.</td>
+<td>None, required input.</td>
+</tr>
+<tr>
+<td><strong>Building Value</strong></td>
+<td>Required</td>
+<td>Used for the calculation of structural loss.</td>
+<td>None, required input.</td>
+</tr>
+<tr>
+<td><strong>Ground Elevation</strong></td>
+<td>Required</td>
+<td>Used to determine depth of water in structure.</td>
+<td>None, required input.</td>
+</tr>
+<tr>
+<td><strong>Number of Stories</strong></td>
+<td>Optional</td>
+<td>Used for the assignment of depth damage functions in analysis.</td>
+<td>Defaults to <strong>1 story</strong> if data not provided.</td>
+</tr>
+<tr>
+<td><strong>Foundation Type</strong></td>
+<td>Optional</td>
+<td>Used for the selection of the depth damage function.</td>
+<td>Defaults to <strong>Slab</strong>.</td>
+</tr>
+<tr>
+<td><strong>Foundation Height / First Floor Height</strong></td>
+<td>Optional</td>
+<td>Used for determining depth of water within a structure.</td>
+<td>Defaults: <strong>Basement = 4 ft</strong>, <strong>Crawlspace = (unspecified)</strong>, <strong>Pier = 5 ft</strong>, <strong>Fill = 3 ft</strong>, <strong>Slab = 1 ft</strong>, <strong>Pile/Wall = 8 ft</strong>. Adjustments may be applied for pre- and post-FIRM structures.</td>
+</tr>
+<tr>
+<td><strong>Basement Type</strong></td>
+<td>Optional</td>
+<td>Used for determining damage function.</td>
+<td>Defaults to <strong>No Basement</strong>.</td>
+</tr>
+<tr>
+<td><strong>Content Insurance Deductible</strong></td>
+<td>Optional</td>
+<td>Not used for loss calculations.</td>
+<td>None.</td>
+</tr>
+<tr>
+<td><strong>Content Insurance Limit</strong></td>
+<td>Optional</td>
+<td>Not used for loss calculations.</td>
+<td>None.</td>
+</tr>
+<tr>
+<td><strong>Building Insurance Deductible</strong></td>
+<td>Optional</td>
+<td>Not used for loss calculations.</td>
+<td>None.</td>
+</tr>
+<tr>
+<td><strong>Building Insurance Limit</strong></td>
+<td>Optional</td>
+<td>Not used for loss calculations.</td>
+<td>None.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="national-structures-inventory">National Structures Inventory</h2>
+<p>The <strong>National Structures Inventory (NSI)</strong>, developed by the <strong>U.S. Army Corps of Engineers (USACE)</strong>, is a nationwide database of structures across the 50 U.S. states. At present, the NSI does not include coverage for U.S. territories. The publicly available NSI dataset provided many of the key fields used in this analysis; however, it is important to note that <strong>building</strong> and <strong>contents values</strong> are reported as <strong>depreciated values</strong> rather than full replacement costs. Full technical documentation for the NSI is available on the <a href="https://www.hec.usace.army.mil/confluence/nsi/technicalreferences/latest/technical-documentation"><strong>USACE NSI Technical Documentation page</strong></a>.</p>
+<p>USACE also maintains a <strong>restricted version</strong> of the NSI accessible to federal users, which contains additional attributes derived from parcel data and other proprietary sources.</p>
+<p>To support national hazard risk assessments, <strong>FEMA</strong> has developed an <strong>enhanced internal version</strong> of the NSI that extends coverage to the <strong>District of Columbia</strong>, <strong>Puerto Rico</strong>, the <strong>U.S. Virgin Islands</strong>, and <strong>Pacific Territories</strong>. This FEMA-enhanced dataset applies <strong>full replacement values</strong> consistent with the <em>Hazus 7.0 Inventory Technical Manual</em> and resolves several known data quality issues identified in the public NSI.</p>
+<p>The following tables list the NSI attributes referenced in this analysis.</p>
+<ul>
+<li><strong>Table 5</strong> summarizes attributes from the public USACE NSI.</li>
+<li><strong>Table 6</strong> lists those from the FEMA-enhanced NSI.\
+  Each table identifies the analysis attribute, the NSI field name, data type, and notes describing the attribute specific to NSI.</li>
+</ul>
+<hr />
+<h3 id="table-5-nsi-public-data-attributes-for-analysis"><strong>Table 5. NSI Public Data Attributes for Analysis</strong></h3>
+<table>
+<thead>
+<tr>
+<th><strong>Analysis Attribute</strong></th>
+<th><strong>NSI Field Name</strong></th>
+<th><strong>Data Type</strong></th>
+<th><strong>Notes</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Geometry</td>
+<td>Shape</td>
+<td>Point</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Unique ID</td>
+<td>fid</td>
+<td>Object ID</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Occupancy Type</td>
+<td>occtype</td>
+<td>String</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Building Value</td>
+<td>val_struct</td>
+<td>Double</td>
+<td>Depreciated replacement value</td>
+</tr>
+<tr>
+<td>Content Value</td>
+<td>val_cont</td>
+<td>Double</td>
+<td>Depreciated replacement value</td>
+</tr>
+<tr>
+<td>Number of Stories</td>
+<td>num_story</td>
+<td>Double</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Area / Square Footage</td>
+<td>sqft</td>
+<td>Double</td>
+<td>--</td>
+</tr>
+<tr>
+<td>General Building Type</td>
+<td>bldgtype</td>
+<td>String</td>
+<td>Building type of the structure, typically associated with exterior wall material and used for structural stability analyses (e.g., M = Masonry, W = Wood, H = Manufactured, S = Steel)</td>
+</tr>
+<tr>
+<td>Foundation Type</td>
+<td>found_type</td>
+<td>String</td>
+<td>Type of foundation (C = Crawl, B = Basement, S = Slab, P = Pier, I = Pile, F = Fill, W = Solid Wall)</td>
+</tr>
+<tr>
+<td>Foundation Height</td>
+<td>found_ht</td>
+<td>Double</td>
+<td>Height of the foundation, in feet, above ground elevation</td>
+</tr>
+<tr>
+<td>Ground Elevation</td>
+<td>ground_elv</td>
+<td>Double</td>
+<td>Ground elevation (in feet, NAVD88) at the structure determined using the USGS National Elevation Dataset (NED)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="table-6-nsi-fema-enhanced-version-data-attributes-for-analysis"><strong>Table 6. NSI FEMA-Enhanced Version Data Attributes for Analysis</strong></h3>
+<table>
+<thead>
+<tr>
+<th><strong>Analysis Attribute</strong></th>
+<th><strong>NSI Field Name</strong></th>
+<th><strong>Data Type</strong></th>
+<th><strong>Notes</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Geometry</td>
+<td>Shape</td>
+<td>Point</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Unique ID</td>
+<td>OBJECTID</td>
+<td>Object ID</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Occupancy Type</td>
+<td>OCCTYPE</td>
+<td>String</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Building Value</td>
+<td>Hazus_Building_Values</td>
+<td>Double</td>
+<td>Full replacement value</td>
+</tr>
+<tr>
+<td>Content Value</td>
+<td>Hazus_Content_Values</td>
+<td>Double</td>
+<td>Full replacement value</td>
+</tr>
+<tr>
+<td>Number of Stories</td>
+<td>NUM_STORY</td>
+<td>Double</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Area / Square Footage</td>
+<td>SQFT</td>
+<td>Double</td>
+<td>--</td>
+</tr>
+<tr>
+<td>General Building Type</td>
+<td>GENERALBUILDINGTYPE</td>
+<td>String</td>
+<td>Building type of the structure, typically associated with exterior wall material and used for structural stability analyses (e.g., M = Masonry, W = Wood, H = Manufactured, S = Steel)</td>
+</tr>
+<tr>
+<td>Foundation Type</td>
+<td>FNDTYPE</td>
+<td>String</td>
+<td>Type of foundation (C = Crawl, B = Basement, S = Slab, P = Pier, I = Pile, F = Fill, W = Solid Wall)</td>
+</tr>
+<tr>
+<td>Foundation Height</td>
+<td>FOUND_HT</td>
+<td>Double</td>
+<td>Height of the foundation, in feet, above ground elevation</td>
+</tr>
+<tr>
+<td>Foundation Type from Parcel Data</td>
+<td>P_FNDTYPE</td>
+<td>String</td>
+<td>See <strong>Table 7</strong>. “P” tables are private attributes and license restricted.</td>
+</tr>
+<tr>
+<td>Basement Type from Parcel Data</td>
+<td>P_BSMNT</td>
+<td>String</td>
+<td>Type of basement from parcel data (B = Basement (Unknown Details), U = Unfinished Basement, F = Finished Basement, N = None (No Basement)). “P” attributes are private data with restricted licensing.</td>
+</tr>
+<tr>
+<td>Ground Elevation</td>
+<td><em>Missing</em></td>
+<td><em>Missing</em></td>
+<td><em>Preprocessing required by user for calculating coastal losses.</em></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="table-7-nsi-p_fndtype-parcel-value-mapping"><strong>Table 7. NSI P_FNDTYPE Parcel Value Mapping</strong></h3>
+<table>
+<thead>
+<tr>
+<th><strong>Parcel Basement Value</strong></th>
+<th><strong>Parcel Basement Description</strong></th>
+<th><strong>Mapped to NSI Basement Value</strong></th>
+<th><strong>Mapped Description</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B</td>
+<td>Basement</td>
+<td>B</td>
+<td>Basement (Unknown Details)</td>
+</tr>
+<tr>
+<td>U</td>
+<td>Unfinished Basement</td>
+<td>U</td>
+<td>Unfinished Basement</td>
+</tr>
+<tr>
+<td>I</td>
+<td>Improved Basement (Finished)</td>
+<td>F</td>
+<td>Finished Basement</td>
+</tr>
+<tr>
+<td>N</td>
+<td>No Basement</td>
+<td>N</td>
+<td>None</td>
+</tr>
+<tr>
+<td>F</td>
+<td>Full Basement</td>
+<td>B</td>
+<td>Basement (Unknown Details)</td>
+</tr>
+<tr>
+<td>P</td>
+<td>Partial Basement</td>
+<td>B</td>
+<td>Basement (Unknown Details)</td>
+</tr>
+<tr>
+<td>L</td>
+<td>Daylight; Partial</td>
+<td>B</td>
+<td>Basement (Unknown Details)</td>
+</tr>
+<tr>
+<td>D</td>
+<td>Daylight; Full</td>
+<td>B</td>
+<td>Basement (Unknown Details)</td>
+</tr>
+<tr>
+<td>Y</td>
+<td>Yes</td>
+<td>B</td>
+<td>Basement (Unknown Details)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="milliman-market-baskets">Milliman Market Baskets</h2>
+<p>The <strong>Milliman Market Baskets</strong> were developed by <strong>Milliman, Inc.</strong> to support <strong>FEMA’s Risk Rating 2.0 initiative</strong>. Milliman created Market Baskets for all U.S. states and territories to provide a representative sample of <strong>single-family homes (RES1)</strong> used in the development of rating factors. Market Basket locations were derived primarily from <strong>CoreLogic ParcelPoint</strong> data, supplemented with <strong>U.S. Census</strong> and <strong>National Hydrography Dataset (NHD)</strong> information, and refined through <strong>extensive quality control</strong> to ensure accuracy and realistic spatial distribution.</p>
+<p>Three categories of data, referred to as <strong>“books”</strong>, were created from the Market Baskets:</p>
+<ol>
+<li><strong>Uniform Book</strong> – Each property assigned identical structural and coverage characteristics, allowing geographic variability to be analyzed independently.</li>
+<li><strong>Uncorrelated Market Basket</strong> – Contains randomized property and policy characteristics not correlated with geography; <em>foundation type</em> and <em>first-floor height</em> remain linked to prevent implausible combinations.</li>
+<li><strong>Correlated Market Basket (Inforce Dataset)</strong> – Joined with FEMA policy data (GFE access required); attributes are correlated to reflect realistic joint distributions and align with observed <strong>parcel</strong> and <strong>NFIP exposure</strong> data.</li>
+</ol>
+<p><strong>Table 8</strong> describes the analysis attributes used across the Market Basket books. While the schema is consistent, each book imputes fields differently—<strong>Uncorrelated</strong> randomizes property and coverage attributes, whereas the <strong>Inforce</strong> dataset applies state-specific distributions to reflect actual conditions.</p>
+<hr />
+<h3 id="table-8-milliman-data-attributes-for-analysis"><strong>Table 8. Milliman Data Attributes for Analysis</strong></h3>
+<table>
+<thead>
+<tr>
+<th><strong>Analysis Attribute</strong></th>
+<th><strong>NSI Field Name</strong></th>
+<th><strong>Data Type</strong></th>
+<th><strong>Notes</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Geometry</td>
+<td>Shape</td>
+<td>Point</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Unique ID</td>
+<td>Location</td>
+<td>String</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Occupancy Type</td>
+<td>--</td>
+<td>--</td>
+<td>All points are <strong>RES1</strong></td>
+</tr>
+<tr>
+<td>Building Value</td>
+<td>BLDG_VALUE</td>
+<td>Long</td>
+<td>Full replacement value</td>
+</tr>
+<tr>
+<td>Building Insurance Deductible</td>
+<td>BLDG_DED</td>
+<td>Long</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Building Insurance Limit</td>
+<td>BLDG_LIMIT</td>
+<td>Long</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Content Value</td>
+<td>CNT_VALUE</td>
+<td>Long</td>
+<td>Full replacement value</td>
+</tr>
+<tr>
+<td>Content Insurance Deductible</td>
+<td>CNT_DED</td>
+<td>Long</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Content Insurance Limit</td>
+<td>CNT_LIMIT</td>
+<td>Long</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Number of Stories</td>
+<td>NUM_STORIE</td>
+<td>Long</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Area / Square Footage</td>
+<td>--</td>
+<td>--</td>
+<td>Default area for <strong>RES1</strong> based on <em>Hazus Methodology</em> (sqft = 1,800)</td>
+</tr>
+<tr>
+<td>General Building Type</td>
+<td>--</td>
+<td>--</td>
+<td>Default value = <strong>W</strong></td>
+</tr>
+<tr>
+<td>Foundation Type</td>
+<td>foundation</td>
+<td>Long</td>
+<td>Foundation type (2 = basement; 4 = crawlspace; 6 = pier; 7 = fill or wall; 8 = slab; 9 = pile)</td>
+</tr>
+<tr>
+<td>Foundation Height</td>
+<td>FIRST_FLOO</td>
+<td>Long</td>
+<td>First floor height (feet above ground)</td>
+</tr>
+<tr>
+<td>Basement Type</td>
+<td>BasementFi</td>
+<td>Long</td>
+<td>Basement finish type (0 = no basement; 1 = unfinished basement; 2 = finished basement)</td>
+</tr>
+<tr>
+<td>Ground Elevation</td>
+<td>DEMft</td>
+<td>Float</td>
+<td>Digital Elevation Model (DEM) ground elevation (feet, NAVD88)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>The <strong>Milliman Market Basket</strong> datasets can be applied to both <strong>coastal</strong> and <strong>inland</strong> loss calculations, as they include the necessary structural, coverage, and geographic attributes to support modeling in either environment.
+However, their use is limited to <strong>single-family residential (RES1)</strong> structures, as the Market Baskets were specifically developed for <strong>Risk Rating 2.0</strong>.
+For more details, refer to the <a href="https://www.fema.gov/sites/default/files/documents/FEMA_Risk-Rating-2.0_Methodology-and-Data-Appendix__01-22.pdf"><strong>FEMA Risk Rating 2.0 Methodology and Data Appendix (2022)</strong></a>.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href=".." class="btn btn-neutral float-left" title="Consequence Solution"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../building_inventories/" class="btn btn-neutral float-right" title="Building Inventories Technical Implementation">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/fema-ffrd/inland-consequences" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../building_inventories/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
