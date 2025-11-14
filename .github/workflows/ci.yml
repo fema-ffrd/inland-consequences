@@ -30,3 +30,6 @@ jobs:
         run: |
           mkdocs build
 
+      - name: Run tests
+        run: |
+          pytest
