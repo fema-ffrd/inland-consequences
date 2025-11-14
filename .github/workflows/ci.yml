@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install .
+          uv install --system --group dev
 
       - name: Markdown formatting check
         run: |
