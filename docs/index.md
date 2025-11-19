@@ -1,6 +1,6 @@
-# Consequence Solution
+# Consequences Solution
 
-**Consequence modeling** is essential for **actuarial assessments, scenario evaluations, and Benefit-Cost Analyses (BCAs)**. Accurate **Annualized Average Loss (AAL)** data supports setting insurance premiums, managing financial risks, planning for emergencies, and justifying investments in flood mitigation. FEMA requires rapid and reliable AAL estimates to improve flood damage assessments. The **Consequence Solution** is designed to deliver a flexible and transparent framework that meets FEMA’s needs by leveraging established methodologies to produce trusted AAL data for both **coastal** and **inland** areas.
+**Consequence modeling** is essential for **actuarial assessments, scenario evaluations, and Benefit-Cost Analyses (BCAs)**. Accurate **Annualized Average Loss (AAL)** data supports setting insurance premiums, managing financial risks, planning for emergencies, and justifying investments in flood mitigation. FEMA requires rapid and reliable AAL estimates to improve flood damage assessments. The **Consequences Solution** is designed to deliver a flexible and transparent framework that meets FEMA’s needs by leveraging established methodologies to produce trusted AAL data for both **coastal** and **inland** areas.
 
 ______________________________________________________________________
 
@@ -13,7 +13,7 @@ ______________________________________________________________________
 
 **Integration with Coastal FFRD Methodology**
 
-The **Consequence Solution** migrates the **Coastal Future of Flood Risk Data (FFRD) Average Annualized Loss Calculation Tool** from **R** to **Python**, integrating its core methodology into a modular, scalable architecture.This migration facilitates continued development and performance enhancements while ensuring methodological consistency with ongoing FEMA projects.
+The **Consequences Solution** migrates the **Coastal Future of Flood Risk Data (FFRD) Average Annualized Loss Calculation Tool** from **R** to **Python**, integrating its core methodology into a modular, scalable architecture.This migration facilitates continued development and performance enhancements while ensuring methodological consistency with ongoing FEMA projects.
 
 ______________________________________________________________________
 
