@@ -1,6 +1,6 @@
 # Inventory Methodology
 
-The **Consequences Solution** is designed to operate out of the box with two predefined national inventories: the **National Structures Inventory (NSI)** and the **Milliman Market Basket Data**. Users may also integrate their own **custom structure inventories** by defining a corresponding **JSON schema**. For additional guidance on configuring and loading custom inventories, refer to the [**Technical Implementation Documentation**](building_inventories.md).
+The **Consequences Solution** is designed to operate out of the box with two predefined national inventories: the **National Structures Inventory (NSI)** and the **Milliman Market Basket Data**. Users may also integrate their own **custom structure inventories** by defining a corresponding **JSON schema**. For additional guidance on NSI Milliman inventories, and configuring and loading custom inventories, refer to the [**Technical Implementation Documentation**](building_inventories.md).
 
 ______________________________________________________________________
 
@@ -17,9 +17,7 @@ The following attributes are used in the **Consequences Solution** loss calculat
 Loss calculations for **inland** and **coastal** areas require different sets of input attributes.
 **Table 1** outlines the required inventory inputs for inland loss calculations, while **Table 4** details the corresponding inputs for coastal loss calculations.
 
-______________________________________________________________________
-
-### **Table 1. Inventory Input Data Requirements for Inland Consequence Modeling**
+**Table 1. Inventory Input Data Requirements for Inland Consequence Modeling**
 
 | **Input Data** | **Required / Optional** | **Purpose** | **Default Process If Data Not Provided** |
 |----------------|--------------------------|--------------|------------------------------------------|
@@ -36,9 +34,7 @@ ______________________________________________________________________
 | **Foundation Type from Parcel Data** | Optional | Used, if available, to refine foundation type assignment. | -- |
 | **Basement Type from Parcel Data** | Optional | Used, if available, to refine foundation type assignment. | -- |
 
-______________________________________________________________________
-
-### **Table 2. Hazus Methodology for Default Building Square Footage by Occupancy Type**
+**Table 2. Hazus Methodology for Default Building Square Footage by Occupancy Type**
 
 | **Occupancy Type** | **Square Footage** |
 |--------------------|-------------------:|
@@ -76,9 +72,7 @@ ______________________________________________________________________
 | RES5 | 25,000 |
 | RES6 | 25,000 |
 
-______________________________________________________________________
-
-### **Table 3. Content Value as Percent of Building Value by Occupancy Type**
+**Table 3. Content Value as Percent of Building Value by Occupancy Type**
 
 | **Occupancy Type** | **Content Value (%)** |
 |--------------------|----------------------:|
@@ -116,9 +110,7 @@ ______________________________________________________________________
 | RES5 | 50% |
 | RES6 | 50% |
 
-______________________________________________________________________
-
-### **Table 4. Inventory Input Data Requirements for Coastal Consequence Modeling**
+**Table 4. Inventory Input Data Requirements for Coastal Consequence Modeling**
 
 | **Input Data** | **Required / Optional** | **Purpose** | **Default Process** |
 |----------------|--------------------------|--------------|----------------------|
@@ -134,116 +126,3 @@ ______________________________________________________________________
 | **Content Insurance Limit** | Optional | Not used for loss calculations. | None. |
 | **Building Insurance Deductible** | Optional | Not used for loss calculations. | None. |
 | **Building Insurance Limit** | Optional | Not used for loss calculations. | None. |
-
-______________________________________________________________________
-
-## National Structures Inventory
-
-The **National Structures Inventory (NSI)**, developed by the **U.S. Army Corps of Engineers (USACE)**, is a nationwide database of structures across the 50 U.S. states. At present, the NSI does not include coverage for U.S. territories. The publicly available NSI dataset provided many of the key fields used in this analysis; however, it is important to note that **building** and **contents values** are reported as **depreciated values** rather than full replacement costs. Full technical documentation for the NSI is available on the [**USACE NSI Technical Documentation page**](https://www.hec.usace.army.mil/confluence/nsi/technicalreferences/latest/technical-documentation).
-
-USACE also maintains a **restricted version** of the NSI accessible to federal users, which contains additional attributes derived from parcel data and other proprietary sources.
-
-To support national hazard risk assessments, **FEMA** has developed an **enhanced internal version** of the NSI that extends coverage to the **District of Columbia**, **Puerto Rico**, the **U.S. Virgin Islands**, and **Pacific Territories**. This FEMA-enhanced dataset applies **full replacement values** consistent with the *Hazus 7.0 Inventory Technical Manual* and resolves several known data quality issues identified in the public NSI.
-
-The following tables list the NSI attributes referenced in this analysis.
-
-- **Table 5** summarizes attributes from the public USACE NSI.
-- **Table 6** lists those from the FEMA-enhanced NSI.\
-  Each table identifies the analysis attribute, the NSI field name, data type, and notes describing the attribute specific to NSI.
-
-______________________________________________________________________
-
-### **Table 5. NSI Public Data Attributes for Analysis**
-
-| **Analysis Attribute** | **NSI Field Name** | **Data Type** | **Notes** |
-|------------------------|--------------------|----------------|------------|
-| Geometry | Shape | Point | -- |
-| Unique ID | fid | Object ID | -- |
-| Occupancy Type | occtype | String | -- |
-| Building Value | val_struct | Double | Depreciated replacement value |
-| Content Value | val_cont | Double | Depreciated replacement value |
-| Number of Stories | num_story | Double | -- |
-| Area / Square Footage | sqft | Double | -- |
-| General Building Type | bldgtype | String | Building type of the structure, typically associated with exterior wall material and used for structural stability analyses (e.g., M = Masonry, W = Wood, H = Manufactured, S = Steel) |
-| Foundation Type | found_type | String | Type of foundation (C = Crawl, B = Basement, S = Slab, P = Pier, I = Pile, F = Fill, W = Solid Wall) |
-| Foundation Height | found_ht | Double | Height of the foundation, in feet, above ground elevation |
-| Ground Elevation | ground_elv | Double | Ground elevation (in feet, NAVD88) at the structure determined using the USGS National Elevation Dataset (NED) |
-
-______________________________________________________________________
-
-### **Table 6. NSI FEMA-Enhanced Version Data Attributes for Analysis**
-
-| **Analysis Attribute** | **NSI Field Name** | **Data Type** | **Notes** |
-|------------------------|--------------------|----------------|------------|
-| Geometry | Shape | Point | -- |
-| Unique ID | OBJECTID | Object ID | -- |
-| Occupancy Type | OCCTYPE | String | -- |
-| Building Value | Hazus_Building_Values | Double | Full replacement value |
-| Content Value | Hazus_Content_Values | Double | Full replacement value |
-| Number of Stories | NUM_STORY | Double | -- |
-| Area / Square Footage | SQFT | Double | -- |
-| General Building Type | GENERALBUILDINGTYPE | String | Building type of the structure, typically associated with exterior wall material and used for structural stability analyses (e.g., M = Masonry, W = Wood, H = Manufactured, S = Steel) |
-| Foundation Type | FNDTYPE | String | Type of foundation (C = Crawl, B = Basement, S = Slab, P = Pier, I = Pile, F = Fill, W = Solid Wall) |
-| Foundation Height | FOUND_HT | Double | Height of the foundation, in feet, above ground elevation |
-| Foundation Type from Parcel Data | P_FNDTYPE | String | See **Table 7**. “P” tables are private attributes and license restricted. |
-| Basement Type from Parcel Data | P_BSMNT | String | Type of basement from parcel data (B = Basement (Unknown Details), U = Unfinished Basement, F = Finished Basement, N = None (No Basement)). “P” attributes are private data with restricted licensing. |
-| Ground Elevation | *Missing* | *Missing* | *Preprocessing required by user for calculating coastal losses.* |
-
-______________________________________________________________________
-
-### **Table 7. NSI P_FNDTYPE Parcel Value Mapping**
-
-| **Parcel Basement Value** | **Parcel Basement Description** | **Mapped to NSI Basement Value** | **Mapped Description** |
-|----------------------------|----------------------------------|----------------------------------|--------------------------|
-| B | Basement | B | Basement (Unknown Details) |
-| U | Unfinished Basement | U | Unfinished Basement |
-| I | Improved Basement (Finished) | F | Finished Basement |
-| N | No Basement | N | None |
-| F | Full Basement | B | Basement (Unknown Details) |
-| P | Partial Basement | B | Basement (Unknown Details) |
-| L | Daylight; Partial | B | Basement (Unknown Details) |
-| D | Daylight; Full | B | Basement (Unknown Details) |
-| Y | Yes | B | Basement (Unknown Details) |
-
-______________________________________________________________________
-
-## Milliman Market Baskets
-
-The **Milliman Market Baskets** were developed by **Milliman, Inc.** to support **FEMA’s Risk Rating 2.0 initiative**. Milliman created Market Baskets for all U.S. states and territories to provide a representative sample of **single-family homes (RES1)** used in the development of rating factors. Market Basket locations were derived primarily from **CoreLogic ParcelPoint** data, supplemented with **U.S. Census** and **National Hydrography Dataset (NHD)** information, and refined through **extensive quality control** to ensure accuracy and realistic spatial distribution.
-
-Three categories of data, referred to as **“books”**, were created from the Market Baskets:
-
-1. **Uniform Book** – Each property assigned identical structural and coverage characteristics, allowing geographic variability to be analyzed independently.
-1. **Uncorrelated Market Basket** – Contains randomized property and policy characteristics not correlated with geography; *foundation type* and *first-floor height* remain linked to prevent implausible combinations.
-1. **Correlated Market Basket (Inforce Dataset)** – Joined with FEMA policy data (GFE access required); attributes are correlated to reflect realistic joint distributions and align with observed **parcel** and **NFIP exposure** data.
-
-**Table 8** describes the analysis attributes used across the Market Basket books. While the schema is consistent, each book imputes fields differently—**Uncorrelated** randomizes property and coverage attributes, whereas the **Inforce** dataset applies state-specific distributions to reflect actual conditions.
-
-______________________________________________________________________
-
-### **Table 8. Milliman Data Attributes for Analysis**
-
-| **Analysis Attribute** | **NSI Field Name** | **Data Type** | **Notes** |
-|------------------------|--------------------|----------------|------------|
-| Geometry | Shape | Point | -- |
-| Unique ID | Location | String | -- |
-| Occupancy Type | -- | -- | All points are **RES1** |
-| Building Value | BLDG_VALUE | Long | Full replacement value |
-| Building Insurance Deductible | BLDG_DED | Long | -- |
-| Building Insurance Limit | BLDG_LIMIT | Long | -- |
-| Content Value | CNT_VALUE | Long | Full replacement value |
-| Content Insurance Deductible | CNT_DED | Long | -- |
-| Content Insurance Limit | CNT_LIMIT | Long | -- |
-| Number of Stories | NUM_STORIE | Long | -- |
-| Area / Square Footage | -- | -- | Default area for **RES1** based on *Hazus Methodology* (sqft = 1,800) |
-| General Building Type | -- | -- | Default value = **W** |
-| Foundation Type | foundation | Long | Foundation type (2 = basement; 4 = crawlspace; 6 = pier; 7 = fill or wall; 8 = slab; 9 = pile) |
-| Foundation Height | FIRST_FLOO | Long | First floor height (feet above ground) |
-| Basement Type | BasementFi | Long | Basement finish type (0 = no basement; 1 = unfinished basement; 2 = finished basement) |
-| Ground Elevation | DEMft | Float | Digital Elevation Model (DEM) ground elevation (feet, NAVD88) |
-
-______________________________________________________________________
-
-The **Milliman Market Basket** datasets can be applied to both **coastal** and **inland** loss calculations, as they include the necessary structural, coverage, and geographic attributes to support modeling in either environment.
-However, their use is limited to **single-family residential (RES1)** structures, as the Market Baskets were specifically developed for **Risk Rating 2.0**.
-For more details, refer to the [**FEMA Risk Rating 2.0 Methodology and Data Appendix (2022)**](https://www.fema.gov/sites/default/files/documents/FEMA_Risk-Rating-2.0_Methodology-and-Data-Appendix__01-22.pdf).
