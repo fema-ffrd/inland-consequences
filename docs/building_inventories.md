@@ -1,62 +1,54 @@
 # Building Inventories Technical Implementation
 
-The **Consequence Modeling Solution** is designed to natively ingest the **National Structures Inventory (NSI)** and the **Milliman Market Basket** datasets out of the box, while also providing a pathway for users to integrate their own **custom inventory data**.  
-**Table 1** identifies the supported data sources, versions, expected input formats, and applicable consequence-modeling pathways.
+The **Consequence Modeling Solution** is designed to natively ingest the **National Structures Inventory (NSI)** and the **Milliman Market Basket** datasets out of the box, while also providing a pathway for users to integrate their own **custom inventory data**. **Table 1** identifies the supported data sources, versions, expected input formats, and applicable consequence-modeling pathways.
 
----
+**Table 1. Supported Inventory Data Sources**
 
-### **Table 1. Supported Inventory Data Sources**
-
-| **Data Source**             | **Version**                 | **Input File Type**     | **Consequence Modeling** |
+| **Data Source** | **Version** | **Input File Type** | **Consequence Modeling** |
 |-----------------------------|-----------------------------|---------------------------|----------------------------|
-| **NSI**                     | 2022 Public Version         | GeoPackage               | Inland, Coastal            |
-| **NSI**                     | 2022 FEMA-Enhanced Version  | File Geodatabase         | Inland only                |
-| **Milliman Market Baskets** | 2021 Uniform, Uncorrelated  | File Geodatabase         | Inland, Coastal            |
-| **User-defined Inventories** | User-defined               | User-defined             | Inland, Coastal            |
+| **NSI** | 2022 Public Version | GeoPackage | Inland, Coastal |
+| **NSI** | 2022 FEMA-Enhanced Version | File Geodatabase | Inland only |
+| **Milliman Market Baskets** | 2021 Uniform, Uncorrelated | File Geodatabase | Inland, Coastal |
+| **User-defined Inventories** | User-defined | User-defined | Inland, Coastal |
 
-For additional details on inventory requirements and methodology, refer to the  
+For additional details on inventory requirements and methodology, refer to the\
 **[Inventory Methodology Documentation](inventory_methodology.md)**.
 
----
+______________________________________________________________________
 
 ## Inventory Ingestion and Processing Approach
 
-Regardless of which inventory type is provided, several **required fields** must be present to support loss calculations.  
-However, the **Consequence Solution** is designed to minimize the amount of data preprocessing required from the user by implementing the following strategies:
+Regardless of which inventory type is provided, several **required fields** must be present to support loss calculations. However, the **Consequence Solution** is designed to minimize the amount of data preprocessing required from the user by implementing the following strategies:
 
-- **Auto-detection** of required fields based on common naming conventions  
-- **Auto-population** of missing fields using documented default values  
-- **User-provided overrides** for NSI and Milliman field names  
-- **Comprehensive documentation** for each inventory source, including requirements for user-defined datasets  
-- **Schema validation** to ensure completeness and correctness prior to modeling  
+- **Auto-detection** of required fields based on common naming conventions
+- **Auto-population** of missing fields using documented default values
+- **User-provided overrides** for NSI and Milliman field names
+- **Comprehensive documentation** for each inventory source, including requirements for user-defined datasets
+- **Schema validation** to ensure completeness and correctness prior to modeling
 
----
+______________________________________________________________________
 
 ## Base Buildings Class
 
-> *TODO:* Define the **Base Buildings Schema** used for consequence analysis in both inland and coastal applications.  
-> All `target_fields` referenced in subsequent sections should be defined here.
+> *TODO:* Define the **Base Buildings Schema** used for consequence analysis in both inland and coastal applications. All `target_fields` referenced in subsequent sections should be defined here.
 
----
+______________________________________________________________________
+
 ## National Structures Inventory (NSI)
 
 ![NSI Example](images/nsi.jpg)
-  
+
 The **National Structures Inventory (NSI)**, developed by the **U.S. Army Corps of Engineers (USACE)**, is a nationwide database of structures across the 50 U.S. states. At present, the NSI does not include coverage for U.S. territories. The publicly available NSI dataset provided many of the key fields used for consequence analysis; however, it is important to note that **building** and **contents values** are reported as **depreciated values** rather than full replacement costs. Full technical documentation for the NSI is available on the [**USACE NSI Technical Documentation page**](https://www.hec.usace.army.mil/confluence/nsi/technicalreferences/latest/technical-documentation).
 
 USACE also maintains a **restricted version** of the NSI accessible to federal users, which contains additional attributes derived from parcel data and other proprietary sources.
 
 To support national hazard risk assessments, **FEMA** has developed an **enhanced internal version** of the NSI that extends coverage to the **District of Columbia**, **Puerto Rico**, the **U.S. Virgin Islands**, and **Pacific Territories**. This FEMA-enhanced dataset applies **full replacement values** consistent with the *Hazus 7.0 Inventory Technical Manual* and resolves several known data quality issues identified in the public NSI.
 
----
+### NSI 2022 Public Version
 
-## NSI 2022 Public Version
+The **2022 Public NSI** contains all attributes required to support both **inland** and **coastal** consequence modeling. **Table 2** lists the key fields used in the Consequence Modeling Solution, including data types, assumptions, rules, and default values assigned when data is missing.
 
-The **2022 Public NSI** contains all attributes required to support both **inland** and **coastal** consequence modeling. **Table 2** lists the key fields used in the Consequence Modeling Solution, including data types, assumptions, rules, and default values assigned when data is missing.  
-
----
-
-### **Table 2. NSI 2022 Public Data Attributes for Analysis**
+**Table 2. NSI 2022 Public Data Attributes for Analysis**
 
 | **Analysis Attribute** | **Data Type** | **NSI Field Name** | **Consequence Modeling** | **Assumption** | **Rule** | **Default if Missing** |
 |------------------------|---------------|---------------------|---------------------------|----------------|-----------|--------------------------|
@@ -72,24 +64,20 @@ The **2022 Public NSI** contains all attributes required to support both **inlan
 | **Foundation Height** | Numeric | found_ht | Inland, Coastal | Feet above ground | Assign default | Slab = 1 ft; Shallow = 3 ft; Pile = 8 ft; Basement = 4 ft |
 | **Ground Elevation** | Numeric | Ground_elv | Coastal | Feet (NAVD88) | Required for coastal modeling | **Error (required)** |
 
----
+#### NSI 2022 Public – Inland Foundation Type Mapping
 
-## NSI 2022 Public – Inland Foundation Type Mapping
+For the NSI Public dataset, the `found_type` field must be mapped to the **standardized inland foundation types** used by the Consequence Modeling engine.
 
-For the NSI Public dataset, the `found_type` field must be mapped to the **standardized inland foundation types** used by the Consequence Modeling engine.  
+**Implementation Rules:**
 
-### **Implementation Rules**
+- The NSI `found_type` field is **always** used as the source field.
+- Foundation types must be translated using **Table 3**.
+- If a code does **not** match a supported value:
+  - Treat the foundation type as **uncertain**, and
+  - Assign the default inland foundation type **SLAB**.
+- No parcel-derived refinements are available in the public NSI.
 
-- The NSI `found_type` field is **always** used as the source field.  
-- Foundation types must be translated using **Table 3**.  
-- If a code does **not** match a supported value:  
-  - Treat the foundation type as **uncertain**, and  
-  - Assign the default inland foundation type **SLAB**.  
-- No parcel-derived refinements are available in the public NSI.  
-
----
-
-### **Table 3. Inland Foundation Type Mapping for NSI 2022 Public Version**
+**Table 3. Inland Foundation Type Mapping for NSI 2022 Public Version**
 
 | **found_type** | **Description** | **Assigned Inland Foundation Type** |
 |----------------|------------------|--------------------------------------|
@@ -101,22 +89,20 @@ For the NSI Public dataset, the `found_type` field must be mapped to the **stand
 | W | Solid Wall | SHAL |
 | I | Pile | PILE |
 
----
-
-## NSI 2022 Public – Coastal Foundation Type Mapping
+#### NSI 2022 Public – Coastal Foundation Type Mapping
 
 > *TODO:* Define coastal foundation type mapping rules for the NSI Public dataset.
 
-## NSI 2022 FEMA-Enhanced Version
+______________________________________________________________________
 
-The **NSI 2022 FEMA-Enhanced Version** allows users to calculate losses using **full replacement costs** and expands structure coverage to include Washington, D.C., Puerto Rico, U.S. Virgin Islands. This enhanced version also includes **parcel-derived fields** that support refinement of the **inland foundation type** assignment.  
+### NSI 2022 FEMA-Enhanced Version
+
+The **NSI 2022 FEMA-Enhanced Version** allows users to calculate losses using **full replacement costs** and expands structure coverage to include Washington, D.C., Puerto Rico, U.S. Virgin Islands. This enhanced version also includes **parcel-derived fields** that support refinement of the **inland foundation type** assignment.
 
 However, the FEMA-enhanced dataset does **not** include ground-elevation information. As a result, only **inland consequence modeling** is supported out of the box.
-Users may preprocess the dataset and manually supply ground elevations if they wish to perform coastal modeling using the **user-defined inventory ingestion process**. **Table 4** summarizes the attributes used in the analysis, including data types, assumptions, rules, and defaults applied when values are missing.  
+Users may preprocess the dataset and manually supply ground elevations if they wish to perform coastal modeling using the **user-defined inventory ingestion process**. **Table 4** summarizes the attributes used in the analysis, including data types, assumptions, rules, and defaults applied when values are missing.
 
----
-
-### **Table 4. NSI 2022 FEMA-Enhanced Data Attributes for Analysis**
+**Table 4. NSI 2022 FEMA-Enhanced Data Attributes for Analysis**
 
 | **Analysis Attribute** | **Data Type** | **NSI Field Name** | **Assumption** | **Rule** | **Default if Missing** |
 |------------------------|---------------|---------------------|----------------|----------|--------------------------|
@@ -133,37 +119,23 @@ Users may preprocess the dataset and manually supply ground elevations if they w
 | **Foundation Type (Parcel)** | String | P_FNDTYPE | Provided | Used only for parcel-based refinement logic | None |
 | **Basement Type (Parcel)** | String | P_BSMNT | Provided | Used only for parcel-based refinement logic | None |
 
----
+#### NSI 2022 FEMA-Enhanced — Inland Foundation Type Mapping
 
-## NSI 2022 FEMA-Enhanced — Inland Foundation Type Mapping
+For the FEMA-Enhanced NSI, parcel-derived fields (`P_FNDTYPE` and `P_BSMNT`) are used to refine the inland foundation type. The following rules determine the **assigned inland foundation type**:
 
-For the FEMA-Enhanced NSI, parcel-derived fields (`P_FNDTYPE` and `P_BSMNT`) are used to refine the inland foundation type.  
-The following rules determine the **assigned inland foundation type**:
+**Refinement Rules:**
 
-### **Refinement Rules**
+- If `P_BSMNT` contains any of the following codes — `B`, `U`, `I`, `F`, `P`, `L`, `D`, `Y` — set inland foundation type to **BASE**.
 
-1. **If `P_BSMNT` contains one of the following codes:**  
-   `B`, `U`, `I`, `F`, `P`, `L`, `D`, `Y`  
-   → Set inland foundation type to **BASE**.
+- If `P_FNDTYPE` contains any of the following codes — `S`, `P`, `L`, `F`, `E`, `T`, `W`, `A` — inland foundation type must stay **blank/null**, even when `P_BSMNT` indicates a basement.
 
-2. **However**, if `P_FNDTYPE` contains one of the following codes:  
-   `S`, `P`, `L`, `F`, `E`, `T`, `W`, `A`  
-   → Inland foundation type must remain **blank/null**, even if `P_BSMNT` indicates a basement.
+- If `P_BSMNT` does not indicate a basement, inland foundation type comes directly from `P_FNDTYPE` using the mapping in **Table 5**.
 
-3. **If `P_BSMNT` does not indicate a basement and does not match the codes above:**  
-   → No basement override.  
-   → Inland foundation type comes **directly from `P_FNDTYPE`**, using the mapping in **Table 5**.
+- If `P_FNDTYPE` is null, use the NSI-provided `FNDTYPE` field and map it using the same rules as the **NSI 2022 Public Version** (`found_type`). *`FNDTYPE` in FEMA-Enhanced is equivalent to `found_type` in the Public NSI.*
 
-4. **If `P_FNDTYPE` is null:**  
-   → Fallback to the NSI-provided `FNDTYPE` field  
-   → Map using the same rules as the **NSI 2022 Public Version** (`found_type`).  
-   Note: `FNDTYPE` in FEMA-Enhanced ≈ `found_type` in Public NSI.
+**Table 5. NSI 2022 FEMA-Enhanced Parcel Foundation Type Mapping**
 
----
-
-### **Table 5. NSI 2022 FEMA-Enhanced Parcel Foundation Type Mapping**
-
-| **P_FNDTYPE** | **Description**      | **Assigned Inland Foundation Type** |
+| **P_FNDTYPE** | **Description** | **Assigned Inland Foundation Type** |
 |---------------|-----------------------|--------------------------------------|
 | P | Piers | SHAL |
 | A | Concrete | SLAB |
@@ -181,7 +153,11 @@ The following rules determine the **assigned inland foundation type**:
 | F | Mud Sill | SLAB |
 | E | Earth | SLAB |
 | Z | Placeholder | If `P_BSMNT` indicates basement → **BASE**, otherwise **Slab** |
+
+______________________________________________________________________
+
 ## Milliman Market Baskets Data
+
 ![Milliman Uniform Book Example](images/milliman-uniform.jpg)
 The **Milliman Market Baskets** were developed by **Milliman, Inc.** to support **FEMA’s Risk Rating 2.0 initiative**. Milliman created Market Baskets for all U.S. states and territories to provide a representative sample of **single-family homes (RES1)** used in the development of rating factors. Market Basket locations were derived primarily from **CoreLogic ParcelPoint** data, supplemented with **U.S. Census** and **National Hydrography Dataset (NHD)** information, and refined through **extensive quality control** to ensure accuracy and realistic spatial distribution.
 
@@ -195,8 +171,7 @@ The Consequences Solution is designed and tested using the Uniform and Uncorrela
 
 The Milliman Market Basket datasets support both coastal and inland loss calculations, as they include the necessary structural, coverage, and geographic attributes for each modeling environment. Their use, however, is limited to single-family residential (RES1) structures, as the datasets were specifically developed for rating factor development under FEMA’s NFIP framework. For more details, refer to the [**FEMA (2022)**](https://www.fema.gov/sites/default/files/documents/FEMA_Risk-Rating-2.0_Methodology-and-Data-Appendix__01-22.pdf).
 
-
-### **Table 6. Milliman Data Attributes for Analysis**
+**Table 6. Milliman Data Attributes for Analysis**
 
 | **Analysis Attribute** | **Data Type** | **Milliman Field Name** | **Assumption** | **Rule** | **Default if Missing** |
 |------------------------|---------------|--------------------------|----------------|----------|--------------------------|
@@ -217,13 +192,11 @@ The Milliman Market Basket datasets support both coastal and inland loss calcula
 | **Building Insurance Deductible** | Numeric | BLDG_DED | Provided | Not used in loss calculations | None |
 | **Building Insurance Limit** | Numeric | BLDG_LIMIT | Provided | Not used in loss calculations | None |
 
----
-
-## Milliman — Inland Foundation Type Mapping
+### Milliman — Inland Foundation Type Mapping
 
 For both the **Uniform Book** and **Uncorrelated Market Basket** datasets, the `foundation` field contains numeric codes that must be mapped to inland foundation types used by the Consequences Solution. These mappings support correct depth–damage function assignment.
 
-### **Table 7. Milliman Inland Foundation Type Mapping**
+**Table 7. Milliman Inland Foundation Type Mapping**
 
 | **foundation** | **Description** | **Assigned Inland Foundation Type** |
 |----------------|------------------|--------------------------------------|
@@ -234,9 +207,7 @@ For both the **Uniform Book** and **Uncorrelated Market Basket** datasets, the `
 | **8** | Slab | **SLAB** |
 | **9** | Pile | **PILE** |
 
----
-
-## Milliman — Coastal Foundation Type Mapping
+### Milliman — Coastal Foundation Type Mapping
 
 *To be developed.*
 
@@ -259,8 +230,6 @@ fields.
     "building_cost": "my_custom_building_cost_field"
 }
 ```
-
-
 
 ## User Defined Data
 

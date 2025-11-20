@@ -17,9 +17,7 @@ The following attributes are used in the **Consequences Solution** loss calculat
 Loss calculations for **inland** and **coastal** areas require different sets of input attributes.
 **Table 1** outlines the required inventory inputs for inland loss calculations, while **Table 4** details the corresponding inputs for coastal loss calculations.
 
-______________________________________________________________________
-
-### **Table 1. Inventory Input Data Requirements for Inland Consequence Modeling**
+**Table 1. Inventory Input Data Requirements for Inland Consequence Modeling**
 
 | **Input Data** | **Required / Optional** | **Purpose** | **Default Process If Data Not Provided** |
 |----------------|--------------------------|--------------|------------------------------------------|
@@ -36,9 +34,7 @@ ______________________________________________________________________
 | **Foundation Type from Parcel Data** | Optional | Used, if available, to refine foundation type assignment. | -- |
 | **Basement Type from Parcel Data** | Optional | Used, if available, to refine foundation type assignment. | -- |
 
-______________________________________________________________________
-
-### **Table 2. Hazus Methodology for Default Building Square Footage by Occupancy Type**
+**Table 2. Hazus Methodology for Default Building Square Footage by Occupancy Type**
 
 | **Occupancy Type** | **Square Footage** |
 |--------------------|-------------------:|
@@ -76,9 +72,7 @@ ______________________________________________________________________
 | RES5 | 25,000 |
 | RES6 | 25,000 |
 
-______________________________________________________________________
-
-### **Table 3. Content Value as Percent of Building Value by Occupancy Type**
+**Table 3. Content Value as Percent of Building Value by Occupancy Type**
 
 | **Occupancy Type** | **Content Value (%)** |
 |--------------------|----------------------:|
@@ -116,9 +110,7 @@ ______________________________________________________________________
 | RES5 | 50% |
 | RES6 | 50% |
 
-______________________________________________________________________
-
-### **Table 4. Inventory Input Data Requirements for Coastal Consequence Modeling**
+**Table 4. Inventory Input Data Requirements for Coastal Consequence Modeling**
 
 | **Input Data** | **Required / Optional** | **Purpose** | **Default Process** |
 |----------------|--------------------------|--------------|----------------------|
@@ -134,4 +126,3 @@ ______________________________________________________________________
 | **Content Insurance Limit** | Optional | Not used for loss calculations. | None. |
 | **Building Insurance Deductible** | Optional | Not used for loss calculations. | None. |
 | **Building Insurance Limit** | Optional | Not used for loss calculations. | None. |
-
