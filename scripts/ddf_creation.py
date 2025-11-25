@@ -385,4 +385,4 @@ if __name__ == "__main__":
     print(complete_table.head(20))
     # Ensure output directory exists
     os.makedirs('outputs', exist_ok=True)
-    complete_table.to_csv('outputs/complete_lookup_table.csv', index=False)
+    complete_table.to_csv('outputs/df_lookup_structures.csv', index=False)

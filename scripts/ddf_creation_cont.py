@@ -637,5 +637,5 @@ if __name__ == "__main__":
     print("\nSample from complete table:")
     print(complete_table.sample(min(30, len(complete_table))))
     
-    complete_table.to_csv('outputs/complete_lookup_table_contents.csv', index=False)
-    print("\nSaved complete lookup table to outputs/complete_lookup_table_contents.csv")
+    complete_table.to_csv('outputs/df_lookup_contents.csv', index=False)
+    print("\nSaved complete lookup table to outputs/df_lookup_contents.csv")
