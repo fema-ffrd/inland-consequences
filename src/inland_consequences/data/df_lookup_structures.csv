@@ -1,4 +1,4 @@
-Construction_Type,Occupancy_Type,Story_Min,Story_Max,SQFT_Min,SQFT_Max,FLSBT_Range,Foundation_Type,Flood_Peril_Type,Damage_Function_ID
+construction_type,occupancy_type,story_min,story_max,sqft_min,sqft_max,flsbt_range,foundation_type,flood_peril_type,damage_function_id
 C,AGR1,1,4,,,CECB001-004,BASE,CHW,214
 C,AGR1,1,4,,,CECB001-004,BASE,CMV,214
 C,AGR1,1,4,,,CECB001-004,BASE,CST,213

@@ -587,6 +587,9 @@ def create_complete_lookup_table(foundation_flood_csv_path, occupancy_flood_csv_
     print(f"  - {len(foundation_flood['Flood_Peril_Type'].unique())} flood peril types")
     print(f"  - {complete_table['Damage_Function_ID'].notna().sum()} rules with damage functions")
     print(f"  - {(complete_table['Damage_Function_ID'] != -9999).sum()} rules with valid damage functions (excluding -9999)")
+
+    # cast all columns to lowercase
+    complete_table.columns = [col.lower() for col in complete_table.columns]
     
     return complete_table
 

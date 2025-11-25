@@ -1,4 +1,4 @@
-occupancy_type,Foundation_Type,Flood_Peril_Type,Damage_Function_ID
+occupancy_type,foundation_type,flood_peril_type,damage_function_id
 AGR1,BASE,CHW,116
 AGR1,BASE,CMV,116
 AGR1,BASE,CST,116

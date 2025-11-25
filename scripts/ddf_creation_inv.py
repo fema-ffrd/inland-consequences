@@ -72,6 +72,9 @@ def unpivot_foundation_flood_table_inv(filepath_or_df):
     # Sort for readability
     result_df = result_df.sort_values(['occupancy_type', 'Foundation_Type', 'Flood_Peril_Type'])
     result_df = result_df.reset_index(drop=True)
+
+    # cast all columns to lowercase
+    result_df.columns = [col.lower() for col in result_df.columns]
     
     return result_df
 

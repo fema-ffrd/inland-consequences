@@ -261,6 +261,9 @@ def create_complete_lookup_table(foundation_flood_csv_path):
     print(f"  - {len(flsbt_lookup)} unique FLSBT ranges")
     print(f"  - {len(foundation_flood['Foundation_Type'].unique())} foundation types")
     print(f"  - {len(foundation_flood['Flood_Peril_Type'].unique())} flood peril types")
+
+    # cast all columns to lowercase
+    complete_table.columns = [col.lower() for col in complete_table.columns]
     
     return complete_table
 
