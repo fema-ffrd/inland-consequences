@@ -84,3 +84,7 @@ if __name__ == "__main__":
     print("Unpivoted Foundation/Flood Table Sample:")
     print(df_results.sample(10))
 
+    df_results.to_csv('outputs/complete_lookup_table_inventory.csv', index=False)
+
+    
+
