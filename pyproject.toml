@@ -11,6 +11,10 @@ dependencies = [
   "sphere-data",
   "sphere-flood",
   "pandas>=2.3.3",
+  "logging>=0.4.9.6",
+  "typing>=3.10.0.0",
+  "scipy>=1.15.3",
+  "polars>=1.35.2",
 ]
 
 [tool.uv.workspace]
