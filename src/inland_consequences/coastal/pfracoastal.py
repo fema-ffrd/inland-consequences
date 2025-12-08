@@ -48,7 +48,7 @@ class Inputs:
         self.nbounds = nbounds
         
         self.storm_csv = storm_csv
-        self._use_stormsuite = use_stormsuite
+        self.use_stormsuite = False
         
         self.bldg_path = bldg_path
         self.bldg_lay = bldg_lay
