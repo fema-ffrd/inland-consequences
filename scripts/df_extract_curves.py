@@ -161,53 +161,52 @@ def correct_damage_function_nulls(df: pd.DataFrame) -> pd.DataFrame:
     
     # Process each row (each damage function)
     for idx in df_corrected.index:
-        row = df_corrected.loc[idx, depth_cols].copy()
+        # Get values as a numpy array for easier scalar access
+        row_values = df_corrected.loc[idx, depth_cols].values
         
         # Find first and last non-null indices
-        non_null_mask = row.notna()
-        if non_null_mask.any():
-            first_valid_idx = non_null_mask.idxmax()  # First True value
-            last_valid_idx = non_null_mask[::-1].idxmax()  # Last True value
-            
-            first_valid_pos = depth_cols.index(first_valid_idx)
-            last_valid_pos = depth_cols.index(last_valid_idx)
+        non_null_indices = [i for i, val in enumerate(row_values) if pd.notna(val)]
+        
+        if len(non_null_indices) > 0:
+            first_valid_pos = non_null_indices[0]
+            last_valid_pos = non_null_indices[-1]
             
             # Get the maximum damage value for this curve
-            max_damage = row.max()
+            max_damage = max(row_values[non_null_indices])
             
             # Process each depth column
             for i, col in enumerate(depth_cols):
-                if pd.isna(row[col]):
+                if pd.isna(row_values[i]):
                     if i < first_valid_pos:
                         # Before first non-null: set to 0
-                        df_corrected.loc[idx, col] = 0.0
+                        df_corrected.at[idx, col] = 0.0
                     elif i > last_valid_pos:
                         # After last non-null: set to max damage
-                        df_corrected.loc[idx, col] = max_damage
+                        df_corrected.at[idx, col] = max_damage
                     else:
                         # Between first and last non-null: interpolate using closest neighbors
                         # Find previous non-null value
                         prev_idx = None
                         for j in range(i - 1, -1, -1):
-                            if pd.notna(row[depth_cols[j]]):
+                            if pd.notna(row_values[j]):
                                 prev_idx = j
                                 break
                         
                         # Find next non-null value
                         next_idx = None
                         for j in range(i + 1, len(depth_cols)):
-                            if pd.notna(row[depth_cols[j]]):
+                            if pd.notna(row_values[j]):
                                 next_idx = j
                                 break
                         
                         # Interpolate linearly between neighbors
                         if prev_idx is not None and next_idx is not None:
-                            prev_val = row[depth_cols[prev_idx]]
-                            next_val = row[depth_cols[next_idx]]
+                            prev_val = row_values[prev_idx]
+                            next_val = row_values[next_idx]
                             # Linear interpolation
                             weight = (i - prev_idx) / (next_idx - prev_idx)
                             interpolated_val = prev_val + weight * (next_val - prev_val)
-                            df_corrected.loc[idx, col] = interpolated_val
+                            df_corrected.at[idx, col] = interpolated_val
     
     return df_corrected
 
