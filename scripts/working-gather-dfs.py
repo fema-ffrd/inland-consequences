@@ -30,7 +30,7 @@ buildings_data = {
 buildings_df = pd.DataFrame(buildings_data)
 
 # Load damage curves from actual data file
-data_file = Path(__file__).parent / 'data' / 'df_lookup_structures.csv'
+data_file = Path(__file__).parent.parent / 'src' / 'inland_consequences' / 'data' / 'df_lookup_structures.csv'
 damage_curves_df = pd.read_csv(data_file)
 
 # Rename columns to match the SQL query expectations
