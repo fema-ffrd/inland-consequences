@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/nsi_schema.json",
+  "title": "NSI Buildings Schema",
+  "version": "0.1.0",
+  "description": "Schema for NSI (National Structure Inventory) building data",
+    "default fields": {
+        "target_fid": {
+            "type": "string",
+            "description": "Unique identifier for the building",
+            "default target field": "id",
+            "required": true,
+            "nullable": false
+        },
+        "occtype": {
+            "type": "string",
+            "description": "Occupancy type code (e.g., RES1, COM1)",
+            "default target field": "occupancy_type",
+            "required": true,
+            "nullable": false
+        },
+        "found_ht": {
+            "type": "number",
+            "description": "First floor height (feet above ground)",
+            "default target field": "first_floor_height",
+            "required": true,
+            "nullable": false
+        },
+        "fndtype": {
+            "type": "string",
+            "description": "Foundation type code (I=Pile, P=Pier, W=Solid Wall, B=Basement, C=Crawl, F=Fill, S=Slab)",
+            "default target field": "foundation_type",
+            "enum": ["I", "P", "W", "B", "C", "F", "S"],
+            "required": true,
+            "nullable": false
+        },
+        "num_story": {
+            "type": "number",
+            "description": "Number of stories in the building",
+            "default target field": "number_stories",
+            "required": true,
+            "nullable": false
+        },
+        "sqft": {
+            "type": "number",
+            "description": "Building area in square feet",
+            "default target field": "area",
+            "required": true,
+            "nullable": false
+        },
+        "val_struct": {
+            "type": "number",
+            "description": "Building replacement cost ($USD)",
+            "default target field": "building_cost",
+            "required": true,
+            "nullable": false
+        },
+        "val_cont": {
+            "type": "number",
+            "description": "Contents replacement cost ($USD)",
+            "default target field": "content_cost",
+            "required": true,
+            "nullable": false
+        }
+    }
+}
