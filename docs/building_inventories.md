@@ -11,7 +11,8 @@ The **Consequence Modeling Solution** is designed to natively ingest the **Natio
 | **Milliman Market Baskets** | 2021 Uniform, Uncorrelated | File Geodatabase | Inland, Coastal |
 | **User-defined Inventories** | User-defined | User-defined | Inland, Coastal |
 
-For additional details on inventory requirements and methodology, refer to the **[Inventory Methodology Documentation](inventory_methodology.md)**.
+For additional details on inventory requirements and methodology, refer to the\
+**[Inventory Methodology Documentation](inventory_methodology.md)**.
 
 ______________________________________________________________________
 
@@ -60,7 +61,7 @@ The **2022 Public NSI** contains all attributes required to support both **inlan
 | **Area / Square Footage** | Numeric | sqft | Inland | Square footage | Validate > 0; assign default | Hazus defaults (Inventory Methodology Table 2) |
 | **General Building Type** | String | bldgtype | Inland | Provided (M, W, H, S) | Assign default if missing | **W (Wood)** |
 | **Foundation Type** | String | found_type | Inland, Coastal | Provided (C, B, S, P, I, F, W) | Assign default if missing | **Slab** |
-| **Foundation Height** | Numeric | found_ht | Inland, Coastal | Feet above ground | Assign default | Slab = 1 ft; Shallow = 3 ft; Pile = 8 ft; Basement = 2 ft |
+| **Foundation Height** | Numeric | found_ht | Inland, Coastal | Feet above ground | Assign default | Slab = 1 ft; Shallow = 3 ft; Pile = 8 ft; Basement = 4 ft |
 | **Ground Elevation** | Numeric | Ground_elv | Coastal | Feet (NAVD88) | Required for coastal modeling | **Error (required)** |
 
 #### NSI 2022 Public – Inland Foundation Type Mapping
@@ -114,7 +115,7 @@ Users may preprocess the dataset and manually supply ground elevations if they w
 | **Area / Square Footage** | Numeric | SQFT | Square footage (sq ft) | Validate > 0; assign default | Hazus defaults (Inventory Methodology Table 2) |
 | **General Building Type** | String | GENERALBUILDINGTYPE | Provided (M, W, H, S) | Assign default if missing | **W (Wood)** |
 | **Foundation Type** | String | FNDTYPE | Provided (C, B, S, P, I, F, W) | Assign default if missing | **Slab** |
-| **Foundation Height** | Numeric | FOUND_HT | Feet above ground elevation | Assign default if missing | Slab = 1 ft; Shallow = 3 ft; Pile = 8 ft; Basement = 2 ft |
+| **Foundation Height** | Numeric | FOUND_HT | Feet above ground elevation | Assign default if missing | Slab = 1 ft; Shallow = 3 ft; Pile = 8 ft; Basement = 4 ft |
 | **Foundation Type (Parcel)** | String | P_FNDTYPE | Provided | Used only for parcel-based refinement logic | None |
 | **Basement Type (Parcel)** | String | P_BSMNT | Provided | Used only for parcel-based refinement logic | None |
 
@@ -183,7 +184,7 @@ The Milliman Market Basket datasets support both coastal and inland loss calcula
 | **Area / Square Footage** | Numeric | *Not provided* | Assume 1,800 sq ft | Assign default | Hazus RES1 default = **1,800 sq ft** |
 | **General Building Type** | String | *Not provided* | Assume Wood | Assign default | **W (Wood)** |
 | **Foundation Type** | Numeric | foundation | Milliman codes: 2, 4, 6, 7, 8, 9 | Should be populated; assign default | **Slab** |
-| **Foundation Height** | Numeric | FIRST_FLOO | First-floor height above ground (ft) | Should be populated; assign default | Slab 1 ft; Shallow 3 ft; Pile 8 ft; Basement 2 ft |
+| **Foundation Height** | Numeric | FIRST_FLOO | First-floor height above ground (ft) | Should be populated; assign default | Slab 1 ft; Shallow 3 ft; Pile 8 ft; Basement 4 ft |
 | **Ground Elevation** | Numeric | DEMft | DEM ground elevation (ft, NAVD88) | Must be present | **Error (required)** |
 | **Basement Type** | Numeric | BasementFi | 0=None, 1=Unfinished, 2=Finished | Provided | Default = None |
 | **Content Insurance Deductible** | Numeric | CNT_DED | Provided | Not used in loss calculations | None |

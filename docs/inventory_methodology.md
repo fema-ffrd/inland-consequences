@@ -30,7 +30,7 @@ Loss calculations for **inland** and **coastal** areas require different sets of
 | **Area / Square Footage** | Optional | Used for assigning depth damage functions and for calculations such as debris and income-related losses. | If not provided, structures will be assigned a default area based on typical square footage by Occupancy Type from the *Hazus Methodology* (see **Table 2**). |
 | **General Building Type** | Optional | Used for assignment of flood-specific building type for inland analysis. | Defaults to **W (Wood)**. Hazus tract-level mapping schemes by occupancy type (*hzGenBldgScheme*) can be used to enhance inventories. |
 | **Foundation Type** | Optional | Used for selecting the appropriate depth damage function. | Defaults to **Slab**. Hazus mapping schemes (also used by **NSI**) are available for users to enhance inventories. |
-| **Foundation Height** | Optional | Used to determine depth of water within a structure. | Defaults: **Slab = 1 ft**, **Shallow = 3 ft**, **Pile = 8 ft**, **Basement = 2 ft**. Adjustments can be considered for pre- and post-FIRM structures. |
+| **Foundation Height** | Optional | Used to determine depth of water within a structure. | Defaults: **Slab = 1 ft**, **Shallow = 3 ft**, **Pile = 8 ft**, **Basement = 4 ft**. Adjustments can be considered for pre- and post-FIRM structures. |
 | **Foundation Type from Parcel Data** | Optional | Used, if available, to refine foundation type assignment. | -- |
 | **Basement Type from Parcel Data** | Optional | Used, if available, to refine foundation type assignment. | -- |
 
