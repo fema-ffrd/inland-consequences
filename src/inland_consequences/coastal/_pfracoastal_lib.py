@@ -28,6 +28,21 @@ class _PFRACoastal_Lib:
         outText = sub("[^0-9.-]", "", inText)
         return outText
     
+    ###################
+    # getZscore()
+    # in:
+    #	x = data value
+    #	mean_data = mean of data
+    #	sd_data = 1 std dev of data
+    # out:
+    #	zscore
+    # called by:
+    # 	main()
+    # calls:
+    #	NULL
+    def getZscore(self, x: float, mean_data: float, sd_data: float) -> float:
+        return (x - mean_data) / sd_data
+    
     ####################
     # padTrailingSpaces()
     #	function to add trailing spaces to a given string to produce
@@ -43,7 +58,7 @@ class _PFRACoastal_Lib:
     #	GUI/setBLDGAttributes()
     # calls:
     #	NULL
-    def padTrailingSpaces(inText: str, tLength=0) -> str:
+    def padTrailingSpaces(self, inText: str, tLength=0) -> str:
         l = len(inText)
         if l >= tLength:
             outText = inText
