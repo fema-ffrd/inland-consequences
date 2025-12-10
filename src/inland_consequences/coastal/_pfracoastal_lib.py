@@ -40,5 +40,5 @@ class _PFRACoastal_Lib:
     # 	main()
     # calls:
     #	NULL
-    def getZscore(x: float, mean_data: float, sd_data: float) -> float:
+    def getZscore(self, x: float, mean_data: float, sd_data: float) -> float:
         return (x - mean_data) / sd_data
