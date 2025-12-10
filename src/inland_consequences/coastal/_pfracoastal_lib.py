@@ -26,7 +26,7 @@ class _PFRACoastal_Lib:
     #	runMC_AALU_x4()
     # calls:
     #	NULL
-    def adjust_Loss_DEDLIM1(loss: int, ded=0, lim=100_000_000) -> int:
+    def adjust_Loss_DEDLIM1(self, loss: int, ded=0, lim=100_000_000) -> int:
         dLoss = loss - ded
         if dLoss < 0:
             dLoss = 0
