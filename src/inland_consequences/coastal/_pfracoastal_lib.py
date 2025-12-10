@@ -27,3 +27,18 @@ class _PFRACoastal_Lib:
     def removeNonNumeric(self, inText: str) -> str:
         outText = sub("[^0-9.-]", "", inText)
         return outText
+    
+    ###################
+    # getZscore()
+    # in:
+    #	x = data value
+    #	mean_data = mean of data
+    #	sd_data = 1 std dev of data
+    # out:
+    #	zscore
+    # called by:
+    # 	main()
+    # calls:
+    #	NULL
+    def getZscore(self, x: float, mean_data: float, sd_data: float) -> float:
+        return (x - mean_data) / sd_data
