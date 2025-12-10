@@ -24,6 +24,6 @@ class _PFRACoastal_Lib:
     #	buildBldgFloodDepthTable5()
     # calls:
     #	NULL
-    def removeNonNumeric(inText: str) -> str:
+    def removeNonNumeric(self, inText: str) -> str:
         outText = sub("[^0-9.-]", "", inText)
         return outText
