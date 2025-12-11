@@ -50,7 +50,6 @@ class Inputs:
         self.nbounds = nbounds
         
         self.storm_csv = storm_csv
-        self.use_stormsuite
         
         self.bldg_path = bldg_path
         self.bldg_lay = bldg_lay
@@ -113,15 +112,10 @@ class Inputs:
     
     @property
     def use_stormsuite(self) -> bool:
-        if self.storm_csv:
-            self.use_stormsuite = True
+        if self.storm_csv not in ('', None) and '.csv' in self.storm_csv and os.path.exists(self.storm_csv):
+            return True
         else:
-            self.use_stormsuite = False
-        return self._use_stormsuite
-    
-    @use_stormsuite.setter
-    def use_stormsuite(self, val: bool) -> None:
-        self.use_stormsuite = val
+            return False
     
     @property
     def bddf_lut_path(self) -> str:
