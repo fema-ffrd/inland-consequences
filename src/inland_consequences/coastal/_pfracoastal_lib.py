@@ -8,6 +8,8 @@ import multiprocessing
 import os
 from re import sub
 
+logger = logging.getLogger(__name__)
+
 class _PFRACoastal_Lib:
     def __init__(self) -> object:
         pass
@@ -94,3 +96,15 @@ class _PFRACoastal_Lib:
         else:
             outText = ''.join([inText, (tLength - l)*' '])
         return outText
+    
+    ####################
+    # write_log()
+    # 	function to dump message ocntents to both the screen and the log file
+    # In:
+    #	txt = message to be written
+    # Out:
+    #	NULL
+    # Calls:
+    #	NULL
+    def write_log(self, txt: str) -> None:
+        logger.info(txt)

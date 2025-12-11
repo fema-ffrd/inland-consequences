@@ -7,7 +7,9 @@ import logging
 import typing
 import multiprocessing
 import os
-from _pfracoastal_lib import _PFRACoastal_Lib
+from ._pfracoastal_lib import _PFRACoastal_Lib
+
+logger = logging.getLogger(__name__)
 
 class Inputs:
     BLDG_ATTR_MAP_DATA = {
@@ -21,7 +23,7 @@ class Inputs:
         "HDDF":[0,0,0,0,0,0,0,0,1,1,0,1,0],
         "TDDF":[0,0,0,0,0,0,0,0,1,1,1,0,0],
         "ANLYS":[1,0,1,1,1,1,1,1,1,1,1,1,1],
-        "DOM":[None, None, None, None, None, None, None, "[1,2,3]", "[2,4,6,7,8,9]", "[0,1,2]", None, None]
+        "DOM":[np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, "[1,2,3]", "[2,4,6,7,8,9]", "[0,1,2]", np.nan, np.nan]
     }
     
     GUTS_ATTR_MAP_DATA = {
@@ -39,7 +41,7 @@ class Inputs:
         GCB_fid='', GCB_Bded='', GCB_Blim='', GCB_Bval='', GCB_Cded='', GCB_Clim='', GCB_Cval='', GCB_Bsto='', GCB_Bfou='',
         GCB_Bbfi='', GCB_Bffh='', GCB_Bdem='') -> object:
         
-        self.blabber = blabber
+        self._blabber = blabber
         self.use_heatmap = use_heatmap
         self.hm_bandwidth = hm_bandwidth
         self.hm_resolution = hm_resolution
@@ -48,7 +50,7 @@ class Inputs:
         self.nbounds = nbounds
         
         self.storm_csv = storm_csv
-        self.use_stormsuite = False
+        self._use_stormsuite = False
         
         self.bldg_path = bldg_path
         self.bldg_lay = bldg_lay
@@ -74,7 +76,7 @@ class Inputs:
         self.use_netcdf = use_netcdf
         self.use_outcsv = use_outcsv
         
-        self._bddf_lut_path = _bddf_lut_path
+        self._bddf_lut_path = bddf_lut_path
         self.bldg_ddf_lut = bldg_ddf_lut
         
         self.cddf_lut_path = cddf_lut_path
@@ -84,10 +86,10 @@ class Inputs:
         self.out_shp_path = out_shp_path
         self._blabfile = blabfile
         
-        self.bldg_attr_map = pd.Dataframe.from_dict(self.BLDG_ATTR_MAP_DATA)
-        self.bldg_attr_map.index = list(range(len(bldg_attr_map.shape[0]))) # to make sure the row index has labels
+        self.bldg_attr_map = pd.DataFrame.from_dict(self.BLDG_ATTR_MAP_DATA)
+        self.bldg_attr_map.index = list(range(self.bldg_attr_map.shape[0])) # to make sure the row index has labels
         
-        self.guts_attr_map = pd.Dataframe.from_dict(self.GUTS_ATTR_MAP_DATA)
+        self.guts_attr_map = pd.DataFrame.from_dict(self.GUTS_ATTR_MAP_DATA)
         
         self._GCB_fid = GCB_fid
         self._GCB_Bded = GCB_Bded
@@ -101,6 +103,16 @@ class Inputs:
         self._GCB_Bbfi = GCB_Bbfi
         self._GCB_Bffh = GCB_Bffh
         self._GCB_Bdem = GCB_Bdem
+    
+    @property
+    def blabber(self) -> bool:
+        if self._blabber:
+            ch = logging.StreamHandler()
+        else:
+            ch = logging.NullHandler()
+        
+        logger.addHandler(ch)
+        return self._blabber
     
     @property
     def use_stormsuite(self) -> bool:
@@ -123,9 +135,14 @@ class Inputs:
     @property
     def blabfile(self) -> str:
         if self.out_shp_path and self.proj_prefix:
-            return os.path.join(self.out_shp_path, f'{self.proj_prefix}_run.log')
+            self._blabfile = os.path.join(self.out_shp_path, f'{self.proj_prefix}_run.log')
+            fh = logging.FileHandler(self._blabfile)
         else:
-            return ''
+            self._blabfile = ''
+            fh = logging.NullHandler()
+        
+        logger.addHandler(fh)
+        return self._blabfile
     
     @property
     def GCB_fid(self) -> str:
