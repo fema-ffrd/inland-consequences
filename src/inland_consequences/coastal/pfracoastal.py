@@ -9,7 +9,7 @@ import multiprocessing
 import os
 from ._pfracoastal_lib import _PFRACoastal_Lib
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__main__)
 
 class Inputs:
     BLDG_ATTR_MAP_DATA = {
@@ -37,11 +37,11 @@ class Inputs:
         swel_mpath='', swel_path='', swelA_path='', swelB_path='', waveA_path='', waveB_path='', use_uncertainty=True,
         use_cutoff=True, use_cutoff10=False, use_eWet=True, use_waves=True, use_twl=False, use_wavecut50=False, use_erosion=False,
         use_singleloss=False, use_insurance=False, use_contents=False, use_netcdf=False, use_outcsv=False, bddf_lut_path='',
-        bldg_ddf_lut=None, cddf_lut_path=None, cont_ddf_lut=None, proj_prefix='', out_shp_path='', blabfile='',
+        bldg_ddf_lut=None, cddf_lut_path=None, cont_ddf_lut=None, proj_prefix='', out_shp_path='',
         GCB_fid='', GCB_Bded='', GCB_Blim='', GCB_Bval='', GCB_Cded='', GCB_Clim='', GCB_Cval='', GCB_Bsto='', GCB_Bfou='',
         GCB_Bbfi='', GCB_Bffh='', GCB_Bdem='') -> object:
         
-        self._blabber = blabber
+        self.blabber = blabber
         self.use_heatmap = use_heatmap
         self.hm_bandwidth = hm_bandwidth
         self.hm_resolution = hm_resolution
@@ -50,7 +50,7 @@ class Inputs:
         self.nbounds = nbounds
         
         self.storm_csv = storm_csv
-        self._use_stormsuite = False
+        self.use_stormsuite
         
         self.bldg_path = bldg_path
         self.bldg_lay = bldg_lay
@@ -76,50 +76,52 @@ class Inputs:
         self.use_netcdf = use_netcdf
         self.use_outcsv = use_outcsv
         
-        self._bddf_lut_path = bddf_lut_path
+        self.bddf_lut_path = bddf_lut_path
         self.bldg_ddf_lut = bldg_ddf_lut
         
         self.cddf_lut_path = cddf_lut_path
         self.cont_ddf_lut = cont_ddf_lut
         
-        self.proj_prefix = proj_prefix
         self.out_shp_path = out_shp_path
-        self._blabfile = blabfile
+        self.proj_prefix = proj_prefix
         
         self.bldg_attr_map = pd.DataFrame.from_dict(self.BLDG_ATTR_MAP_DATA)
         self.bldg_attr_map.index = list(range(self.bldg_attr_map.shape[0])) # to make sure the row index has labels
         
         self.guts_attr_map = pd.DataFrame.from_dict(self.GUTS_ATTR_MAP_DATA)
         
-        self._GCB_fid = GCB_fid
-        self._GCB_Bded = GCB_Bded
-        self._GCB_Blim = GCB_Blim
-        self._GCB_Bval = GCB_Bval
-        self._GCB_Cded = GCB_Cded
-        self._GCB_Clim = GCB_Clim
-        self._GCB_Cval = GCB_Cval
-        self._GCB_Bsto = GCB_Bsto
-        self._GCB_Bfou = GCB_Bfou
-        self._GCB_Bbfi = GCB_Bbfi
-        self._GCB_Bffh = GCB_Bffh
-        self._GCB_Bdem = GCB_Bdem
+        self.GCB_fid = GCB_fid
+        self.GCB_Bded = GCB_Bded
+        self.GCB_Blim = GCB_Blim
+        self.GCB_Bval = GCB_Bval
+        self.GCB_Cded = GCB_Cded
+        self.GCB_Clim = GCB_Clim
+        self.GCB_Cval = GCB_Cval
+        self.GCB_Bsto = GCB_Bsto
+        self.GCB_Bfou = GCB_Bfou
+        self.GCB_Bbfi = GCB_Bbfi
+        self.GCB_Bffh = GCB_Bffh
+        self.GCB_Bdem = GCB_Bdem
     
     @property
     def blabber(self) -> bool:
-        if self._blabber:
-            ch = logging.StreamHandler()
-        else:
-            ch = logging.NullHandler()
-        
-        logger.addHandler(ch)
         return self._blabber
+    
+    @blabber.setter
+    def blabber(self, val: bool) -> None:
+        self._blabber = val
     
     @property
     def use_stormsuite(self) -> bool:
         if self.storm_csv:
-            return True
+            self.use_stormsuite = True
         else:
-            return False
+            self.use_stormsuite = False
+        return self._use_stormsuite
+    
+    @use_stormsuite.setter
+    def use_stormsuite(self, val: bool) -> None:
+        self.use_stormsuite = val
     
     @property
     def bddf_lut_path(self) -> str:
@@ -128,21 +130,15 @@ class Inputs:
     @bddf_lut_path.setter
     def bddf_lut_path(self, val: str) -> None:
         self._bddf_lut_path = val
-        
         if '.csv' in val and os.path.exists(val):
             self.bldg_ddf_lut = pd.read_csv(val)
     
     @property
     def blabfile(self) -> str:
-        if self.out_shp_path and self.proj_prefix:
-            self._blabfile = os.path.join(self.out_shp_path, f'{self.proj_prefix}_run.log')
-            fh = logging.FileHandler(self._blabfile)
+        if self.out_shp_path not in (None, '') and os.path.exists(self.out_shp_path) and self.proj_prefix not in (None, ''):
+            return os.path.join(self.out_shp_path, self.proj_prefix+"_run.log")
         else:
-            self._blabfile = ''
-            fh = logging.NullHandler()
-        
-        logger.addHandler(fh)
-        return self._blabfile
+            return ''
     
     @property
     def GCB_fid(self) -> str:
@@ -257,5 +253,19 @@ class PFRACoastal:
     def __init__(self) -> object:
         pass
     
-    def runPFRACoastal(inputs: Inputs) -> None:
-        pass
+    def runPFRACoastal(self, inputs: Inputs) -> None:
+        # configure logging
+        log_format_str = "{levelname} [{asctime}] {message}"
+        if inputs.blabpath:
+            fh = logging.FileHandler(inputs.blabpath, mode='a')
+            fh.setLevel("INFO")
+        else:
+            fh = logging.NullHandler()
+        
+        if inputs.blabber:
+            ch = logging.StreamHandler()
+            ch.setLevel("INFO")
+        else:
+            ch = logging.NullHandler()
+        
+        logging.basicConfig(handlers=[fh,ch], format=log_format_str, style='{') # configures the root logger
