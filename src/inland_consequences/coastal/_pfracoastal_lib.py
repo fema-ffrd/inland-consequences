@@ -8,7 +8,7 @@ import multiprocessing
 import os
 from re import sub
 
-logger = logging.getLogger(__main__)
+logger = logging.getLogger(__name__)
 
 class _PFRACoastal_Lib:
     def __init__(self) -> object:

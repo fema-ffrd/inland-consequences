@@ -9,7 +9,7 @@ import multiprocessing
 import os
 from ._pfracoastal_lib import _PFRACoastal_Lib
 
-logger = logging.getLogger(__main__)
+logger = logging.getLogger(__name__)
 
 class Inputs:
     BLDG_ATTR_MAP_DATA = {
