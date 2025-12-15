@@ -125,11 +125,11 @@ class _PFRACoastal_Lib:
     #	attachWSELtoBUILDING3()
     # calls:
     #	NULL
-    def get_NNx(b_coords: np.ndarray, a_coord: np.ndarray, x=3) -> pd.DataFrame:
-        nn_dist = scipy.spatial.distance_matrix(b_coords, a_coord, p=2)
-        nn_res = pd.DataFrame(nn_dist, columns='NN.dist')
+    def get_NNx(self, b_coords: np.ndarray, a_coord: np.ndarray, x=3) -> pd.DataFrame:
+        nn_dist = scipy.spatial.distance.cdist(b_coords, a_coord, metric='euclidean')
+        nn_res = pd.DataFrame(nn_dist, columns=['NN.dist'])
         nn_res['rowid'] = list(range(1, nn_dist.shape[0]+1))
         
         #get rowids for the three min distances
-        nn_res = nn_res.sort_values(by='NN.dist', axis=0, inplace=True).head(x)
-        return nn_res
+        nn_res.sort_values(by='NN.dist', axis=0, inplace=True)
+        return nn_res.head(x)
