@@ -108,3 +108,76 @@ class _PFRACoastal_Lib:
     #	NULL
     def write_log(self, txt: str) -> None:
         logger.info(txt)
+    
+    ####################
+    # validateBuildingAttr()
+    #	function to test the attribute table of a building dataset in order 
+    #	to determine if 
+    #		the required fields exist,
+    #		the fields contain the correct type (numeric vs character) of data
+    #		field contains valid data
+    #	If required fields are missing, they will be created an populated with default value
+    #	If required fields contain unexpected values (inc NULLS), they will be replaced by the default
+    #	*The table bldg.attr.map contains the information about required field names, domains, and defaults
+    # In:
+    #	intab = attribute table from building dataset
+    # Out:
+    #	validated building attribute table 
+    # called by:
+    #	formatBuildings()
+    # calls:
+    #	NULL
+    def validateBuildingAttr(self, inputs: Inputs, intab: pd.DataFrame) -> pd.DataFrame:
+        self.write_log(".start b validation.")
+        
+        # initialize attribute error flags as FALSE
+        val_flag = [False for i in range(inputs.bldg_attr_map.shape[0])]
+        
+        self.write_log(".casting numeric fields.")
+        # Replace non-numeric values for numeric-type attributes with the default value
+        sel = inputs.bldg_attr_map.query("TYPE == 'int32' and CHECK == 1").index.to_list()
+        for i in sel:
+            intab.iloc[:,i] = intab.iloc[:,i].astype('int32')
+            self.write_log(f".Check {inputs.bldg_attr_map.at[i,"IN"]}."))
+            
+            pre_mask_col = intab.iloc[:,i]
+            intab.iloc[:,i].mask(intab.iloc[:,i].isna(), inputs.bldg_attr_map["DEF"].astype(inputs.bldg_attr_map.at[i,"TYPE"]).at[i], inplace=True)
+            post_mask_col = intab.iloc[:,i]
+            
+            if pre_mask_col.ne(post_mask_col, fill_value=-8888): # fill value here is arbitrary, just can't be a default value
+                val_flag[i] = True
+        
+        self.write_log(".checking domained fields.")
+        # Fix Domained Variables
+        sel = inputs.bldg_attr_map.query("pd.notna(DOM)==True").index.to_list()
+        for i in sel:
+            self.write_log(f".Check {inputs.bldg_attr_map.at[i,"IN"]}."))
+            pre_where_col = intab.iloc[:,i]
+            intab.iloc[:,i].where(intab.iloc[:,i].isin(list(inputs.bldg_attr_map.at[i,"DOM"])), inputs.bldg_attr_map["DEF"].astype(inputs.bldg_attr_map.at[i,"TYPE"]).at[i], inplace=True)
+            post_where_col = intab.iloc[:,i]
+            
+            if pre_where_col.ne(post_where_col, fill_value=-8888): # fill value here is arbitrary, just can't be a default value
+                val_flag[i] = True
+        
+        bsmt_finish_type_index = inputs.bldg_attr_map.query("DESC == 'basement finish type'").index[0]
+        fndn_type_index = inputs.bldg_attr_map.query("DESC == 'foundation type'").index[0]
+        # check if basements have non basement finishes
+        sel = intab.query(f"{intab.columns[bsmt_finish_type_index]} == 0 and {intab.columns[fndn_type_index]} == 2").index.to_list()
+        if len(sel) > 0:
+            self.write_log(f"Warning. {len(sel)} instances of foundation type 2 incorrectly paired with basement finish type 0. Substituting basement finish type 1.")
+            intab.iloc[sel,bsmt_finish_type_index] = 1
+        
+        # check if non-basements have basement finishes
+        sel = intab.query(f"{intab.columns[bsmt_finish_type_index]} != 0 and {intab.columns[fndn_type_index]} != 2").index.to_list()
+        if len(sel) > 0:
+            self.write_log(f"Warning. {len(sel)} instances of basement finish types 1,2 incorrectly paired with foundation type other than 2. Substituting basement finish type 0.")
+            intab.iloc[sel,bsmt_finish_type_index] = 0
+        
+        # report valflags
+        self.write_log(".snitching on b.")
+        for i in range(len(val_flag)):
+            if val_flag[i]:
+                self.write_log(f"Invalid values of building attribute {inputs.bldg_attr_map.at[i,"IN"]} found. Replaced with value {inputs.bldg_attr_map.loc[i,"DEF"]}")
+        
+        self.write_log(".finish b validation.")
+        return intab
