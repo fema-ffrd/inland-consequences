@@ -16,5 +16,7 @@ nav:
     - index.md
   - Methodlogy:
     - inventory_methodology.md
+    - inland_methodology.md
   - Technical Implementation:
     - building_inventories.md
+    - AAL_tech_implementation.md
