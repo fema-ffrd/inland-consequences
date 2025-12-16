@@ -18,7 +18,7 @@ class Inputs:
         "OUT":["BID", "ORIG_ID", "BLDG_DED", "BLDG_LIM", "BLDG_VAL", "CNT_DED", "CNT_LIM", "CNT_VALUE", "STORY", "FOUND", "BASEFIN", "FFH", "DEMFT"],
         "DESC":["new building id", "source building id", "building deductible", "building limit", "building value", "content deductible", "content limit", "content value", "number of stories", "foundation type", "basement finish type", "first floor height", "ground elevation"],
         "DEF":["-1", "-1", "2000", "200000", "200000", "1000", "100000", "100000", "1", "8", "0", "1", "-9999"],
-        "TYPE":['int32', 'object', 'int32', 'int32', 'int32', 'int32', 'int32', 'int32', 'int32', 'int32', 'int32', 'int32', 'int32'],
+        "TYPE":['int32', 'object', 'float64', 'float64', 'float64', 'float64', 'float64', 'float64', 'float64', 'float64', 'float64', 'float64', 'float64'],
         "CHECK":[0,0,1,1,1,1,1,1,1,1,1,1,1],
         "HDDF":[0,0,0,0,0,0,0,0,1,1,0,1,0],
         "TDDF":[0,0,0,0,0,0,0,0,1,1,1,0,0],

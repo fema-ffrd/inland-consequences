@@ -1,5 +1,6 @@
 import rasterio
 import geopandas as gpd
+import pandas as pd
 import numpy as np
 import scipy
 import logging
@@ -127,7 +128,7 @@ class _PFRACoastal_Lib:
     #	formatBuildings()
     # calls:
     #	NULL
-    def validateBuildingAttr(self, inputs: Inputs, intab: pd.DataFrame) -> pd.DataFrame:
+    def validateBuildingAttr(self, inputs, intab: pd.DataFrame) -> pd.DataFrame:
         self.write_log(".start b validation.")
         
         # initialize attribute error flags as FALSE
@@ -135,40 +136,44 @@ class _PFRACoastal_Lib:
         
         self.write_log(".casting numeric fields.")
         # Replace non-numeric values for numeric-type attributes with the default value
-        sel = inputs.bldg_attr_map.query("TYPE == 'int32' and CHECK == 1").index.to_list()
+        sel = inputs.bldg_attr_map.query("CHECK == 1 and (TYPE == 'int32' or TYPE == 'float64')").index.to_list()
         for i in sel:
-            intab.iloc[:,i] = intab.iloc[:,i].astype('int32')
-            self.write_log(f".Check {inputs.bldg_attr_map.at[i,"IN"]}."))
+            intab.iloc[:,i] = intab.iloc[:,i].astype(inputs.bldg_attr_map.at[i,"TYPE"], errors='ignore')
+            self.write_log(f".Check {inputs.bldg_attr_map.at[i,"IN"]}.")
             
             pre_mask_col = intab.iloc[:,i]
-            intab.iloc[:,i].mask(intab.iloc[:,i].isna(), inputs.bldg_attr_map["DEF"].astype(inputs.bldg_attr_map.at[i,"TYPE"]).at[i], inplace=True)
+            intab.iloc[:,i] = intab.iloc[:,i].mask(intab.iloc[:,i].isna(), inputs.bldg_attr_map["DEF"].astype(inputs.bldg_attr_map.at[i,"TYPE"]).at[i])
             post_mask_col = intab.iloc[:,i]
             
-            if pre_mask_col.ne(post_mask_col, fill_value=-8888): # fill value here is arbitrary, just can't be a default value
+            if pre_mask_col.ne(post_mask_col, fill_value=-8888).any(): # fill value here is arbitrary, just can't be a default value
                 val_flag[i] = True
         
         self.write_log(".checking domained fields.")
         # Fix Domained Variables
-        sel = inputs.bldg_attr_map.query("pd.notna(DOM)==True").index.to_list()
+        sel = inputs.bldg_attr_map[inputs.bldg_attr_map["DOM"].notna()].index.to_list()
         for i in sel:
-            self.write_log(f".Check {inputs.bldg_attr_map.at[i,"IN"]}."))
+            self.write_log(f".Check {inputs.bldg_attr_map.at[i,"IN"]}.")
+
+            domain_val_list = [int(char) if char.isnumeric() else '' for char in list(inputs.bldg_attr_map.at[i,"DOM"]) if char.isnumeric()]
+
             pre_where_col = intab.iloc[:,i]
-            intab.iloc[:,i].where(intab.iloc[:,i].isin(list(inputs.bldg_attr_map.at[i,"DOM"])), inputs.bldg_attr_map["DEF"].astype(inputs.bldg_attr_map.at[i,"TYPE"]).at[i], inplace=True)
+            intab.iloc[:,i] = intab.iloc[:,i].where(intab.iloc[:,i].isin(domain_val_list), inputs.bldg_attr_map["DEF"].astype(inputs.bldg_attr_map.at[i,"TYPE"]).at[i])
             post_where_col = intab.iloc[:,i]
             
-            if pre_where_col.ne(post_where_col, fill_value=-8888): # fill value here is arbitrary, just can't be a default value
+            if pre_where_col.ne(post_where_col, fill_value=-8888).any(): # fill value here is arbitrary, just can't be a default value
                 val_flag[i] = True
         
         bsmt_finish_type_index = inputs.bldg_attr_map.query("DESC == 'basement finish type'").index[0]
         fndn_type_index = inputs.bldg_attr_map.query("DESC == 'foundation type'").index[0]
+        
         # check if basements have non basement finishes
-        sel = intab.query(f"{intab.columns[bsmt_finish_type_index]} == 0 and {intab.columns[fndn_type_index]} == 2").index.to_list()
+        sel = intab.query(f"({intab.columns[bsmt_finish_type_index]}==0) and ({intab.columns[fndn_type_index]}==2)").index.to_list()
         if len(sel) > 0:
             self.write_log(f"Warning. {len(sel)} instances of foundation type 2 incorrectly paired with basement finish type 0. Substituting basement finish type 1.")
             intab.iloc[sel,bsmt_finish_type_index] = 1
         
         # check if non-basements have basement finishes
-        sel = intab.query(f"{intab.columns[bsmt_finish_type_index]} != 0 and {intab.columns[fndn_type_index]} != 2").index.to_list()
+        sel = intab.query(f"({intab.columns[bsmt_finish_type_index]}!=0) and ({intab.columns[fndn_type_index]}!=2)").index.to_list()
         if len(sel) > 0:
             self.write_log(f"Warning. {len(sel)} instances of basement finish types 1,2 incorrectly paired with foundation type other than 2. Substituting basement finish type 0.")
             intab.iloc[sel,bsmt_finish_type_index] = 0
@@ -177,7 +182,7 @@ class _PFRACoastal_Lib:
         self.write_log(".snitching on b.")
         for i in range(len(val_flag)):
             if val_flag[i]:
-                self.write_log(f"Invalid values of building attribute {inputs.bldg_attr_map.at[i,"IN"]} found. Replaced with value {inputs.bldg_attr_map.loc[i,"DEF"]}")
+                self.write_log(f"Invalid values of building attribute {inputs.bldg_attr_map.at[i,"IN"]} found. Replaced with value {inputs.bldg_attr_map.at[i,"DEF"]}")
         
         self.write_log(".finish b validation.")
         return intab
