@@ -8,6 +8,7 @@ import typing
 import multiprocessing
 import os
 from re import sub
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -133,3 +134,81 @@ class _PFRACoastal_Lib:
         #get rowids for the three min distances
         nn_res.sort_values(by='NN.dist', axis=0, inplace=True)
         return nn_res.head(x)
+    
+    ####################
+    # haltscript()
+    #	function to halt the execution of the script.
+    # called by:
+    # 	formatSurge()
+    #	formatBuildings()
+    # calls:
+    #	NULL
+    def haltscript(self) -> None:
+        self.write_log(".stopping execution.")
+        logging.shutdown()
+        sys.exit("Script was halted.")
+    
+    ####################
+    # formatBuildings()
+    #	given a path to a building shapefile,
+    #	the shapefile will be read/loaded, with attributes formatted and validated
+    # In:
+    #	inputs = instance of pfracoastal.Inputs
+    # Out:
+    #	Geopandas GeodataFrame of building dataset
+    # called by:
+    #	main()
+    # calls:
+    #	validateBuildingAttr()
+    #	haltscript()
+    def formatBuildings(self, inputs) -> gpd.GeoDataFrame:
+        # load buildings shape
+        self.write_log(".loading building shapefile.")
+        try:
+            b_shp = gpd.read_file(inputs.bldg_path)
+            shp_crs = b_shp.crs
+        except Exception:
+            cond = sys.exc_info()[1]
+            self.write_log(f"Critical Error loading building shapefile, {inputs.bldg_path}")
+            self.write_log("Here's the original error message:")
+            self.write_log(cond.args[0])
+            self.haltscript()
+        
+        self.write_log(".reformatting building table.")
+        # pull attribute table
+        b_tab = b_shp.to_wkb()
+        
+        # get geometry data from attribute table
+        geom_data_wkb = b_tab.loc[:,'geometry']
+        
+        # add unique building ID
+        b_tab.loc["BID"] = list(range(1,b_tab.shape[0]+1))
+        
+        # find required attributes and make them if they dont exist
+        for att in inputs.bldg_attr_map["IN"].to_list():
+            if att not in b_tab.columns:
+                self.write_log(f".creating undefined attribute, {att}")
+                b_tab[att] = [np.nan for i in range(b_tab.shape[0])]
+        
+        # filter and sort incoming attributes
+        b_tab = b_tab.loc[:,inputs.bldg_attr_map["IN"].to_list()]
+        
+        # map new attribute names
+        b_tab = b_tab.rename(columns={new:old for new,old in list(zip(inputs.bldg_attr_map["IN"].to_list(), inputs.bldg_attr_map["OUT"].to_list()))})
+        
+        # validate
+        self.write_log(".validate buildings.")
+        try:
+            b_tab = self.validateBuildingAttr(inputs, b_tab)
+        except:
+            cond = sys.exc_info()[1]
+            self.write_log(f"Critical Error validating shapefile, {inputs.bldg_path}")
+            self.write_log("Here's the original error message:")
+            self.write_log(cond.args[0])
+            self.haltscript()
+        
+        # export buildings to GeoDataFrame
+        self.write_log(".packaging buildings.")
+        geom_data_gs = gpd.GeoSeries.from_wkb(geom_data_wkb, crs=shp_crs)
+        out_gdf = gpd.GeoDataFrame(b_tab, geometry=geom_data_gs, crs=shp_crs)
+        return out_gdf
