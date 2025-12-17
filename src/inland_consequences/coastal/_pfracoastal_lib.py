@@ -138,7 +138,7 @@ class _PFRACoastal_Lib:
         # Replace non-numeric values for numeric-type attributes with the default value
         sel = inputs.bldg_attr_map.query("CHECK == 1 and (TYPE == 'int32' or TYPE == 'float64')").index.to_list()
         for i in sel:
-            intab.iloc[:,i] = intab.iloc[:,i].astype(inputs.bldg_attr_map.at[i,"TYPE"], errors='ignore')
+            intab.iloc[:,i] = intab.iloc[:,i].astype(inputs.bldg_attr_map.at[i,"TYPE"])
             self.write_log(f".Check {inputs.bldg_attr_map.at[i,"IN"]}.")
             
             pre_mask_col = intab.iloc[:,i]

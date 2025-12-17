@@ -1,5 +1,4 @@
 from inland_consequences.coastal import _pfracoastal_lib, pfracoastal
-import pandas as pd
 import geopandas as gpd
 import os.path as pth
 
@@ -26,7 +25,4 @@ def test_validateBuildingAttr():
     test_intab.rename(columns=name_dict, inplace=True)
 
     ret = lib.validateBuildingAttr(test_inputs_obj, test_intab)
-    print(ret.eq(correct_output_tab).all())
-    #print(ret.loc[:,["STORY","FOUND","BASEFIN"]])
-    #print(correct_output_tab.loc[:,["STORY","FOUND","BASEFIN"]])
     assert ret.eq(correct_output_tab).all().all() == True
