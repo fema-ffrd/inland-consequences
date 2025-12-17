@@ -173,8 +173,9 @@ class _PFRACoastal_Lib:
         return ''.join([str(digit) for digit in (digit1,digit2,digit3,digit4)])
     # Example,
     ## 
-    # > tempstories <- 2
-    # > tempfound <- 9
-    # > tempwave <- 3.1 
-    # > DecideDDF4 (tempstories, tempfound, tempwave)
+    # > tempstories = 2
+    # > tempfound = 9
+    # > tempbase = 0
+    # > tempwave = 3.1 
+    # > DecideDDF4 (tempstories, tempfound, tempbase, tempwave)
     ## [1] "2903"
