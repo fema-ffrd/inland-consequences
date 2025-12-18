@@ -210,3 +210,49 @@ class _PFRACoastal_Lib:
         #get rowids for the three min distances
         nn_res.sort_values(by='NN.dist', axis=0, inplace=True)
         return nn_res.head(x)
+    
+    #####################
+    # DecideDDF_Task4()
+    #	For use with CPFRA DDFs only
+    #	decision tree to determine an appropriate DDF to use in high wave scenarios given foundation type
+    # in:
+    #	numStor = Number of stories	
+    #	fndtn = foundation type = {2 = basement; 4 = crawlspace; 6 = pier; 7 = fill or wall; 8 = slab; 9 = pile}
+    #	basefin = basement finish, if basement exists = {2 = finished; 1 = no finish; 0 = no basement}
+    #	wvh = estimated breaking wave height (ft)
+    # out:
+    #	depth damage function ID to be used
+    # called by:
+    #	assign_TASK4_DDFs()
+    # calls:
+    #	NULL
+    def DecideDDF_Task4(self, numStor:int, fndtn:int, basefin:int, wvh:float) -> str:        
+        # check basefin
+        chk = lambda x: x if x in (0,1,2) else 0
+        basefin = chk(basefin)
+        
+        # determine 1st digit
+        calc_digit1 = lambda x: 1 if x==1 else 2
+        digit1 = calc_digit1(numStor)
+        
+        # determine 2nd digit
+        calc_digit2 = lambda x: 9 if x==9 else 2 if x==2 else 4
+        digit2 = calc_digit2(fndtn)
+        
+        # determine 3rd digit
+        calc_digit3 = lambda x,y: 1 if x==2 and y==0 else x if x==2 and y!=0 else 0
+        digit3 = calc_digit3(fndtn, basefin)
+        
+        # determine 4th digit
+        calc_digit4 = lambda x: 0 if x<0 else 1 if x<1 else 2 if x<3 else 3
+        digit4 = calc_digit4(wvh)
+        
+        return ''.join([str(digit) for digit in (digit1,digit2,digit3,digit4)])
+    # Example,
+    ## 
+    # > tempstories = 2
+    # > tempfound = 9
+    # > tempbase = 0
+    # > tempwave = 3.1 
+    # > DecideDDF4 (tempstories, tempfound, tempbase, tempwave)
+    ## [1] "2903"
