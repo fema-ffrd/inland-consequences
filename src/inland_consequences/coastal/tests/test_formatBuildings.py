@@ -16,4 +16,4 @@ def test_formatBuildings():
     correct_out_gdf = gpd.read_file(correct_output_shp_path)
 
     ret = lib.formatBuildings(test_inputs)
-    assert ret == correct_out_gdf
+    assert ret.eq(correct_out_gdf).all().all()
