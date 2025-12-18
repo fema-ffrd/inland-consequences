@@ -187,3 +187,26 @@ class _PFRACoastal_Lib:
         
         self.write_log(".finish b validation.")
         return intab
+    
+    # get_NNx()
+    # 	given single point coordinate (a), 
+    #		find the nearest x points of a collection of point coordinates (b)
+    #	Points should be in same CRS/projection
+    # IN:
+    #	b.coords = nx2 matrix of x,y coordinates for n points
+    #	a.coord = a 1x2 matrix of a single x,y coordinate
+    #	x = number of nearest neights to find, default = 3
+    # OUT:
+    #	(x)by2 df with row number of nearest point
+    # called by:
+    #	attachWSELtoBUILDING3()
+    # calls:
+    #	NULL
+    def get_NNx(self, b_coords: np.ndarray, a_coord: np.ndarray, x=3) -> pd.DataFrame:
+        nn_dist = scipy.spatial.distance.cdist(b_coords, a_coord, metric='euclidean')
+        nn_res = pd.DataFrame(nn_dist, columns=['NN.dist'])
+        nn_res['rowid'] = list(range(1, nn_dist.shape[0]+1))
+        
+        #get rowids for the three min distances
+        nn_res.sort_values(by='NN.dist', axis=0, inplace=True)
+        return nn_res.head(x)
