@@ -119,8 +119,9 @@ class _PFRACoastal_Lib:
     #		field contains valid data
     #	If required fields are missing, they will be created an populated with default value
     #	If required fields contain unexpected values (inc NULLS), they will be replaced by the default
-    #	*The table bldg.attr.map contains the information about required field names, domains, and defaults
+    #	*The table Inputs.bldg_attr_map contains the information about required field names, domains, and defaults
     # In:
+    #   inputs = instance of pfracoastal.Inputs
     #	intab = attribute table from building dataset
     # Out:
     #	validated building attribute table 
