@@ -112,6 +112,83 @@ class _PFRACoastal_Lib:
         logger.info(txt)
     
     ####################
+    # validateBuildingAttr()
+    #	function to test the attribute table of a building dataset in order 
+    #	to determine if 
+    #		the required fields exist,
+    #		the fields contain the correct type (numeric vs character) of data
+    #		field contains valid data
+    #	If required fields are missing, they will be created an populated with default value
+    #	If required fields contain unexpected values (inc NULLS), they will be replaced by the default
+    #	*The table Inputs.bldg_attr_map contains the information about required field names, domains, and defaults
+    # In:
+    #   inputs = instance of pfracoastal.Inputs
+    #	intab = attribute table from building dataset
+    # Out:
+    #	validated building attribute table 
+    # called by:
+    #	formatBuildings()
+    # calls:
+    #	NULL
+    def validateBuildingAttr(self, inputs, intab: pd.DataFrame) -> pd.DataFrame:
+        self.write_log(".start b validation.")
+        
+        # initialize attribute error flags as FALSE
+        val_flag = [False for i in range(inputs.bldg_attr_map.shape[0])]
+        
+        self.write_log(".casting numeric fields.")
+        # Replace non-numeric values for numeric-type attributes with the default value
+        sel = inputs.bldg_attr_map.query("CHECK == 1 and (TYPE == 'int32' or TYPE == 'float64')").index.to_list()
+        for i in sel:
+            intab.iloc[:,i] = intab.iloc[:,i].astype(inputs.bldg_attr_map.at[i,"TYPE"])
+            self.write_log(f".Check {inputs.bldg_attr_map.at[i,"IN"]}.")
+            
+            pre_mask_col = intab.iloc[:,i]
+            intab.iloc[:,i] = intab.iloc[:,i].mask(intab.iloc[:,i].isna(), inputs.bldg_attr_map["DEF"].astype(inputs.bldg_attr_map.at[i,"TYPE"]).at[i])
+            post_mask_col = intab.iloc[:,i]
+            
+            if pre_mask_col.ne(post_mask_col, fill_value=-8888).any(): # fill value here is arbitrary, just can't be a default value
+                val_flag[i] = True
+        
+        self.write_log(".checking domained fields.")
+        # Fix Domained Variables
+        sel = inputs.bldg_attr_map[inputs.bldg_attr_map["DOM"].notna()].index.to_list()
+        for i in sel:
+            self.write_log(f".Check {inputs.bldg_attr_map.at[i,"IN"]}.")
+
+            domain_val_list = [int(char) if char.isnumeric() else '' for char in list(inputs.bldg_attr_map.at[i,"DOM"]) if char.isnumeric()]
+
+            pre_where_col = intab.iloc[:,i]
+            intab.iloc[:,i] = intab.iloc[:,i].where(intab.iloc[:,i].isin(domain_val_list), inputs.bldg_attr_map["DEF"].astype(inputs.bldg_attr_map.at[i,"TYPE"]).at[i])
+            post_where_col = intab.iloc[:,i]
+            
+            if pre_where_col.ne(post_where_col, fill_value=-8888).any(): # fill value here is arbitrary, just can't be a default value
+                val_flag[i] = True
+        
+        bsmt_finish_type_index = inputs.bldg_attr_map.query("DESC == 'basement finish type'").index[0]
+        fndn_type_index = inputs.bldg_attr_map.query("DESC == 'foundation type'").index[0]
+        
+        # check if basements have non basement finishes
+        sel = intab.query(f"({intab.columns[bsmt_finish_type_index]}==0) and ({intab.columns[fndn_type_index]}==2)").index.to_list()
+        if len(sel) > 0:
+            self.write_log(f"Warning. {len(sel)} instances of foundation type 2 incorrectly paired with basement finish type 0. Substituting basement finish type 1.")
+            intab.iloc[sel,bsmt_finish_type_index] = 1
+        
+        # check if non-basements have basement finishes
+        sel = intab.query(f"({intab.columns[bsmt_finish_type_index]}!=0) and ({intab.columns[fndn_type_index]}!=2)").index.to_list()
+        if len(sel) > 0:
+            self.write_log(f"Warning. {len(sel)} instances of basement finish types 1,2 incorrectly paired with foundation type other than 2. Substituting basement finish type 0.")
+            intab.iloc[sel,bsmt_finish_type_index] = 0
+        
+        # report valflags
+        self.write_log(".snitching on b.")
+        for i in range(len(val_flag)):
+            if val_flag[i]:
+                self.write_log(f"Invalid values of building attribute {inputs.bldg_attr_map.at[i,"IN"]} found. Replaced with value {inputs.bldg_attr_map.at[i,"DEF"]}")
+        
+        self.write_log(".finish b validation.")
+        return intab
+    
     # get_NNx()
     # 	given single point coordinate (a), 
     #		find the nearest x points of a collection of point coordinates (b)
@@ -212,3 +289,49 @@ class _PFRACoastal_Lib:
         geom_data_gs = gpd.GeoSeries.from_wkb(geom_data_wkb, crs=shp_crs)
         out_gdf = gpd.GeoDataFrame(b_tab, geometry=geom_data_gs, crs=shp_crs)
         return out_gdf
+    
+    #####################
+    # DecideDDF_Task4()
+    #	For use with CPFRA DDFs only
+    #	decision tree to determine an appropriate DDF to use in high wave scenarios given foundation type
+    # in:
+    #	numStor = Number of stories	
+    #	fndtn = foundation type = {2 = basement; 4 = crawlspace; 6 = pier; 7 = fill or wall; 8 = slab; 9 = pile}
+    #	basefin = basement finish, if basement exists = {2 = finished; 1 = no finish; 0 = no basement}
+    #	wvh = estimated breaking wave height (ft)
+    # out:
+    #	depth damage function ID to be used
+    # called by:
+    #	assign_TASK4_DDFs()
+    # calls:
+    #	NULL
+    def DecideDDF_Task4(self, numStor:int, fndtn:int, basefin:int, wvh:float) -> str:        
+        # check basefin
+        chk = lambda x: x if x in (0,1,2) else 0
+        basefin = chk(basefin)
+        
+        # determine 1st digit
+        calc_digit1 = lambda x: 1 if x==1 else 2
+        digit1 = calc_digit1(numStor)
+        
+        # determine 2nd digit
+        calc_digit2 = lambda x: 9 if x==9 else 2 if x==2 else 4
+        digit2 = calc_digit2(fndtn)
+        
+        # determine 3rd digit
+        calc_digit3 = lambda x,y: 1 if x==2 and y==0 else x if x==2 and y!=0 else 0
+        digit3 = calc_digit3(fndtn, basefin)
+        
+        # determine 4th digit
+        calc_digit4 = lambda x: 0 if x<0 else 1 if x<1 else 2 if x<3 else 3
+        digit4 = calc_digit4(wvh)
+        
+        return ''.join([str(digit) for digit in (digit1,digit2,digit3,digit4)])
+    # Example,
+    ## 
+    # > tempstories = 2
+    # > tempfound = 9
+    # > tempbase = 0
+    # > tempwave = 3.1 
+    # > DecideDDF4 (tempstories, tempfound, tempbase, tempwave)
+    ## [1] "2903"
