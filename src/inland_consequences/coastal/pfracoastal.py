@@ -18,7 +18,7 @@ class Inputs:
         "OUT":["BID", "ORIG_ID", "BLDG_DED", "BLDG_LIM", "BLDG_VAL", "CNT_DED", "CNT_LIM", "CNT_VALUE", "STORY", "FOUND", "BASEFIN", "FFH", "DEMFT"],
         "DESC":["new building id", "source building id", "building deductible", "building limit", "building value", "content deductible", "content limit", "content value", "number of stories", "foundation type", "basement finish type", "first floor height", "ground elevation"],
         "DEF":["-1", "-1", "2000", "200000", "200000", "1000", "100000", "100000", "1", "8", "0", "1", "-9999"],
-        "TYPE":['np.int32', 'object', 'np.int32', 'np.int32', 'np.int32', 'np.int32', 'np.int32', 'np.int32', 'np.int32', 'np.int32', 'np.int32', 'np.int32', 'np.int32'],
+        "TYPE":['int32', 'object', 'int32', 'int32', 'int32', 'int32', 'int32', 'int32', 'int32', 'int32', 'int32', 'int32', 'float64'],
         "CHECK":[0,0,1,1,1,1,1,1,1,1,1,1,1],
         "HDDF":[0,0,0,0,0,0,0,0,1,1,0,1,0],
         "TDDF":[0,0,0,0,0,0,0,0,1,1,1,0,0],
@@ -38,8 +38,8 @@ class Inputs:
         use_cutoff=True, use_cutoff10=False, use_eWet=True, use_waves=True, use_twl=False, use_wavecut50=False, use_erosion=False,
         use_singleloss=False, use_insurance=False, use_contents=False, use_netcdf=False, use_outcsv=False, bddf_lut_path='',
         bldg_ddf_lut=None, cddf_lut_path=None, cont_ddf_lut=None, proj_prefix='', out_shp_path='',
-        GCB_fid='', GCB_Bded='', GCB_Blim='', GCB_Bval='', GCB_Cded='', GCB_Clim='', GCB_Cval='', GCB_Bsto='', GCB_Bfou='',
-        GCB_Bbfi='', GCB_Bffh='', GCB_Bdem='') -> object:
+        GCB_fid="location", GCB_Bded="BLDG_DED", GCB_Blim="BLDG_LIMIT", GCB_Bval="BLDG_VALUE", GCB_Cded="CNT_DED", 
+        GCB_Clim="CNT_LIM", GCB_Cval="CNT_VALUE", GCB_Bsto="NUM_STORIE", GCB_Bfou="foundation", GCB_Bbfi="BasementFi", GCB_Bffh="FIRST_FLOO", GCB_Bdem="DEMft") -> object:
         
         self.blabber = blabber
         self.use_heatmap = use_heatmap
@@ -230,7 +230,7 @@ class Inputs:
     
     @GCB_Bffh.setter
     def GCB_Bffh(self, val: str) -> None:
-        self.GCB_Bffh = val
+        self._GCB_Bffh = val
         self.bldg_attr_map.loc[11,"IN"] = val
     
     @property
@@ -239,7 +239,7 @@ class Inputs:
     
     @GCB_Bdem.setter
     def GCB_Bdem(self, val: str) -> None:
-        self.GCB_Bdem = val
+        self._GCB_Bdem = val
         self.bldg_attr_map.loc[12,"IN"] = val
 
 
