@@ -310,16 +310,19 @@ class _PFRACoastal_Lib:
         chk = lambda x: x if x in (0,1,2) else 0
         basefin = chk(basefin)
         
-        # determine 1st digit
+        ##determine 1st digit
+        # x = numStor
         calc_digit1 = lambda x: 1 if x==1 else 2
         digit1 = calc_digit1(numStor)
         
-        # determine 2nd digit
+        ##determine 2nd digit
+        # x = fndtn
         calc_digit2 = lambda x: 9 if x==9 else 2 if x==2 else 4
         digit2 = calc_digit2(fndtn)
         
-        # determine 3rd digit
-        calc_digit3 = lambda x,y: 1 if x==2 and y==0 else x if x==2 and y!=0 else 0
+        ##determine 3rd digit
+        # x = fndtn, y = basefin
+        calc_digit3 = lambda x,y: 1 if x==2 and y==0 else y if x==2 and y!=0 else 0
         digit3 = calc_digit3(fndtn, basefin)
         
         # determine 4th digit
@@ -336,48 +339,51 @@ class _PFRACoastal_Lib:
     # > DecideDDF4 (tempstories, tempfound, tempbase, tempwave)
     ## [1] "2903"
 
-#############
-# assign_TASK4_DDFs()
-# wrapper function to identify necessary fields in building table to determine the proper Task4 DDF 
-#	for each building.  And re-format results.
-# in: 
-#   inputs =
-#   bldgred_tab = bldg_tab with only the records corresponding to valid buildings
-# out:
-#	ddf.tab = table with a row corresonding to each row in the input bldg.tab, with fields:
-#		DDF1 = freshwater Task4 DDF ID
-#		DDF2 = saltwater, low wave (<1 ft) scenario Task4 DDF ID
-#		DDF3 = saltwater, med wave (>=1 and <3 ft) scenario Task4 DDF ID
-#		DDF4 = saltwater, high wave (>=3ft) scenario Task4 DDF ID
-# called by:
-#	main()
-# calls:
-#	DecideDDF_Task4()
-def assign_TASK4_DDFs(self, inputs, bldgred_tab: pd.DataFrame) -> pd.DataFrame:
-    # record the necessary building fields to determine Task4 DDFs
-    fieldIndecies = inputs.bldg_attr_map.query("TDDF == 1").index.to_list()
-    
-    self.write_log(".determining freshwater Task4 DDFs.")
-    ddf1 = bldgred_tab.iloc[:,fieldIndecies].apply(func=lambda x: self.DecideDDF_Task4(x.iat[0], x.iat[1], x.iat[2], -1), axis=1, result_type='reduce')
-    self.write_log(".determining low-wave Task4 DDFs.")
-    ddf2 = bldgred_tab.iloc[:,fieldIndecies].apply(func=lambda x: self.DecideDDF_Task4(x.iat[0], x.iat[1], x.iat[2], 0.5), axis=1, result_type='reduce')
-    
-    # if waves are used in analysis, identify a second high-wave DDF else just copy the low-wave DDF
-    if inputs.use_waves or inputs.use_twl:
-        self.write_log(".determining med-wave Task4 DDFs.")
-        ddf3 = bldgred_tab.iloc[:,fieldIndecies].apply(func=lambda x: self.DecideDDF_Task4(x.iat[0], x.iat[1], x.iat[2], 2), axis=1, result_type='reduce')
-        self.write_log(".determining high-wave Task4 DDFs.")
-        ddf4 = bldgred_tab.iloc[:,fieldIndecies].apply(func=lambda x: self.DecideDDF_Task4(x.iat[0], x.iat[1], x.iat[2], 4), axis=1, result_type='reduce')
-    else:
-        ddf3 = ddf2
-        ddf4 = ddf2
-    
-    ddf_data = {
-        "DDF1":ddf1,
-        "DDF2":ddf2,
-        "DDF3":ddf3,
-        "DDF4":ddf4
-    }
-    
-    ddf_tab = pd.DataFrame(ddf_data)
-    return ddf_tab
+    #############
+    # assign_TASK4_DDFs()
+    # wrapper function to identify necessary fields in building table to determine the proper Task4 DDF 
+    #	for each building.  And re-format results.
+    # in: 
+    #   inputs =
+    #   b_tab = bldg_tab with only the records corresponding to valid buildings
+    # out:
+    #	ddf.tab = table with a row corresonding to each row in the input bldg.tab, with fields:
+    #		DDF1 = freshwater Task4 DDF ID
+    #		DDF2 = saltwater, low wave (<1 ft) scenario Task4 DDF ID
+    #		DDF3 = saltwater, med wave (>=1 and <3 ft) scenario Task4 DDF ID
+    #		DDF4 = saltwater, high wave (>=3ft) scenario Task4 DDF ID
+    # called by:
+    #	main()
+    # calls:
+    #	DecideDDF_Task4()
+    def assign_TASK4_DDFs(self, inputs, b_tab: pd.DataFrame) -> pd.DataFrame:
+        # record the necessary building fields to determine Task4 DDFs
+        tddf_rows = inputs.bldg_attr_map.loc[inputs.bldg_attr_map["TDDF"]==1]
+        fieldIndecies = [b_tab.columns.get_loc(f) for f in tddf_rows.loc[:,"OUT"].to_list()]
+        
+        self.write_log(".determining freshwater Task4 DDFs.")
+        ddf1 = b_tab.iloc[:,fieldIndecies].apply(func=lambda x: self.DecideDDF_Task4(x.iat[0], x.iat[1], x.iat[2], -1), axis=1, result_type='reduce')
+
+        self.write_log(".determining low-wave Task4 DDFs.")
+        ddf2 = b_tab.iloc[:,fieldIndecies].apply(func=lambda x: self.DecideDDF_Task4(x.iat[0], x.iat[1], x.iat[2], 0.5), axis=1, result_type='reduce')
+        
+        # if waves are used in analysis, identify a second high-wave DDF else just copy the low-wave DDF
+        if inputs.use_waves or inputs.use_twl:
+            self.write_log(".determining med-wave Task4 DDFs.")
+            ddf3 = b_tab.iloc[:,fieldIndecies].apply(func=lambda x: self.DecideDDF_Task4(x.iat[0], x.iat[1], x.iat[2], 2), axis=1, result_type='reduce')
+            
+            self.write_log(".determining high-wave Task4 DDFs.")
+            ddf4 = b_tab.iloc[:,fieldIndecies].apply(func=lambda x: self.DecideDDF_Task4(x.iat[0], x.iat[1], x.iat[2], 4), axis=1, result_type='reduce')
+        else:
+            ddf3 = ddf2
+            ddf4 = ddf2
+        
+        ddf_data = {
+            "DDF1":ddf1,
+            "DDF2":ddf2,
+            "DDF3":ddf3,
+            "DDF4":ddf4
+        }
+        
+        ddf_tab = pd.DataFrame(ddf_data)
+        return ddf_tab
