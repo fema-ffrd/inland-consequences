@@ -2,23 +2,24 @@ from inland_consequences.coastal import _pfracoastal_lib, pfracoastal
 from os import path
 import geopandas as gpd
 import pandas as pd
+import pytest
 
-def test_assign_TASK4_DDFs():
+@pytest.fixture
+def inputs_obj():
     working_dir = path.abspath(path.dirname(__file__))
-
+    
     in_bldg_shp_path = path.join(working_dir, "_data/TEST_CALC/input/Calc_bldg_sample.shp")
     in_wav_shp_path = path.join(working_dir, "_data/TEST_CALC/output/Test1_WAV.shp")
     in_wse_shp_path = path.join(working_dir, "_data/TEST_CALC/output/Test1_WSE.shp")
 
-    lib = _pfracoastal_lib._PFRACoastal_Lib()
     # these properties are not what they would normally be set to if running main
-    inputs_obj = pfracoastal.Inputs(
-        bldg_path=in_bldg_shp_path, 
-        swelA_path=in_wse_shp_path,
-        use_waves=True,
-        waveA_path=in_wav_shp_path
-    )
-    
+    return pfracoastal.Inputs(bldg_path=in_bldg_shp_path, swelA_path=in_wse_shp_path, use_waves=True, waveA_path=in_wav_shp_path)
+
+
+@pytest.fixture
+def pre_processing_results(inputs_obj):
+    lib = _pfracoastal_lib._PFRACoastal_Lib()
+
     bldg_gdf = lib.formatBuildings(inputs_obj)
     bldg_geom = bldg_gdf[bldg_gdf.active_geometry_name]
     bldg_gdf_crs = bldg_gdf.crs
@@ -28,6 +29,7 @@ def test_assign_TASK4_DDFs():
     wse_tab = gpd.read_file(inputs_obj.swelA_path, ignore_geometry=True)
 
     # create extensible swel attribute map
+    working_dir = path.abspath(path.dirname(__file__))
     temp_tab = gpd.read_file(path.join(working_dir,"_data/TEST_CALC/input/Calc_SWL_BE_sample.shp"), ignore_geometry=True)
 
     #get all names that begin with 'e'
@@ -103,12 +105,26 @@ def test_assign_TASK4_DDFs():
     # add sort field because bldg.tab and bldg.coords are 1:1 and .tab might get jumbled in future merges or joins
     test_bldgred_tab["sort"] = [i for i in range(1, test_bldgred_tab.shape[0]+1)]
 
+    ret_tup = (test_bldgred_tab, wse_attr_map, val_gdf, swel_attr_map)
+    return ret_tup
+
+
+@pytest.fixture
+def assign_TASK4_DDFs_Result(inputs_obj, pre_processing_results) -> pd.DataFrame:
+    lib = _pfracoastal_lib._PFRACoastal_Lib()
+    
     # DDFS
 	# Assign DDFs to buildings
     # Select Four TASK4 DDFs, 1 for freshwater intrusion, 1 each for low-wave, med-wave, and 
 	# high-wave conditions
-    ret = lib.assign_TASK4_DDFs(inputs_obj, test_bldgred_tab)
+    return lib.assign_TASK4_DDFs(inputs_obj, pre_processing_results[0])
 
+
+@pytest.fixture
+def post_processing_result(pre_processing_results, assign_TASK4_DDFs_Result):
+    test_bldgred_tab, wse_attr_map, val_gdf, swel_attr_map = pre_processing_results
+    ret = assign_TASK4_DDFs_Result
+    
     # add DDF IDs as attributes to bldgred.tab
     test_bldgred_tab["DDF1"] = ret.loc[:,"DDF1"]
     test_bldgred_tab["DDF2"] = ret.loc[:,"DDF2"]
@@ -134,9 +150,17 @@ def test_assign_TASK4_DDFs():
 	# auto-convert NA to 0.
     test_prep_df = test_prep_gdf.to_wkb().drop(columns=test_prep_gdf.active_geometry_name)
     test_prep_df = test_prep_df.mask(test_prep_df.isna(), pd.to_numeric(swel_attr_map.iat[1,swel_attr_map.columns.get_loc("DEF")]))
+    
+    return test_prep_df
+
+
+def test_assign_TASK4_DDFs(post_processing_result):
+    working_dir = path.abspath(path.dirname(__file__))
 
     # check results
     comp_prep_shp_path = path.join(working_dir, "_data/TEST_CALC/output/Test1_PREP.shp")
     comp_prep_df = gpd.read_file(comp_prep_shp_path, ignore_geometry=True)
+
+    test_prep_df = post_processing_result
 
     assert test_prep_df.loc[:,["DDF1","DDF2","DDF3","DDF4"]].eq(comp_prep_df.loc[:,["DDF1","DDF2","DDF3","DDF4"]]).all().all()
