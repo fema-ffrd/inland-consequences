@@ -56,9 +56,9 @@ These probabilities are used as weights to combine the three wave-dependent dama
 
 $$
 D =
-\left(D_{3p} \cdot P_{3p}\right) +
-\left(D_{1\text{-}3} \cdot P_{1\text{-}3}\right) +
-\left(D_{\mathrm{lt1}} \cdot P_{\mathrm{lt1}}\right)
+\\left(D\_{3p} \\cdot P\_{3p}\\right) +
+\\left(D\_{1\\text{-}3} \\cdot P\_{1\\text{-}3}\\right) +
+\\left(D\_{\\mathrm{lt1}} \\cdot P\_{\\mathrm{lt1}}\\right)
 $$
 
 <!-- mdformat on -->
@@ -68,12 +68,12 @@ $$
 <!-- mdformat off -->
 
 - $D$ = composite percent damage at a given building flood depth
-- $D_{3p}$ = percent damage from the $\ge 3$ ft wave depth–damage function
-- $D_{1\text{-}3}$ = percent damage from the 1–3 ft wave depth–damage function
-- $D_{\mathrm{lt1}}$ = percent damage from the $<1$ ft wave depth–damage function
-- $P_{3p}$ = probability of $\ge 3$ ft wave conditions
-- $P_{1\text{-}3}$ = probability of 1–3 ft wave conditions
-- $P_{\mathrm{lt1}}$ = probability of $<1$ ft wave conditions
+- $D\_{3p}$ = percent damage from the $\\ge 3$ ft wave depth–damage function
+- $D\_{1\\text{-}3}$ = percent damage from the 1–3 ft wave depth–damage function
+- $D\_{\\mathrm{lt1}}$ = percent damage from the $\<1$ ft wave depth–damage function
+- $P\_{3p}$ = probability of $\\ge 3$ ft wave conditions
+- $P\_{1\\text{-}3}$ = probability of 1–3 ft wave conditions
+- $P\_{\\mathrm{lt1}}$ = probability of $\<1$ ft wave conditions
 
 <!-- mdformat on -->
 
@@ -112,7 +112,7 @@ The uncertainty associated with total water level (TWLe) is calculated by combin
 <!-- mdformat off -->
 
 $$
-\mathrm{TWLe} = \sqrt{(\mathrm{SWELe})^2 + (0.7 \cdot \mathrm{He})^2}
+\\mathrm{TWLe} = \\sqrt{(\\mathrm{SWELe})^2 + (0.7 \\cdot \\mathrm{He})^2}
 $$
 
 <!-- mdformat on -->
@@ -128,7 +128,7 @@ Flood depth uncertainty (BFDe) is calculated by combining these components using
 <!-- mdformat off -->
 
 $$
-\mathrm{BFDe} = \sqrt{(\mathrm{FFEe})^2 + (\mathrm{TWLe})^2}
+\\mathrm{BFDe} = \\sqrt{(\\mathrm{FFEe})^2 + (\\mathrm{TWLe})^2}
 $$
 
 <!-- mdformat on -->
@@ -168,17 +168,18 @@ The structure-level AAL is calculated as:
 <!-- mdformat off -->
 
 $$
-\mathrm{AAL} = \sum_{i=1}^{n-1}
-\left[
-(F_i - F_{i+1}) \cdot \frac{L_i + L_{i+1}}{2}
-\right]
-+ (F_n \cdot L_n)
-$$
+\\mathrm{AAL} = \\sum\_{i=1}^{n-1}
+\\left\[
+(F_i - F\_{i+1}) \\cdot \\frac{L_i + L\_{i+1}}{2}
+\\right\]
+
+- (F_n \\cdot L_n)
+  $$
 
 **Where:**
 
 - $n = N$, the total number of probabilistic events
-- $F_i = \dfrac{1}{\text{ith Probability}}$, the return period associated with event $i$
+- $F_i = \\dfrac{1}{\\text{ith Probability}}$, the return period associated with event $i$
 - $L_i$ = loss associated with event $i$
 
 <!-- mdformat on -->
