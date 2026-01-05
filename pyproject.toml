@@ -6,6 +6,7 @@ dependencies = [
   "mkdocs-macros-plugin",
   "mkdocs-include-markdown-plugin",
   "mdformat",
+  "pymdown-extensions",
   "pre-commit",
   "sphere-core",
   "sphere-data",
