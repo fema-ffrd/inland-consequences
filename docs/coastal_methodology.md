@@ -52,30 +52,22 @@ The Coastal Consequences Methodology uses a probabilistic blending approach to c
 
 These probabilities are used as weights to combine the three wave-dependent damage curves at each flood depth. The resulting composite damage value is calculated as:
 
-<!-- mdformat off -->
-
 $$
 D =
-\\left(D\_{3p} \\cdot P\_{3p}\\right) +
-\\left(D\_{1\\text{-}3} \\cdot P\_{1\\text{-}3}\\right) +
-\\left(D\_{\\mathrm{lt1}} \\cdot P\_{\\mathrm{lt1}}\\right)
+\left(D_{3p} \cdot P_{3p}\right) +
+\left(D_{1\text{-}3} \cdot P_{1\text{-}3}\right) +
+\left(D_{\mathrm{lt1}} \cdot P_{\mathrm{lt1}}\right)
 $$
-
-<!-- mdformat on -->
 
 **Where:**
 
-<!-- mdformat off -->
-
 - $D$ = composite percent damage at a given building flood depth
-- $D\_{3p}$ = percent damage from the $\\ge 3$ ft wave depth–damage function
-- $D\_{1\\text{-}3}$ = percent damage from the 1–3 ft wave depth–damage function
-- $D\_{\\mathrm{lt1}}$ = percent damage from the $\<1$ ft wave depth–damage function
-- $P\_{3p}$ = probability of $\\ge 3$ ft wave conditions
-- $P\_{1\\text{-}3}$ = probability of 1–3 ft wave conditions
-- $P\_{\\mathrm{lt1}}$ = probability of $\<1$ ft wave conditions
-
-<!-- mdformat on -->
+- $D_{3p}$ = percent damage from the $\ge 3$ ft wave depth–damage function
+- $D_{1\text{-}3}$ = percent damage from the 1–3 ft wave depth–damage function
+- $D_{\mathrm{lt1}}$ = percent damage from the $<1$ ft wave depth–damage function
+- $P_{3p}$ = probability of $\ge 3$ ft wave conditions
+- $P_{1\text{-}3}$ = probability of 1–3 ft wave conditions
+- $P_{\mathrm{lt1}}$ = probability of $<1$ ft wave conditions
 
 This process produces a single, depth-dependent damage curve that reflects both flood depth and uncertainty in wave conditions.
 
@@ -109,13 +101,9 @@ Uncertainty in total water level reflects uncertainty in both surge and wave con
 
 The uncertainty associated with total water level (TWLe) is calculated by combining the uncertainty in stillwater elevation (SWELe) and the uncertainty in controlling wave height (He), with a scaling factor applied to account for the conversion from controlling wave height to an equivalent breaking wave contribution consistent with the damage function formulation:
 
-<!-- mdformat off -->
-
 $$
-\\mathrm{TWLe} = \\sqrt{(\\mathrm{SWELe})^2 + (0.7 \\cdot \\mathrm{He})^2}
+\mathrm{TWLe} = \sqrt{(\mathrm{SWELe})^2 + (0.7 \cdot \mathrm{He})^2}
 $$
-
-<!-- mdformat on -->
 
 The coefficient of 0.7 represents the conversion from controlling wave height to breaking wave height used in coastal damage estimation.
 
@@ -125,13 +113,9 @@ Flood depth uncertainty represents variability in the estimated depth of inundat
 
 Flood depth uncertainty (BFDe) is calculated by combining these components using a root-sum-of-squares approach:
 
-<!-- mdformat off -->
-
 $$
-\\mathrm{BFDe} = \\sqrt{(\\mathrm{FFEe})^2 + (\\mathrm{TWLe})^2}
+\mathrm{BFDe} = \sqrt{(\mathrm{FFEe})^2 + (\mathrm{TWLe})^2}
 $$
-
-<!-- mdformat on -->
 
 where FFEe represents uncertainty in first-floor elevation and TWLe represents uncertainty in total water level.
 
@@ -168,18 +152,17 @@ The structure-level AAL is calculated as:
 <!-- mdformat off -->
 
 $$
-\\mathrm{AAL} = \\sum\_{i=1}^{n-1}
-\\left\[
-(F_i - F\_{i+1}) \\cdot \\frac{L_i + L\_{i+1}}{2}
-\\right\]
-
-- (F_n \\cdot L_n)
-  $$
+\mathrm{AAL} = \sum_{i=1}^{n-1}
+\left[
+(F_i - F_{i+1}) \cdot \frac{L_i + L_{i+1}}{2}
+\right]
++ (F_n \cdot L_n)
+$$
 
 **Where:**
 
 - $n = N$, the total number of probabilistic events
-- $F_i = \\dfrac{1}{\\text{ith Probability}}$, the return period associated with event $i$
+- $F_i = \dfrac{1}{\text{ith Probability}}$, the return period associated with event $i$
 - $L_i$ = loss associated with event $i$
 
 <!-- mdformat on -->
@@ -194,28 +177,28 @@ The existing tool provides a range of results output including a results, prep, 
 
 A shapefile of all building points with the fields described below:
 
-| Field Name | Description | Data Type |
-|----------|-------------|-----------|
-| FID | Sequential numeric ID starts at 0 | Object ID |
-| Shape | Point geometry | Geometry |
-| BID | Sequential numeric ID starts at 1 | Long |
-| ORIG_ID | Original NSI and Milliman ID | Text |
-| BLDG_DED | Building Deductible ($1,500 default) | Double |
-| BLDG_LIM | Building Limit ($200,000 default) | Double |
-| BLDG_VAL | Building Value (USD) | Double |
-| CNT_DED | Content Deductible ($1,000 default) | Double |
-| CNT_LIM | Content Limit ($100,000 default) | Double |
-| CNT_VALUE | Content Value (USD) | Double |
-| STORY | Number of stories | Double |
-| FOUND | Foundation type (2–9) | Double |
-| BASEFIN | Basement Finish Flag (0 or 1) | Double |
-| FFH | First floor height (feet) | Double |
-| DEMFT | Ground surface elevation (feet) | Double |
-| ANLYS | Analysis flag (0=no results, 1=included in analysis) | Double |
-| BAAL | Building AAL "Best Estimate" (USD) | Double |
-| BAALmin | Building minimum AAL (USD) | Double |
-| BAALmax | Building maximum AAL (USD) | Double |
-| FLAG_DF16 | Damage function flag (0 or 1) | Double |
+| Field Name | Description                                          | Data Type |
+| ---------- | ---------------------------------------------------- | --------- |
+| FID        | Sequential numeric ID starts at 0                    | Object ID |
+| Shape      | Point geometry                                       | Geometry  |
+| BID        | Sequential numeric ID starts at 1                    | Long      |
+| ORIG_ID    | Original NSI and Milliman ID                         | Text      |
+| BLDG_DED   | Building Deductible (\$1,500 default)                | Double    |
+| BLDG_LIM   | Building Limit (\$200,000 default)                   | Double    |
+| BLDG_VAL   | Building Value (USD)                                 | Double    |
+| CNT_DED    | Content Deductible (\$1,000 default)                 | Double    |
+| CNT_LIM    | Content Limit (\$100,000 default)                    | Double    |
+| CNT_VALUE  | Content Value (USD)                                  | Double    |
+| STORY      | Number of stories                                    | Double    |
+| FOUND      | Foundation type (2–9)                                | Double    |
+| BASEFIN    | Basement Finish Flag (0 or 1)                        | Double    |
+| FFH        | First floor height (feet)                            | Double    |
+| DEMFT      | Ground surface elevation (feet)                      | Double    |
+| ANLYS      | Analysis flag (0=no results, 1=included in analysis) | Double    |
+| BAAL       | Building AAL "Best Estimate" (USD)                   | Double    |
+| BAALmin    | Building minimum AAL (USD)                           | Double    |
+| BAALmax    | Building maximum AAL (USD)                           | Double    |
+| FLAG_DF16  | Damage function flag (0 or 1)                        | Double    |
 
 ### WSE Shapefile
 
@@ -243,39 +226,39 @@ A TAB folder contains a .csv for each building analyzed with detailed informatio
 
 Each loss table is a 202 row × 32 column table (including header row) that will contain the various necessary calculated values to derive building loss at each value of building flood depth from -4 feet to +16 feet by increments of 0.1 feet. The attributes of the table are described below:
 
-| FIELD | Sample VALUE | DESC |
-|------|--------------|------|
-| BID | 1234 | Unique integer building ID generated by code |
-| BFD | -1.9 | Depth of flood above first floor |
-| DEM | 10.696 | Elevation from DEM in feet, NAVD88 |
-| FFE | 11.696 | First Floor Elevation in feet, NAVD88 |
-| FFEe | 0 | Error associated with FFE |
-| TWL | 9.796 | Total Water Elevation in feet, NAVD88 |
-| TWLe | 1.603 | Error associated with TWL |
-| BFDe | 1.603 | Error associated with BFD |
-| RP | 138.168 | Return Period |
-| PVAL | 0.007237566 | Probability (1/RP) |
-| SWEL | 9.795997218 | SWEL in feet, NAVD88 |
-| SWELe | 1.60332847 | Error associated with SWEL |
-| WET | 0.287238001 | Probability that ground at building is flooded |
-| Hc | 0 | Conditional wave height in feet |
-| Hce | 0 | Error associated with Hc |
-| PWL1 | 1 | Probability of waves less than 1 foot |
-| PW13 | 0 | Probability of waves between 1 and 3 feet |
-| PWG3 | 0 | Probability of waves greater than 3 feet |
-| DDFfam | 2400 | Building's Coastal FFRD Depth-damage function family |
-| dfx1 | 0 | Damage from DDFx1 (%) |
-| dfx2 | 0.015 | Damage from DDFx2 (%) |
-| dfx3 | 0.031 | Damage from DDFx3 (%) |
-| DAMLw | 0 | Low Estimate Damage (%) |
-| DAMPr | 0 | BE Combined Damage (%) |
-| DAMUp | 0.05624 | High Estimate Damage (%) |
-| BVAL | 1008431 | Building replacement value ($) |
-| rLOSSLw | 0 | Raw Low Building Loss ($) |
-| rLOSSBE | 0 | Raw BE Building Loss ($) |
-| rLOSSUp | 56714 | Raw High Building Loss ($) |
-| Loss_Lw | 0 | Final Low Building Loss ($) |
-| Loss_BE | 0 | Final BE Building Loss ($) |
-| Loss_Up | 56714 | Final High Building Loss ($) |
+| FIELD   | Sample VALUE | DESC                                                 |
+| ------- | ------------ | ---------------------------------------------------- |
+| BID     | 1234         | Unique integer building ID generated by code         |
+| BFD     | -1.9         | Depth of flood above first floor                     |
+| DEM     | 10.696       | Elevation from DEM in feet, NAVD88                   |
+| FFE     | 11.696       | First Floor Elevation in feet, NAVD88                |
+| FFEe    | 0            | Error associated with FFE                            |
+| TWL     | 9.796        | Total Water Elevation in feet, NAVD88                |
+| TWLe    | 1.603        | Error associated with TWL                            |
+| BFDe    | 1.603        | Error associated with BFD                            |
+| RP      | 138.168      | Return Period                                        |
+| PVAL    | 0.007237566  | Probability (1/RP)                                   |
+| SWEL    | 9.795997218  | SWEL in feet, NAVD88                                 |
+| SWELe   | 1.60332847   | Error associated with SWEL                           |
+| WET     | 0.287238001  | Probability that ground at building is flooded       |
+| Hc      | 0            | Conditional wave height in feet                      |
+| Hce     | 0            | Error associated with Hc                             |
+| PWL1    | 1            | Probability of waves less than 1 foot                |
+| PW13    | 0            | Probability of waves between 1 and 3 feet            |
+| PWG3    | 0            | Probability of waves greater than 3 feet             |
+| DDFfam  | 2400         | Building's Coastal FFRD Depth-damage function family |
+| dfx1    | 0            | Damage from DDFx1 (%)                                |
+| dfx2    | 0.015        | Damage from DDFx2 (%)                                |
+| dfx3    | 0.031        | Damage from DDFx3 (%)                                |
+| DAMLw   | 0            | Low Estimate Damage (%)                              |
+| DAMPr   | 0            | BE Combined Damage (%)                               |
+| DAMUp   | 0.05624      | High Estimate Damage (%)                             |
+| BVAL    | 1008431      | Building replacement value (\$)                      |
+| rLOSSLw | 0            | Raw Low Building Loss (\$)                           |
+| rLOSSBE | 0            | Raw BE Building Loss (\$)                            |
+| rLOSSUp | 56714        | Raw High Building Loss (\$)                          |
+| Loss_Lw | 0            | Final Low Building Loss (\$)                         |
+| Loss_BE | 0            | Final BE Building Loss (\$)                          |
+| Loss_Up | 56714        | Final High Building Loss (\$)                        |
 
 Based on integration with the inland consequences framework, future development is likely to include a notebook interface where the user can highlight and select desired outputs and file types.
