@@ -327,7 +327,7 @@ class InlandFloodAnalysis:
             for prop in props
             if fm.get_field_name(prop) in gdf.columns and fm.get_field_name(prop) != prop
         }
-
+        
         # Rename in a lightweight way (returns a view/copy as needed) so we do
         # not re-create every column manually; this keeps column objects intact
         # where possible and maintains geometry on GeoDataFrame.
@@ -405,7 +405,7 @@ class InlandFloodAnalysis:
             SELECT b.ID AS building_id, x.damage_function_id
             FROM buildings b
             JOIN xref_structures x
-                ON b.occtype = x.occupancy_type
+                ON b.occupancy_type = x.occupancy_type
                 --AND b.BldgType = x.bldg_type
                 --AND b.DesignLevel = x.design_level
         '''
@@ -417,7 +417,7 @@ class InlandFloodAnalysis:
             SELECT b.ID AS building_id, x.damage_function_id
             FROM buildings b
             JOIN xref_contents x
-                ON b.occtype = x.occupancy_type
+                ON b.occupancy_type = x.occupancy_type
                 --AND b.BldgType = x.bldg_type
                 --AND b.DesignLevel = x.design_level
         '''
@@ -429,7 +429,7 @@ class InlandFloodAnalysis:
             SELECT b.ID AS building_id, x.damage_function_id
             FROM buildings b
             JOIN xref_inventory x
-                ON b.occtype = x.occupancy_type
+                ON b.occupancy_type = x.occupancy_type
                 --AND b.BldgType = x.bldg_type
                 --AND b.DesignLevel = x.design_level
         '''
@@ -640,8 +640,8 @@ class InlandFloodAnalysis:
             SELECT
                 b.ID,
                 d.return_period,
-                b.building_value * d.damage_percent_mean AS loss_mean,
-                b.building_value * d.damage_percent_std AS loss_std
+                b.building_cost * d.damage_percent_mean AS loss_mean,
+                b.building_cost * d.damage_percent_std AS loss_std
             FROM buildings b
             JOIN damage_function_statistics d ON b.ID = d.building_id
         '''

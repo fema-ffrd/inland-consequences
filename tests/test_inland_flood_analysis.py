@@ -2,8 +2,10 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import pytest
+
 import duckdb
 from unittest.mock import MagicMock
+from inland_consequences.nsi_buildings import NsiBuildings
 
 from inland_consequences.inland_flood_analysis import InlandFloodAnalysis
 from inland_consequences.raster_collection import RasterCollection
@@ -14,22 +16,25 @@ from sphere.core.schemas.abstract_vulnerability_function import AbstractVulnerab
 
 @pytest.fixture(scope="module")
 def mock_buildings():
-    """Mocks the buildings object to provide a small, fixed GeoDataFrame."""
+    """Provides a real NsiBuildings object with a small, fixed GeoDataFrame."""
     data = {
-        'ID': [1, 2, 3],
-        'occtype': ['RES1', 'RES2', 'RES3'],    
+        'target_fid': [1, 2, 3],
+        'occtype': ['RES1', 'RES2', 'RES3'],
+        'found_ht': [2.5, 3.0, 2.0],
+        'fndtype': [1, 2, 3],
+        'num_story': [1, 2, 1],
+        'sqft': [1000, 1500, 1200],
+        'val_struct': [100000.0, 200000.0, 300000.0],
+        'val_cont': [50000.0, 60000.0, 70000.0],
         'geometry': ['POINT (0 0)', 'POINT (1 1)', 'POINT (2 2)'],
-        'building_value': [100000.0, 200000.0, 300000.0],
     }
+
     gdf = gpd.GeoDataFrame(
-        pd.DataFrame(data), 
-        geometry=gpd.GeoSeries.from_wkt(data['geometry']), 
+        pd.DataFrame(data),
+        geometry=gpd.GeoSeries.from_wkt(data['geometry']),
         crs="EPSG:4326"
     )
-    # Mock the object the class expects
-    mock = MagicMock()
-    mock.gdf = gdf
-    return mock
+    return NsiBuildings(gdf)
 
 @pytest.fixture(scope="module")
 def mock_raster_collection():
