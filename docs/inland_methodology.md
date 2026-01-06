@@ -46,41 +46,41 @@ Occupancy type is a primary input used to select appropriate DDFs by grouping st
 
 **Table 1. Occupancy Types**
 
-| Occupancy Type | Description |
-|---------------|-------------|
-| RES1 | Single-family Dwelling |
-| RES2 | Mobile Home |
-| RES3A | Multi-Family Dwelling - Duplex |
-| RES3B | Multi-Family Dwelling - 3-4 Units |
-| RES3C | Multi-Family Dwelling - 5-9 Units |
-| RES3D | Multi-Family Dwelling - 10-19 Units |
-| RES3E | Multi-Family Dwelling - 20-49 Units |
-| RES3F | Multi-Family Dwelling - 50+ Units |
-| RES4 | Temporary Lodging |
-| RES5 | Institutional Dormitory |
-| RES6 | Nursing Home |
-| COM1 | Retail Trade |
-| COM2 | Wholesale Trade |
-| COM3 | Personal and Repair Services |
-| COM4 | Business / Professional / Technical Services |
-| COM5 | Depository Institutions (Banks) |
-| COM6 | Hospital |
-| COM7 | Medical Office / Clinic |
-| COM8 | Entertainment and Recreation |
-| COM9 | Theaters |
-| COM10 | Parking |
-| IND1 | Heavy Industrial |
-| IND2 | Light Industrial |
-| IND3 | Food, Drugs, and Chemicals |
-| IND4 | Metals and Minerals Processing |
-| IND5 | High Technology |
-| IND6 | Construction |
-| AGR1 | Agriculture |
-| REL1 | Church / Non-Profit |
-| GOV1 | General Services |
-| GOV2 | Emergency Response |
-| EDU1 | Schools and Libraries |
-| EDU2 | Colleges and Universities |
+| Occupancy Type | Description                                  |
+| -------------- | -------------------------------------------- |
+| RES1           | Single-family Dwelling                       |
+| RES2           | Mobile Home                                  |
+| RES3A          | Multi-Family Dwelling - Duplex               |
+| RES3B          | Multi-Family Dwelling - 3-4 Units            |
+| RES3C          | Multi-Family Dwelling - 5-9 Units            |
+| RES3D          | Multi-Family Dwelling - 10-19 Units          |
+| RES3E          | Multi-Family Dwelling - 20-49 Units          |
+| RES3F          | Multi-Family Dwelling - 50+ Units            |
+| RES4           | Temporary Lodging                            |
+| RES5           | Institutional Dormitory                      |
+| RES6           | Nursing Home                                 |
+| COM1           | Retail Trade                                 |
+| COM2           | Wholesale Trade                              |
+| COM3           | Personal and Repair Services                 |
+| COM4           | Business / Professional / Technical Services |
+| COM5           | Depository Institutions (Banks)              |
+| COM6           | Hospital                                     |
+| COM7           | Medical Office / Clinic                      |
+| COM8           | Entertainment and Recreation                 |
+| COM9           | Theaters                                     |
+| COM10          | Parking                                      |
+| IND1           | Heavy Industrial                             |
+| IND2           | Light Industrial                             |
+| IND3           | Food, Drugs, and Chemicals                   |
+| IND4           | Metals and Minerals Processing               |
+| IND5           | High Technology                              |
+| IND6           | Construction                                 |
+| AGR1           | Agriculture                                  |
+| REL1           | Church / Non-Profit                          |
+| GOV1           | General Services                             |
+| GOV2           | Emergency Response                           |
+| EDU1           | Schools and Libraries                        |
+| EDU2           | Colleges and Universities                    |
 
 #### Square Footage
 
@@ -94,29 +94,29 @@ For each combination of general building type, occupancy type, and square footag
 
 **Table 2. Expected Number of Stories for Attribute Combination**
 
-| General Building Type | Occupancy Type | Square Footage | Expected Number of Stories |
-|----------------------|----------------|----------------|----------------------------|
-| Wood | RES1, RES3A | All | 1-4 |
-| Wood | RES3B-F, RES4-6 | All | 1-4 |
-| Wood | COM1, COM9 | All | 1-2 |
-| Wood | COM1, COM9 | All | 3-6 |
-| Wood | COM2-8, COM10, IND1-6, REL1, AGR1, GOV1-2, EDU1-2 | All | 1-6 |
-| Masonry | RES1, RES3A | All | 1-7 |
-| Masonry | RES3B | All | 1-7 |
-| Masonry | COM1, COM9 | All | 1-2 |
-| Masonry | IND1, AGR1 | All | 1 |
-| Masonry | RES3C-F, RES4-6 | All | 1-30 |
-| Masonry | COM1, COM9 | All | 3-30 |
-| Masonry | IND1, AGR1 | All | 2-30 |
-| Masonry | COM2-8, COM10, IND2-6, REL1, GOV1-2, EDU1-2 | All | 1-30 |
-| Concrete | RES1, RES3A | All | 1-40 |
-| Concrete | RES3B-F, RES4-6 | All | 1-40 |
-| Concrete | COM1-10, IND1-6, REL1, AGR1, GOV1-2, EDU1-2 | All | 1-40 |
-| Steel | COM1-2, IND1-6, AGR1 | \<= 4,000 sf | 1 |
-| Steel | RES1, RES3A-F, RES4-6 | All | 1-108 |
-| Steel | COM1-2, IND1-6, AGR1 | > 4,000 sf | 1-108 |
-| Steel | COM3-10, REL1, GOV1-2, EDU1-2 | All | 1-108 |
-| Manufactured Home | RES2 | All | 1 |
+| General Building Type | Occupancy Type                                    | Square Footage | Expected Number of Stories |
+| --------------------- | ------------------------------------------------- | -------------- | -------------------------- |
+| Wood                  | RES1, RES3A                                       | All            | 1-4                        |
+| Wood                  | RES3B-F, RES4-6                                   | All            | 1-4                        |
+| Wood                  | COM1, COM9                                        | All            | 1-2                        |
+| Wood                  | COM1, COM9                                        | All            | 3-6                        |
+| Wood                  | COM2-8, COM10, IND1-6, REL1, AGR1, GOV1-2, EDU1-2 | All            | 1-6                        |
+| Masonry               | RES1, RES3A                                       | All            | 1-7                        |
+| Masonry               | RES3B                                             | All            | 1-7                        |
+| Masonry               | COM1, COM9                                        | All            | 1-2                        |
+| Masonry               | IND1, AGR1                                        | All            | 1                          |
+| Masonry               | RES3C-F, RES4-6                                   | All            | 1-30                       |
+| Masonry               | COM1, COM9                                        | All            | 3-30                       |
+| Masonry               | IND1, AGR1                                        | All            | 2-30                       |
+| Masonry               | COM2-8, COM10, IND2-6, REL1, GOV1-2, EDU1-2       | All            | 1-30                       |
+| Concrete              | RES1, RES3A                                       | All            | 1-40                       |
+| Concrete              | RES3B-F, RES4-6                                   | All            | 1-40                       |
+| Concrete              | COM1-10, IND1-6, REL1, AGR1, GOV1-2, EDU1-2       | All            | 1-40                       |
+| Steel                 | COM1-2, IND1-6, AGR1                              | \<= 4,000 sf   | 1                          |
+| Steel                 | RES1, RES3A-F, RES4-6                             | All            | 1-108                      |
+| Steel                 | COM1-2, IND1-6, AGR1                              | > 4,000 sf     | 1-108                      |
+| Steel                 | COM3-10, REL1, GOV1-2, EDU1-2                     | All            | 1-108                      |
+| Manufactured Home     | RES2                                              | All            | 1                          |
 
 If the number of stories attribute is not provided, the methodology assumes a default of one story.
 
@@ -127,11 +127,11 @@ Foundation type is a key structural attribute that influences how buildings resp
 **Table 3. Inland Foundation Types and Default Foundation Heights**
 
 | Foundation Type | Default Foundation Height |
-|-----------------|---------------------------|
-| Basement | 2 ft |
-| Pile | 8 ft |
-| Shallow | 3 ft |
-| Slab | 1 ft |
+| --------------- | ------------------------- |
+| Basement        | 2 ft                      |
+| Pile            | 8 ft                      |
+| Shallow         | 3 ft                      |
+| Slab            | 1 ft                      |
 
 Based on NSI 2025 pre-release materials, an adjustment was made to the default basement foundation heights from 4 ft to 2 ft for alignment.
 
@@ -147,12 +147,12 @@ Each structure is assigned a single riverine flood peril based on the combinatio
 
 **Table 4. Riverine Flood Peril Descriptions**
 
-| Flood Peril | Description |
-|-------------|-------------|
-| RLS | Riverine, Low Velocity, Short Duration |
-| RHS | Riverine, High Velocity, Short Duration |
-| RLL | Riverine, Low Velocity, Long Duration |
-| RHL | Riverine, High Velocity, Long Duration |
+| Flood Peril | Description                             |
+| ----------- | --------------------------------------- |
+| RLS         | Riverine, Low Velocity, Short Duration  |
+| RHS         | Riverine, High Velocity, Short Duration |
+| RLL         | Riverine, Low Velocity, Long Duration   |
+| RHL         | Riverine, High Velocity, Long Duration  |
 
 ### DDF Assignment
 
@@ -188,17 +188,17 @@ In this approach, each pair of return-period losses and their associated frequen
 
 **Table 5. Average Annualized Building Loss Estimations**
 
-| Return Period | Annualized Probability | Differential Probability | Scenario Losses ($) | Average Loss Formula | Average Losses ($) | Annualized Losses ($) |
-|--------------|------------------------|--------------------------|---------------------|----------------------|--------------------|-----------------------|
-| 2000 | 0.00050000 | 0.00050000 | 2,966,772 | L2000 | 2,966,772 | 1,483 |
-| 1000 | 0.00100000 | 0.00050000 | 2,549,166 | (L2000 + L1000) / 2 | 2,757,969 | 1,379 |
-| 500 | 0.00200000 | 0.00100000 | 1,941,000 | (L1000 + L500) / 2 | 2,245,083 | 2,245 |
-| 200 | 0.00500000 | 0.00300000 | 0 | (L500 + L200) / 2 | 970,500 | 2,912 |
-| 100 | 0.01000000 | 0.00500000 | 0 | (L200 + L100) / 2 | | |
-| 50 | 0.02000000 | 0.01000000 | 0 | (L100 + L50) / 2 | | |
-| 20 | 0.05000000 | 0.03000000 | 0 | (L50 + L20) / 2 | | |
-| 10 | 0.10000000 | 0.05000000 | 0 | (L20 + L10) / 2 | | |
-| **Total** | | | | | | **8,018.95** |
+| Return Period | Annualized Probability | Differential Probability | Scenario Losses (\$) | Average Loss Formula | Average Losses (\$) | Annualized Losses (\$) |
+| ------------- | ---------------------- | ------------------------ | -------------------- | -------------------- | ------------------- | ---------------------- |
+| 2000          | 0.00050000             | 0.00050000               | 2,966,772            | L2000                | 2,966,772           | 1,483                  |
+| 1000          | 0.00100000             | 0.00050000               | 2,549,166            | (L2000 + L1000) / 2  | 2,757,969           | 1,379                  |
+| 500           | 0.00200000             | 0.00100000               | 1,941,000            | (L1000 + L500) / 2   | 2,245,083           | 2,245                  |
+| 200           | 0.00500000             | 0.00300000               | 0                    | (L500 + L200) / 2    | 970,500             | 2,912                  |
+| 100           | 0.01000000             | 0.00500000               | 0                    | (L200 + L100) / 2    |                     |                        |
+| 50            | 0.02000000             | 0.01000000               | 0                    | (L100 + L50) / 2     |                     |                        |
+| 20            | 0.05000000             | 0.03000000               | 0                    | (L50 + L20) / 2      |                     |                        |
+| 10            | 0.10000000             | 0.05000000               | 0                    | (L20 + L10) / 2      |                     |                        |
+| **Total**     |                        |                          |                      |                      |                     | **8,018.95**           |
 
 **Figure 1 Illustration of Estimating Area of Loss Curve Based on Input Return periods Using Riemann Sums Method**
 
