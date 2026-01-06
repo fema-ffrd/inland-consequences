@@ -34,58 +34,108 @@ ______________________________________________________________________
 
 ## Depth-Damage Function (DDF) Assignment
 
-The inland consequence methodology assigns depth-damage functions (DDFs) by integrating three key structural and hazard characteristics: foundation type, flood-specific building type, and flood hazard peril. These elements collectively determine how a structure is expected to perform under various flooding conditions and which DDF curve should be applied to calculate percent damage at a given inundation depth. The methodology follows the principles and thresholds developed through the OpenHazus initiative and is designed to maintain alignment with FEMA’s broader approach to flood consequence modeling.
+The inland consequence methodology assigns depth-damage functions (DDFs) by integrating key building and hazard characteristics: general building type, occupancy type, square footage, number of stories, foundation type, and flood hazard peril type. These elements collectively determine how a structure is expected to perform under various flooding conditions and which DDF function should be applied to calculate percent damage at a given depth in structure. The methodology follows the principles and thresholds developed through the OpenHazus initiative and is designed to maintain alignment with FEMA’s broader approach to flood consequence modeling.
+
+### General Building Type
+
+The general building type describes a building’s construction type and the primary materials used in its construction and is a key factor in understanding how the building responds to flood events. Flood general building types include wood (W), masonry (M), concrete (C), steel (S), and manufactured housing (MH). If the flood general building type is unknown, wood is assumed by default.
+
+### Occupancy Type
+
+Occupancy type is a primary input used to select appropriate DDFs by grouping structures with similar use and vulnerability characteristics. The assigned occupancy type informs both the structure and contents damage relationships applied during flood loss estimation. The occupancy types used in this methodology are listed in Table 1. If the occupancy type is unknown, RES1 is assumed by default.
+
+**Table 1. Occupancy Types**
+
+| Occupancy Type | Description                                  |
+| -------------- | -------------------------------------------- |
+| RES1           | Single-family Dwelling                       |
+| RES2           | Mobile Home                                  |
+| RES3A          | Multi-Family Dwelling - Duplex               |
+| RES3B          | Multi-Family Dwelling - 3-4 Units            |
+| RES3C          | Multi-Family Dwelling - 5-9 Units            |
+| RES3D          | Multi-Family Dwelling - 10-19 Units          |
+| RES3E          | Multi-Family Dwelling - 20-49 Units          |
+| RES3F          | Multi-Family Dwelling - 50+ Units            |
+| RES4           | Temporary Lodging                            |
+| RES5           | Institutional Dormitory                      |
+| RES6           | Nursing Home                                 |
+| COM1           | Retail Trade                                 |
+| COM2           | Wholesale Trade                              |
+| COM3           | Personal and Repair Services                 |
+| COM4           | Business / Professional / Technical Services |
+| COM5           | Depository Institutions (Banks)              |
+| COM6           | Hospital                                     |
+| COM7           | Medical Office / Clinic                      |
+| COM8           | Entertainment and Recreation                 |
+| COM9           | Theaters                                     |
+| COM10          | Parking                                      |
+| IND1           | Heavy Industrial                             |
+| IND2           | Light Industrial                             |
+| IND3           | Food, Drugs, and Chemicals                   |
+| IND4           | Metals and Minerals Processing               |
+| IND5           | High Technology                              |
+| IND6           | Construction                                 |
+| AGR1           | Agriculture                                  |
+| REL1           | Church / Non-Profit                          |
+| GOV1           | General Services                             |
+| GOV2           | Emergency Response                           |
+| EDU1           | Schools and Libraries                        |
+| EDU2           | Colleges and Universities                    |
+
+#### Square Footage
+
+For selected occupancy types and general building type combinations, additional refinement of DDF selection is applied based on building area. For COM1, COM2, IND1-6 and AGR1 occupancies where the general building type is steel, structures with an area less than 4,000 square feet are treated as pre-engineered construction, while structures greater than 4,000 square feet are treated as engineered construction. This classification affects the DDFs applied to both structure and contents losses.
+
+### Number of Stories
+
+The inland consequences methodology uses the explicit number of stories attribute rather than generic low-, mid-, or high-rise categories. This approach allows the methodology to leverage depth-damage functions developed specifically for one-, two-, and three-story structures, which represent the majority of the building stock.
+
+For each combination of general building type, occupancy type, and square footage, an expected minimum and maximum number of stories is defined based on typical real-world construction practices. If an input number of stories exceeds the expected maximum for a given attribute combination, the structure is flagged as a potential anomaly and assigned the maximum allowable number of stories for that combination when selecting the most appropriate DDF. This flag may be used by analysts to identify and evaluate potential issues in the input dataset. Table 2 shows the expected number of stories for attribute combinations.
+
+**Table 2. Expected Number of Stories for Attribute Combination**
+
+| General Building Type | Occupancy Type                                    | Square Footage | Expected Number of Stories |
+| --------------------- | ------------------------------------------------- | -------------- | -------------------------- |
+| Wood                  | RES1, RES3A                                       | All            | 1-4                        |
+| Wood                  | RES3B-F, RES4-6                                   | All            | 1-4                        |
+| Wood                  | COM1, COM9                                        | All            | 1-2                        |
+| Wood                  | COM1, COM9                                        | All            | 3-6                        |
+| Wood                  | COM2-8, COM10, IND1-6, REL1, AGR1, GOV1-2, EDU1-2 | All            | 1-6                        |
+| Masonry               | RES1, RES3A                                       | All            | 1-7                        |
+| Masonry               | RES3B                                             | All            | 1-7                        |
+| Masonry               | COM1, COM9                                        | All            | 1-2                        |
+| Masonry               | IND1, AGR1                                        | All            | 1                          |
+| Masonry               | RES3C-F, RES4-6                                   | All            | 1-30                       |
+| Masonry               | COM1, COM9                                        | All            | 3-30                       |
+| Masonry               | IND1, AGR1                                        | All            | 2-30                       |
+| Masonry               | COM2-8, COM10, IND2-6, REL1, GOV1-2, EDU1-2       | All            | 1-30                       |
+| Concrete              | RES1, RES3A                                       | All            | 1-40                       |
+| Concrete              | RES3B-F, RES4-6                                   | All            | 1-40                       |
+| Concrete              | COM1-10, IND1-6, REL1, AGR1, GOV1-2, EDU1-2       | All            | 1-40                       |
+| Steel                 | COM1-2, IND1-6, AGR1                              | \<= 4,000 sf   | 1                          |
+| Steel                 | RES1, RES3A-F, RES4-6                             | All            | 1-108                      |
+| Steel                 | COM1-2, IND1-6, AGR1                              | > 4,000 sf     | 1-108                      |
+| Steel                 | COM3-10, REL1, GOV1-2, EDU1-2                     | All            | 1-108                      |
+| Manufactured Home     | RES2                                              | All            | 1                          |
+
+If the number of stories attribute is not provided, the methodology assumes a default of one story.
 
 ### Foundation Type
 
 Foundation type is a key structural attribute that influences how buildings respond to flooding and, in cases where foundation information is missing, helps determine the default flood condition applied during loss calculation. The methodology classifies foundations into four categories: Basement, Shallow, Slab, and Pile. Each foundation type is associated with an expected default foundation height when height information is not available in the structure inventory, Table 1.
 
-**Table 1. Inland Foundation Types and Default Foundation Heights**
+**Table 3. Inland Foundation Types and Default Foundation Heights**
 
 | Foundation Type | Default Foundation Height |
-|-----------------|---------------------------|
-| Basement | 2 ft |
-| Pile | 8 ft |
-| Shallow | 3 ft |
-| Slab | 1 ft |
+| --------------- | ------------------------- |
+| Basement        | 2 ft                      |
+| Pile            | 8 ft                      |
+| Shallow         | 3 ft                      |
+| Slab            | 1 ft                      |
 
 Based on NSI 2025 pre-release materials, an adjustment was made to the default basement foundation heights from 4 ft to 2 ft for alignment.
 
 The consequence methodology is designed to natively support the NSI 2022 Public Version, NSI 2022 Private Version, and Milliman Market Basket datasets. For additional details on how foundation types are defined and derived within these inventories, refer to the [**Building Inventories Technical Implementation Documentation**](building_inventories.md).
-
-### Flood-Specific Building Type (FLSBT)
-
-The flood-specific building type (FLSBT) classification refines how structures are represented in the inland consequence methodology by incorporating building characteristics that more accurately capture flood vulnerability. This approach aligns the flood model with how other Hazus hazards—particularly the Hurricane (Wind) model—define buildings. Rather than relying solely on occupancy type and number of stories, the methodology also incorporates general building type (e.g., wood, masonry, concrete, steel, manufactured housing), resulting in a more nuanced representation of building performance under flood conditions.
-
-General building type reflects the primary construction material and structural system, while the specific building type further differentiates structures based on occupancy and the actual number of stories. The use of explicit story counts—rather than generic low-, mid-, or high-rise categories—allows the methodology to take advantage of depth-damage functions developed specifically for 1-, 2-, and 3-story structures, which represent the majority of the building stock.
-
-Table 2 represents the flood-specific building classes used to assign depth-damage functions.
-
-**Table 2. Flood-Specific Building Type Classes**
-
-| SBT Code | General Building Type | FLSBT Group | SBT Range | Description | Occupancy / Usage | Notes |
-|---------|------------------------|-------------|-----------|-------------|--------------------|-------|
-| WSFX | Wood | F Wood Group 1 | WSF001–WSF004 | Wood, single-family | RES1, RES3A / IRC | Assume pre-engineered |
-| WMUHX | Wood | F Wood Group 2 | WMUH001–WMUH004 | Wood, multi-unit housing | RES3B–F, RES4–6 / IBC | Assume pre-engineered |
-| WLRMX | Wood | F Wood Group 3 | WLRM001–WLRM002 | Wood, commercial strip mall | 1–2 story COM1, COM9 / IBC | Assume engineered |
-| WLRIX | Wood | F Wood Group 4 | WLRI001–WLRI006 | Wood, industrial/warehouse | ≥3 story COM1, COM9; non-res / IBC | Assume engineered |
-| MSFX | Masonry | F Masonry Group 1 | MSF001–MSF007 | Masonry, single-family | RES1, RES3A / IRC | Assume pre-engineered |
-| MMUHX | Masonry | F Masonry Group 2 | MMUH001–MMUH007 | Masonry, multi-unit housing | RES3B / IBC | Assume pre-engineered |
-| MLRMX | Masonry | F Masonry Group 3 | MLRM001–MLRM002 | Masonry, commercial strip mall | 1–2 story COM1, COM9 / IBC | Assume pre-engineered |
-| MLRI | Masonry | F Masonry Group 4 | MLRI | Masonry industrial/warehouse | 1 story IND1, AGR1 / IBC | Assume pre-engineered |
-| MERBX | Masonry | F Masonry Group 5 | MERB001–MERB030 | Masonry engineered residential | RES3C–F, RES4–6 / IBC | Assume engineered |
-| MECBX | Masonry | F Masonry Group 6 | MECB001–MECB030 | Masonry engineered commercial | ≥3 story COM1, COM9; ≥2 story IND1, AGR1; others / IBC | Assume engineered |
-| CSFX | Concrete | F Concrete Group 1 | CSF001–CSF040 | Concrete engineered single-family | RES1, RES3A / IRC | Assume engineered |
-| CERBX | Concrete | F Concrete Group 2 | CERB001–CERB040 | Concrete engineered multifamily | RES3B–F, RES4–6 / IBC | Assume engineered |
-| CECBX | Concrete | F Concrete Group 3 | CECB001–CECB040 | Concrete engineered commercial | All non-res / IBC | Assume engineered |
-| SPMB | Steel | F Steel Group 1 | SPMB | Steel pre-engineered metal building | ≤4,000 sq ft COM1–2, IND1–6, AGR1 | Assume pre-engineered |
-| SERBX | Steel | F Steel Group 2 | SERB001–SERB108 | Steel engineered residential | RES1, RES3–6 / IRC & IBC | Assume engineered |
-| SECBX | Steel | F Steel Group 3 | SECB001–SECB108 | Steel engineered commercial | >4,000 sq ft COM1–2, IND1–6, AGR1; all non-res / IBC | Assume engineered |
-| MH | Manufactured Home | F MH Group 1 | MH | Manufactured home | RES2 | Assume pre-engineered |
-
-This classification system allows the assigned depth-damage functions reflect differences in structural material, design practice, occupancy, and building height. By grounding the hazard model in detailed structural attributes, the methodology better captures the diversity of building performance observed across the U.S. building stock and improves the accuracy and relevance of resulting loss estimates.
-
-If the number of stories in the inventory exceeds the maximum permitted for its general building type, occupancy, and square footage combination, the structure will be flagged for review and assigned the FLSBT corresponding to the highest allowable number of stories for that configuration.
 
 ### Hazard Peril
 
@@ -95,20 +145,20 @@ For inland (riverine) flooding, the methodology classifies hazard peril based on
 
 Each structure is assigned a single riverine flood peril based on the combination of duration and velocity characteristics. The riverine peril types used in this methodology are shown in Table 3.
 
-**Table 3. Riverine Flood Peril Descriptions**
+**Table 4. Riverine Flood Peril Descriptions**
 
-| Flood Peril | Description |
-|-------------|-------------|
-| RLS | Riverine, Low Velocity, Short Duration |
-| RHS | Riverine, High Velocity, Short Duration |
-| RLL | Riverine, Low Velocity, Long Duration |
-| RHL | Riverine, High Velocity, Long Duration |
+| Flood Peril | Description                             |
+| ----------- | --------------------------------------- |
+| RLS         | Riverine, Low Velocity, Short Duration  |
+| RHS         | Riverine, High Velocity, Short Duration |
+| RLL         | Riverine, Low Velocity, Long Duration   |
+| RHL         | Riverine, High Velocity, Long Duration  |
 
 ### DDF Assignment
 
-Once foundation type, flood-specific building type, and hazard peril are assigned, the methodology uses lookup tables consistent with OpenHazus to determine the appropriate depth-damage function (DDF). The assigned DDF determines percent damage at each depth and forms the basis for building-, contents-, and inventory-level loss calculations.
+Based on general building type, occupancy type, square footage, number of stories, foundation type, and hazard peril, the methodology integrates these inputs to select the appropriate depth-damage function. This is performed through a dedicated DDF assignment module that applies a sequence of lookup tables consistent with OpenHazus conventions. The assigned DDF determines the percent damage at each depth and forms the basis for structure- and content-level loss calculations. For more details on the DDF assignment look up tables please refer to the technical implementation documentation.
 
-This workflow continues to evolve under the OpenHazus innovation account and the Natural Hazard Risk Assessment Program. The modular structure allows for future enhancements such as probabilistic DDF selection and integration with expanded hazard datasets.
+This workflow is actively advancing under the OpenHazus innovation account and the Natural Hazard Risk Assessment Program, and the modular design ensures the system can incorporate future modifications, including new building classifications, updated peril logic, probabilistic DDF selection, or integration with enhanced hazard datasets. The result is a flexible, transparent, and extensible framework for assigning depth-damage functions within the inland consequence methodology.
 
 ______________________________________________________________________
 
@@ -130,31 +180,31 @@ This process is followed for each return period to produce estimated losses for 
 
 ### Average Annualized Loss (AAL)
 
-After losses are computed across all available return periods, the inland consequence methodology derives the Average Annualized Loss (AAL), which represents the long-term expected loss per year. The AAL is calculated using a Riemann sum numerical integration approach, consistent with the methodology employed in FEMA’s Hazus Program. Table 4 illustrates this method, in which the inland consequence solution computes annual losses for eight probabilistic return periods (RPs). The annual probability of each event is calculated as 1/RP, and differential probabilities are obtained by subtracting adjacent annual occurrence probabilities.
+After losses are computed across all available return periods, the inland consequence methodology derives the Average Annualized Loss (AAL), which represents the long-term expected loss per year. The AAL is calculated using a Riemann sum numerical integration approach, consistent with the methodology employed in FEMA’s Hazus Program. Table 5 illustrates this method, in which the inland consequence solution computes annual losses for eight probabilistic return periods (RPs). The annual probability of each event is calculated as 1/RP, and differential probabilities are obtained by subtracting adjacent annual occurrence probabilities based on descending order (e.g., 2,000 year – 1,000 year annual probability).
 
 The average loss for each interval is then calculated by averaging the annual losses associated with the corresponding return periods, as shown in the “average losses” column. The AAL is obtained by summing the products of each average loss and its associated differential probability, resulting in a single annualized estimate of expected flood-related losses.
 
-In this approach, each pair of return-period losses and their associated frequencies is treated as a point along a continuous loss-exceedance curve. As illustrated in Figure1, by summing the areas of rectangles or trapezoids formed between adjacent points, the Riemann sum integrates across the full range of flood frequencies to produce the annualized loss.
+In this approach, each pair of return-period losses and their associated frequencies is treated as a point along a continuous loss-exceedance curve. As illustrated in Figure 1, by summing up the areas of rectangles or trapezoids formed between adjacent points, the Riemann sum integrates across the full range of flood frequencies to produce the annualized loss. Two options are available for the annualization of losses for the first high frequency return period where no losses occur. The first method is to average the 0 loss with the next highest loss, which is the common default method in Hazus and the second is to truncate the lowest range. The Table 5 example below illustrates the default (non-truncate) method for an industrial building in the Duwamish watershed that is impacted by 500 year and longer return period flooding and dry at 200 year and less. This is a IND5 structure with a building value of $12,156,928. In the truncate method, the 200 year contribution to AAL is reduced by $2,912 (nearly 40% of AAL). Both options are available, and the large difference can be mitigated by using a larger number of frequencies.
 
-**Table 4 Average Annualized Building Loss Estimations**
+**Table 5. Average Annualized Building Loss Estimations**
 
-| Return Period | Annual Probability | Differential Probability | Scenario Loss ($) | Average Loss Formula | Average Loss ($) | Annualized Loss ($) |
-|---------------|--------------------|---------------------------|--------------------|-----------------------|-------------------|----------------------|
-| 2,000 | 0.00050000 | 0.00050000 | $163,850 | L2000 | 163,850 | $82 |
-| 1,000 | 0.00100000 | 0.00050000 | $163,850 | (L2000 + L1000) / 2 | 163,850 | $82 |
-| 500 | 0.00200000 | 0.00100000 | $163,850 | (L1000 + L500) / 2 | 163,850 | $164 |
-| 200 | 0.00500000 | 0.00300000 | $163,850 | (L500 + L200) / 2 | 163,850 | $492 |
-| 100 | 0.01000000 | 0.00500000 | $163,850 | (L200 + L100) / 2 | 163,850 | $819 |
-| 50 | 0.02000000 | 0.01000000 | $163,850 | (L100 + L50) / 2 | 163,850 | $1,639 |
-| 20 | 0.05000000 | 0.03000000 | $163,850 | (L50 + L20) / 2 | 163,850 | $4,916 |
-| 10 | 0.10000000 | 0.05000000 | $163,850 | (L20 + L10) / 2 | 163,850 | $8,193 |
-| **Total** | | | | | | **$16,385** |
+| Return Period | Annualized Probability | Differential Probability | Scenario Losses (\$) | Average Loss Formula | Average Losses (\$) | Annualized Losses (\$) |
+| ------------- | ---------------------- | ------------------------ | -------------------- | -------------------- | ------------------- | ---------------------- |
+| 2000          | 0.00050000             | 0.00050000               | 2,966,772            | L2000                | 2,966,772           | 1,483                  |
+| 1000          | 0.00100000             | 0.00050000               | 2,549,166            | (L2000 + L1000) / 2  | 2,757,969           | 1,379                  |
+| 500           | 0.00200000             | 0.00100000               | 1,941,000            | (L1000 + L500) / 2   | 2,245,083           | 2,245                  |
+| 200           | 0.00500000             | 0.00300000               | 0                    | (L500 + L200) / 2    | 970,500             | 2,912                  |
+| 100           | 0.01000000             | 0.00500000               | 0                    | (L200 + L100) / 2    |                     |                        |
+| 50            | 0.02000000             | 0.01000000               | 0                    | (L100 + L50) / 2     |                     |                        |
+| 20            | 0.05000000             | 0.03000000               | 0                    | (L50 + L20) / 2      |                     |                        |
+| 10            | 0.10000000             | 0.05000000               | 0                    | (L20 + L10) / 2      |                     |                        |
+| **Total**     |                        |                          |                      |                      |                     | **8,018.95**           |
 
 **Figure 1 Illustration of Estimating Area of Loss Curve Based on Input Return periods Using Riemann Sums Method**
 
 ![Illustration of Estimating Area of Loss Curve Based on Input Return periods Using](images/AAL.png)
 
-A greater number and wider range of modeled return periods yield a more complete and representative loss curve. A minimum of three return periods is required to compute AAL, though including additional frequencies improves accuracy. Contractor research indicates that using approximately 22 return periods offers an effective balance, capturing the loss curve with high fidelity while minimizing computational demands. However, final decision for FFRD surround the number periods is pending.
+A greater number and wider range of modeled return periods yield a more complete and representative loss curve. A minimum of three return periods is required to compute AAL, though including additional frequencies improves accuracy. Contractor research indicates that using approximately 22 return periods offers an effective balance, capturing the loss curve with high fidelity while minimizing computational demands. However, decisions for FFRD pertaining to the recommended number of return periods are pending.
 
 **Figure 2 PTS Contractor Research on the Recommendation for Identifying 22 return periods to represent the full Annual Exceedance Probability Curve**
 
@@ -164,10 +214,34 @@ ______________________________________________________________________
 
 ## Uncertainty
 
-TO DO
+Three major sources of uncertainty are considered:
 
-______________________________________________________________________
+1. Hazard
+1. Building data and attribution
+1. Depth-Damage Functions (DDFs)
+
+Initially, the tool will provide uncertainty based on hazard and placeholders for methods to incorporate uncertainty based on building data and DDFs, as well as a combined uncertainty across all sources.
+
+FFRD input provides hazard-related uncertainty; however, an ongoing OpenHazus Innovations task is intended to refine and develop recommendations for building data, DDF and combined uncertainties.
+
+FFRD uncertainty represents the standard deviation of the hazard for a given frequency across 50 realizations for each of the return periods available. The deviation is provided in feet related to the mean flood depth and feet per second relative to the mean velocity. When these uncertainty grids are available, losses will include the minimum, mean and maximum based on mean and standard deviation. Cases where large uncertainties for long return periods result in minimum losses lower than more frequent return periods at the structure level will be flagged (e.g. 1,000 year > 2,000 year).
+
+Several OpenHazus tasks are scheduled for completion in March 2026 to evaluate and provide recommendations for uncertainty-related processes, including:
+
+- Uncertainties including internal inconsistencies in % loss for each stage depth based on examples from DDF’s outlined in the uncertainty white paper and from DDFs with available uncertainties (e.g. IWR, NAACs, and FEMA claims data studies).
+- Outline the process flow for evaluating the DDF uncertainty impacts on losses. Capture assumptions and carry uncertainty through to outputs, including median losses, ranges, and probabilities.
+- Outline how other building foundation types and height attributes are incorporated into the OpenHazus uncertainty process, including processes that consider uncertainties in occupancy, square footage, number of stories, basement/finished and value.
+- Setup a global sensitivity analysis experimental design for total losses. Consider certain known parameters like water depth, velocity, building occupancy, foundation type, FFE, and DDF uncertainty.
+- Complete global sensitivity analysis for pilot FFRD data.
 
 ## Results
 
-TO DO
+Results are provided at the structure level using a Python notebook interface. The notebook supports:
+
+- A final summary table of AAL building and content losses, providing mean, minimum, and maximum values when uncertainty is available.
+
+- A final summary table of actuarially adjusted AAL building, content, and inventory losses that accounts for limits and deductibles and provides mean, minimum, and maximum values when uncertainty is available.
+
+- A comprehensive results table that allows users to select outputs in a variety of user-defined formats (e.g., `.csv`, file geodatabase, parquet). This table includes all return period and event-level building, content, and inventory losses based on mean values and available uncertainties; mean and standard deviation of flood depths at the structure and in-structure based on foundation height; damage function IDs and percent damage for structure, content, and inventory along with the corresponding depth in structure; and inventory attributes such as building and content value, occupancy, foundation type and height, number of stories, building and footprint area, and general building type.
+
+- Summary options that enable aggregation of total losses by occupancy, building type, and foundation type, as well as by geographic areas such as state, county, tract, census block, HUC, and jurisdiction.

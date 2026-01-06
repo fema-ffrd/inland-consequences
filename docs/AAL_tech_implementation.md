@@ -55,21 +55,21 @@ The methodology supports two AAL calculation modes: non-truncated (default) and 
 
 ### Non-Truncated AAL (Default, 0)
 
-- Includes all provided return periods, even those with $0 loss.
+- Includes all provided return periods, even those with \$0 loss.
 
 - When the lowest-frequency return period has $0 loss, the $0 value is averaged with the next nonzero period.
 
   *Example:*
 
-  - 50-year loss = $0
-  - 100-year loss = $1,200
-  - Average used in integration = (0 + 1,200) / 2 = **$600**
+  - 50-year loss = \$0
+  - 100-year loss = \$1,200
+  - Average used in integration = (0 + 1,200) / 2 = **\$600**
 
 This follows the Hazus approach and provides a more conservative AAL estimate.
 
 ### Truncated AAL (1)
 
-- Excludes the $0-loss return period from the summation.
+- Excludes the \$0-loss return period from the summation.
 - This approach aligns with the GoConsequences implementation.
 - Generally produces lower AAL values, particularly when few frequencies are supplied.
 
