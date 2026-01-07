@@ -149,7 +149,9 @@ class NsiBuildings(Buildings):
             gdf["foundation_type"] = pd.to_numeric(gdf["fndtype"], errors='coerce') \
                                            .map(foundation_type_map) \
                                            .astype("category")
-            # Drop fndtype after mapping
+            
+            # Drop fndtype after mapping 
+            # TODO: Consider keeping both fields for export later
             gdf = gdf.drop(columns=["fndtype"])
 
         return gdf

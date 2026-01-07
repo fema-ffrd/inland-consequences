@@ -113,6 +113,23 @@ def flood_analysis_results(mock_raster_collection, mock_buildings, mock_vulnerab
     # 5. Cleanup (runs after all tests in the module are complete)
     # The __exit__ method in the DataProcessor handles the conn.close()
 
+@pytest.mark.manual
+def test_manual_calculate_losses(mock_raster_collection, mock_buildings, mock_vulnerability):
+    # To run this test manually, execute the statement in the command line
+    # uv run pytest -m manual tests/test_inland_flood_analysis.py
+    
+    analysis = InlandFloodAnalysis(
+            raster_collection=mock_raster_collection,
+            buildings=mock_buildings,
+            vulnerability=mock_vulnerability,
+            calculate_aal=True
+        )
+        
+    # 3. Enter the context manager to open the connection and setup tables
+    with analysis:
+        # **This is where the expensive data-creating call happens ONCE**
+        analysis.calculate_losses()
+
 def test_buildings_copied(flood_analysis_results):
     """Test that buildings data is copied into the analysis database."""
     conn = flood_analysis_results.conn
