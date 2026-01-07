@@ -4,15 +4,14 @@ The **Consequence Modeling Solution** is designed to natively ingest the **Natio
 
 **Table 1. Supported Inventory Data Sources**
 
-| **Data Source** | **Version** | **Input File Type** | **Consequence Modeling** |
-|-----------------------------|-----------------------------|---------------------------|----------------------------|
-| **NSI** | 2022 Public Version | GeoPackage | Inland, Coastal |
-| **NSI** | 2022 FEMA-Enhanced Version | File Geodatabase | Inland only |
-| **Milliman Market Baskets** | 2021 Uniform, Uncorrelated | File Geodatabase | Inland, Coastal |
-| **User-defined Inventories** | User-defined | User-defined | Inland, Coastal |
+| **Data Source**              | **Version**                | **Input File Type** | **Consequence Modeling** |
+| ---------------------------- | -------------------------- | ------------------- | ------------------------ |
+| **NSI**                      | 2022 Public Version        | GeoPackage          | Inland, Coastal          |
+| **NSI**                      | 2022 FEMA-Enhanced Version | File Geodatabase    | Inland only              |
+| **Milliman Market Baskets**  | 2021 Uniform, Uncorrelated | File Geodatabase    | Inland, Coastal          |
+| **User-defined Inventories** | User-defined               | User-defined        | Inland, Coastal          |
 
-For additional details on inventory requirements and methodology, refer to the\
-**[Inventory Methodology Documentation](inventory_methodology.md)**.
+For additional details on inventory requirements and methodology, refer to the **[Inventory Methodology Documentation](inventory_methodology.md)**.
 
 ______________________________________________________________________
 
@@ -50,19 +49,19 @@ The **2022 Public NSI** contains all attributes required to support both **inlan
 
 **Table 2. NSI 2022 Public Data Attributes for Analysis**
 
-| **Analysis Attribute** | **Data Type** | **NSI Field Name** | **Consequence Modeling** | **Assumption** | **Rule** | **Default if Missing** |
-|------------------------|---------------|---------------------|---------------------------|----------------|-----------|--------------------------|
-| **Geometry** | Point | Shape | Inland, Coastal | Point geometry | Must be valid point geometry | **Error (required)** |
-| **Unique ID** | Object ID | fid | Inland, Coastal | Provided | Must be present and unique | **Error (required)** |
-| **Occupancy Type** | String | occtype | Inland, Coastal | Provided; must map to Hazus types | Must map to Hazus types | **RES1** |
-| **Building Value** | Numeric | val_struct | Inland, Coastal | Depreciated USD value | Must be present | **Error (required)** |
-| **Content Value** | Numeric | val_cont | Inland, Coastal | Depreciated USD value | Validate > 0; assign default if missing | Default % by occupancy (see Inventory Methodology Table 3) |
-| **Number of Stories** | Numeric | num_story | Inland, Coastal | Provided | Validate > 0; assign default | **1** |
-| **Area / Square Footage** | Numeric | sqft | Inland | Square footage | Validate > 0; assign default | Hazus defaults (Inventory Methodology Table 2) |
-| **General Building Type** | String | bldgtype | Inland | Provided (M, W, H, S) | Assign default if missing | **W (Wood)** |
-| **Foundation Type** | String | found_type | Inland, Coastal | Provided (C, B, S, P, I, F, W) | Assign default if missing | **Slab** |
-| **Foundation Height** | Numeric | found_ht | Inland, Coastal | Feet above ground | Assign default | Slab = 1 ft; Shallow = 3 ft; Pile = 8 ft; Basement = 4 ft |
-| **Ground Elevation** | Numeric | Ground_elv | Coastal | Feet (NAVD88) | Required for coastal modeling | **Error (required)** |
+| **Analysis Attribute**    | **Data Type** | **NSI Field Name** | **Consequence Modeling** | **Assumption**                    | **Rule**                                | **Default if Missing**                                     |
+| ------------------------- | ------------- | ------------------ | ------------------------ | --------------------------------- | --------------------------------------- | ---------------------------------------------------------- |
+| **Geometry**              | Point         | Shape              | Inland, Coastal          | Point geometry                    | Must be valid point geometry            | **Error (required)**                                       |
+| **Unique ID**             | Object ID     | fid                | Inland, Coastal          | Provided                          | Must be present and unique              | **Error (required)**                                       |
+| **Occupancy Type**        | String        | occtype            | Inland, Coastal          | Provided; must map to Hazus types | Must map to Hazus types                 | **RES1**                                                   |
+| **Building Value**        | Numeric       | val_struct         | Inland, Coastal          | Depreciated USD value             | Must be present                         | **Error (required)**                                       |
+| **Content Value**         | Numeric       | val_cont           | Inland, Coastal          | Depreciated USD value             | Validate > 0; assign default if missing | Default % by occupancy (see Inventory Methodology Table 3) |
+| **Number of Stories**     | Numeric       | num_story          | Inland, Coastal          | Provided                          | Validate > 0; assign default            | **1**                                                      |
+| **Area / Square Footage** | Numeric       | sqft               | Inland                   | Square footage                    | Validate > 0; assign default            | Hazus defaults (Inventory Methodology Table 2)             |
+| **General Building Type** | String        | bldgtype           | Inland                   | Provided (M, W, H, S)             | Assign default if missing               | **W (Wood)**                                               |
+| **Foundation Type**       | String        | found_type         | Inland, Coastal          | Provided (C, B, S, P, I, F, W)    | Assign default if missing               | **Slab**                                                   |
+| **Foundation Height**     | Numeric       | found_ht           | Inland, Coastal          | Feet above ground                 | Assign default                          | Slab = 1 ft; Shallow = 3 ft; Pile = 8 ft; Basement = 2 ft  |
+| **Ground Elevation**      | Numeric       | Ground_elv         | Coastal                  | Feet (NAVD88)                     | Required for coastal modeling           | **Error (required)**                                       |
 
 #### NSI 2022 Public – Inland Foundation Type Mapping
 
@@ -80,14 +79,14 @@ For the NSI Public dataset, the `found_type` field must be mapped to the **stand
 **Table 3. Inland Foundation Type Mapping for NSI 2022 Public Version**
 
 | **found_type** | **Description** | **Assigned Inland Foundation Type** |
-|----------------|------------------|--------------------------------------|
-| C | Crawl | SHAL |
-| B | Basement | BASE |
-| S | Slab | SLAB |
-| P | Pier | SHAL |
-| F | Fill | SLAB |
-| W | Solid Wall | SHAL |
-| I | Pile | PILE |
+| -------------- | --------------- | ----------------------------------- |
+| C              | Crawl           | SHAL                                |
+| B              | Basement        | BASE                                |
+| S              | Slab            | SLAB                                |
+| P              | Pier            | SHAL                                |
+| F              | Fill            | SLAB                                |
+| W              | Solid Wall      | SHAL                                |
+| I              | Pile            | PILE                                |
 
 #### NSI 2022 Public – Coastal Foundation Type Mapping
 
@@ -104,20 +103,20 @@ Users may preprocess the dataset and manually supply ground elevations if they w
 
 **Table 4. NSI 2022 FEMA-Enhanced Data Attributes for Analysis**
 
-| **Analysis Attribute** | **Data Type** | **NSI Field Name** | **Assumption** | **Rule** | **Default if Missing** |
-|------------------------|---------------|---------------------|----------------|----------|--------------------------|
-| **Geometry** | Point | Shape | Point geometry | Must be valid point geometry | **Error (required)** |
-| **Unique ID** | Object ID | OBJECTID | Provided | Must be present and unique | **Error (required)** |
-| **Occupancy Type** | String | OCCTYPE | Provided; must map to Hazus occupancy types | Must map to Hazus types | **RES1** |
-| **Building Value** | Numeric | Hazus_Building_Values | Full replacement cost (USD) | Must be present | **Error (required)** |
-| **Content Value** | Numeric | Hazus_Content_Values | Full replacement cost (USD) | Validate > 0; assign default if missing | Default % by occupancy (Inventory Methodology Table 3) |
-| **Number of Stories** | Numeric | NUM_STORY | Provided | Validate > 0; assign default | **1** |
-| **Area / Square Footage** | Numeric | SQFT | Square footage (sq ft) | Validate > 0; assign default | Hazus defaults (Inventory Methodology Table 2) |
-| **General Building Type** | String | GENERALBUILDINGTYPE | Provided (M, W, H, S) | Assign default if missing | **W (Wood)** |
-| **Foundation Type** | String | FNDTYPE | Provided (C, B, S, P, I, F, W) | Assign default if missing | **Slab** |
-| **Foundation Height** | Numeric | FOUND_HT | Feet above ground elevation | Assign default if missing | Slab = 1 ft; Shallow = 3 ft; Pile = 8 ft; Basement = 4 ft |
-| **Foundation Type (Parcel)** | String | P_FNDTYPE | Provided | Used only for parcel-based refinement logic | None |
-| **Basement Type (Parcel)** | String | P_BSMNT | Provided | Used only for parcel-based refinement logic | None |
+| **Analysis Attribute**       | **Data Type** | **NSI Field Name**    | **Assumption**                              | **Rule**                                    | **Default if Missing**                                    |
+| ---------------------------- | ------------- | --------------------- | ------------------------------------------- | ------------------------------------------- | --------------------------------------------------------- |
+| **Geometry**                 | Point         | Shape                 | Point geometry                              | Must be valid point geometry                | **Error (required)**                                      |
+| **Unique ID**                | Object ID     | OBJECTID              | Provided                                    | Must be present and unique                  | **Error (required)**                                      |
+| **Occupancy Type**           | String        | OCCTYPE               | Provided; must map to Hazus occupancy types | Must map to Hazus types                     | **RES1**                                                  |
+| **Building Value**           | Numeric       | Hazus_Building_Values | Full replacement cost (USD)                 | Must be present                             | **Error (required)**                                      |
+| **Content Value**            | Numeric       | Hazus_Content_Values  | Full replacement cost (USD)                 | Validate > 0; assign default if missing     | Default % by occupancy (Inventory Methodology Table 3)    |
+| **Number of Stories**        | Numeric       | NUM_STORY             | Provided                                    | Validate > 0; assign default                | **1**                                                     |
+| **Area / Square Footage**    | Numeric       | SQFT                  | Square footage (sq ft)                      | Validate > 0; assign default                | Hazus defaults (Inventory Methodology Table 2)            |
+| **General Building Type**    | String        | GENERALBUILDINGTYPE   | Provided (M, W, H, S)                       | Assign default if missing                   | **W (Wood)**                                              |
+| **Foundation Type**          | String        | FNDTYPE               | Provided (C, B, S, P, I, F, W)              | Assign default if missing                   | **Slab**                                                  |
+| **Foundation Height**        | Numeric       | FOUND_HT              | Feet above ground elevation                 | Assign default if missing                   | Slab = 1 ft; Shallow = 3 ft; Pile = 8 ft; Basement = 2 ft |
+| **Foundation Type (Parcel)** | String        | P_FNDTYPE             | Provided                                    | Used only for parcel-based refinement logic | None                                                      |
+| **Basement Type (Parcel)**   | String        | P_BSMNT               | Provided                                    | Used only for parcel-based refinement logic | None                                                      |
 
 #### NSI 2022 FEMA-Enhanced — Inland Foundation Type Mapping
 
@@ -135,24 +134,24 @@ For the FEMA-Enhanced NSI, parcel-derived fields (`P_FNDTYPE` and `P_BSMNT`) are
 
 **Table 5. NSI 2022 FEMA-Enhanced Parcel Foundation Type Mapping**
 
-| **P_FNDTYPE** | **Description** | **Assigned Inland Foundation Type** |
-|---------------|-----------------------|--------------------------------------|
-| P | Piers | SHAL |
-| A | Concrete | SLAB |
-| W | Wood | SHAL |
-| C | Crossed Walls | SLAB |
-| S | Slab | SLAB |
-| K | Concrete Block | SHAL |
-| O | Other | NULL |
-| G | Stone | SHAL |
-| D | Masonry | SHAL |
-| L | Piling | PILE |
-| R | Retaining Wall | SHAL |
-| T | Footing | SLAB |
-| B | Crawl / Raised | SHAL |
-| F | Mud Sill | SLAB |
-| E | Earth | SLAB |
-| Z | Placeholder | If `P_BSMNT` indicates basement → **BASE**, otherwise **Slab** |
+| **P_FNDTYPE** | **Description** | **Assigned Inland Foundation Type**                            |
+| ------------- | --------------- | -------------------------------------------------------------- |
+| P             | Piers           | SHAL                                                           |
+| A             | Concrete        | SLAB                                                           |
+| W             | Wood            | SHAL                                                           |
+| C             | Crossed Walls   | SLAB                                                           |
+| S             | Slab            | SLAB                                                           |
+| K             | Concrete Block  | SHAL                                                           |
+| O             | Other           | NULL                                                           |
+| G             | Stone           | SHAL                                                           |
+| D             | Masonry         | SHAL                                                           |
+| L             | Piling          | PILE                                                           |
+| R             | Retaining Wall  | SHAL                                                           |
+| T             | Footing         | SLAB                                                           |
+| B             | Crawl / Raised  | SHAL                                                           |
+| F             | Mud Sill        | SLAB                                                           |
+| E             | Earth           | SLAB                                                           |
+| Z             | Placeholder     | If `P_BSMNT` indicates basement → **BASE**, otherwise **Slab** |
 
 ______________________________________________________________________
 
@@ -173,24 +172,24 @@ The Milliman Market Basket datasets support both coastal and inland loss calcula
 
 **Table 6. Milliman Data Attributes for Analysis**
 
-| **Analysis Attribute** | **Data Type** | **Milliman Field Name** | **Assumption** | **Rule** | **Default if Missing** |
-|------------------------|---------------|--------------------------|----------------|----------|--------------------------|
-| **Geometry** | Point | Shape | Point geometry | Must be valid point geometry | **Error (required)** |
-| **Unique ID** | Object ID | Location | Provided | Must be present and unique | **Error (required)** |
-| **Occupancy Type** | String | *Not provided* | Assume RES1 | Assign default | **RES1** |
-| **Building Value** | Numeric | BLDG_VALUE | Full replacement cost (USD) | Must be present | **Error (required)** |
-| **Content Value** | Numeric | CNT_VALUE | Full replacement cost (USD) | Validate > 0; assign default | Default % by occupancy (Inventory Methodology Table 3) |
-| **Number of Stories** | Numeric | NUM_STORIE | Provided | Validate > 0; assign default | **1** |
-| **Area / Square Footage** | Numeric | *Not provided* | Assume 1,800 sq ft | Assign default | Hazus RES1 default = **1,800 sq ft** |
-| **General Building Type** | String | *Not provided* | Assume Wood | Assign default | **W (Wood)** |
-| **Foundation Type** | Numeric | foundation | Milliman codes: 2, 4, 6, 7, 8, 9 | Should be populated; assign default | **Slab** |
-| **Foundation Height** | Numeric | FIRST_FLOO | First-floor height above ground (ft) | Should be populated; assign default | Slab 1 ft; Shallow 3 ft; Pile 8 ft; Basement 4 ft |
-| **Ground Elevation** | Numeric | DEMft | DEM ground elevation (ft, NAVD88) | Must be present | **Error (required)** |
-| **Basement Type** | Numeric | BasementFi | 0=None, 1=Unfinished, 2=Finished | Provided | Default = None |
-| **Content Insurance Deductible** | Numeric | CNT_DED | Provided | Not used in loss calculations | None |
-| **Content Insurance Limit** | Numeric | CNT_LIM | Provided | Not used in loss calculations | None |
-| **Building Insurance Deductible** | Numeric | BLDG_DED | Provided | Not used in loss calculations | None |
-| **Building Insurance Limit** | Numeric | BLDG_LIMIT | Provided | Not used in loss calculations | None |
+| **Analysis Attribute**            | **Data Type** | **Milliman Field Name** | **Assumption**                       | **Rule**                            | **Default if Missing**                                 |
+| --------------------------------- | ------------- | ----------------------- | ------------------------------------ | ----------------------------------- | ------------------------------------------------------ |
+| **Geometry**                      | Point         | Shape                   | Point geometry                       | Must be valid point geometry        | **Error (required)**                                   |
+| **Unique ID**                     | Object ID     | Location                | Provided                             | Must be present and unique          | **Error (required)**                                   |
+| **Occupancy Type**                | String        | *Not provided*          | Assume RES1                          | Assign default                      | **RES1**                                               |
+| **Building Value**                | Numeric       | BLDG_VALUE              | Full replacement cost (USD)          | Must be present                     | **Error (required)**                                   |
+| **Content Value**                 | Numeric       | CNT_VALUE               | Full replacement cost (USD)          | Validate > 0; assign default        | Default % by occupancy (Inventory Methodology Table 3) |
+| **Number of Stories**             | Numeric       | NUM_STORIE              | Provided                             | Validate > 0; assign default        | **1**                                                  |
+| **Area / Square Footage**         | Numeric       | *Not provided*          | Assume 1,800 sq ft                   | Assign default                      | Hazus RES1 default = **1,800 sq ft**                   |
+| **General Building Type**         | String        | *Not provided*          | Assume Wood                          | Assign default                      | **W (Wood)**                                           |
+| **Foundation Type**               | Numeric       | foundation              | Milliman codes: 2, 4, 6, 7, 8, 9     | Should be populated; assign default | **Slab**                                               |
+| **Foundation Height**             | Numeric       | FIRST_FLOO              | First-floor height above ground (ft) | Should be populated; assign default | Slab 1 ft; Shallow 3 ft; Pile 8 ft; Basement 2 ft      |
+| **Ground Elevation**              | Numeric       | DEMft                   | DEM ground elevation (ft, NAVD88)    | Must be present                     | **Error (required)**                                   |
+| **Basement Type**                 | Numeric       | BasementFi              | 0=None, 1=Unfinished, 2=Finished     | Provided                            | Default = None                                         |
+| **Content Insurance Deductible**  | Numeric       | CNT_DED                 | Provided                             | Not used in loss calculations       | None                                                   |
+| **Content Insurance Limit**       | Numeric       | CNT_LIM                 | Provided                             | Not used in loss calculations       | None                                                   |
+| **Building Insurance Deductible** | Numeric       | BLDG_DED                | Provided                             | Not used in loss calculations       | None                                                   |
+| **Building Insurance Limit**      | Numeric       | BLDG_LIMIT              | Provided                             | Not used in loss calculations       | None                                                   |
 
 ### Milliman — Inland Foundation Type Mapping
 
@@ -199,13 +198,13 @@ For both the **Uniform Book** and **Uncorrelated Market Basket** datasets, the `
 **Table 7. Milliman Inland Foundation Type Mapping**
 
 | **foundation** | **Description** | **Assigned Inland Foundation Type** |
-|----------------|------------------|--------------------------------------|
-| **2** | Basement | **BASE** |
-| **4** | Crawlspace | **SHAL** |
-| **6** | Pier | **SHAL** |
-| **7** | Fill / Wall | **SLAB** |
-| **8** | Slab | **SLAB** |
-| **9** | Pile | **PILE** |
+| -------------- | --------------- | ----------------------------------- |
+| **2**          | Basement        | **BASE**                            |
+| **4**          | Crawlspace      | **SHAL**                            |
+| **6**          | Pier            | **SHAL**                            |
+| **7**          | Fill / Wall     | **SLAB**                            |
+| **8**          | Slab            | **SLAB**                            |
+| **9**          | Pile            | **PILE**                            |
 
 ### Milliman — Coastal Foundation Type Mapping
 

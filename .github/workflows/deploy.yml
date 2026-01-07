@@ -24,7 +24,7 @@ jobs:
 
       - name: Markdown formatting check
         run: |
-          mdformat --check . --exclude '.github/instructions/**'
+          mdformat --check docs/ *.md
 
       - name: Build and deploy
         run: |

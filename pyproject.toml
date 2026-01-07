@@ -6,6 +6,9 @@ dependencies = [
   "mkdocs-macros-plugin",
   "mkdocs-include-markdown-plugin",
   "mdformat",
+  "mdformat-gfm",
+  "mdformat-myst",
+  "pymdown-extensions",
   "pre-commit",
   "sphere-core",
   "sphere-data",
@@ -58,3 +61,7 @@ dev = [
     "pytest-cov>=6.2.1",
     "pytest-mock>=3.15.1",
 ]
+
+[tool.mdformat]
+wrap = "no"
+number = false
