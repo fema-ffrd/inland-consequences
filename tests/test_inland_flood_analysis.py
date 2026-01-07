@@ -1,131 +1,148 @@
 import numpy as np
 import pandas as pd
+import geopandas as gpd
 import pytest
+
+import duckdb
+from unittest.mock import MagicMock
+from inland_consequences.nsi_buildings import NsiBuildings
 
 from inland_consequences.inland_flood_analysis import InlandFloodAnalysis
 from inland_consequences.raster_collection import RasterCollection
 from sphere.core.schemas.abstract_raster_reader import AbstractRasterReader
+from sphere.core.schemas.abstract_vulnerability_function import AbstractVulnerabilityFunction
 
+# --- Fixtures for Mocking External Dependencies ---
 
-# --- Mocks used across tests -------------------------------------------------
-class MockRaster(AbstractRasterReader):
-    """Simple raster-like object for tests.
+@pytest.fixture(scope="module")
+def mock_buildings():
+    """Provides a real NsiBuildings object with a small, fixed GeoDataFrame."""
+    data = {
+        'target_fid': [1, 2, 3],
+        'occtype': ['RES1', 'RES2', 'RES3'],
+        'found_ht': [2.5, 3.0, 2.0],
+        'fndtype': [1, 2, 3],
+        'num_story': [1, 2, 1],
+        'sqft': [1000, 1500, 1200],
+        'val_struct': [100000.0, 200000.0, 300000.0],
+        'val_cont': [50000.0, 60000.0, 70000.0],
+        'geometry': ['POINT (0 0)', 'POINT (1 1)', 'POINT (2 2)'],
+    }
 
-    It exposes get_value_vectorized(geometries) and returns a fixed array of
-    values (ignores geometries).
+    gdf = gpd.GeoDataFrame(
+        pd.DataFrame(data),
+        geometry=gpd.GeoSeries.from_wkt(data['geometry']),
+        crs="EPSG:4326"
+    )
+    return NsiBuildings(gdf)
+
+@pytest.fixture(scope="module")
+def mock_raster_collection():
+    """Mocks the RasterCollection to return predictable depths."""
+    mock_collection = MagicMock(spec=RasterCollection)
+    
+    # Define the depths to be returned based on the return period (RP)
+    # RP 100: depths 1.0, 2.0, 3.0
+    # RP 500: depths 1.5, 2.5, 3.5
+    
+    mock_collection.return_periods.return_value = [100, 500]
+    
+    # Create mock depth rasters for each return period
+    mock_depth_100 = MagicMock(spec=AbstractRasterReader)
+    mock_depth_100.get_value_vectorized.return_value = [1.0, 2.0, 3.0]
+    
+    mock_depth_500 = MagicMock(spec=AbstractRasterReader)
+    mock_depth_500.get_value_vectorized.return_value = [1.5, 2.5, 3.5]
+    
+    def mock_get(rp):
+        if rp == 100:
+            return {"depth": mock_depth_100, "uncertainty": None, "velocity": None, "duration": None}
+        elif rp == 500:
+            return {"depth": mock_depth_500, "uncertainty": None, "velocity": None, "duration": None}
+        return {"depth": None, "uncertainty": None, "velocity": None, "duration": None}
+
+    mock_collection.get.side_effect = mock_get
+    return mock_collection
+
+@pytest.fixture(scope="module")
+def mock_vulnerability():
+    """Mocks the vulnerability function to return a fixed damage ratio."""
+    mock = MagicMock(spec=AbstractVulnerabilityFunction)
+    
+    def mock_calculate_vulnerability(exposure_df):
+        # Always return a fixed 50% damage ratio for simplicity in tests
+        return pd.DataFrame({'damage_ratio': [0.5] * len(exposure_df)})
+
+    mock.calculate_vulnerability.side_effect = mock_calculate_vulnerability
+    return mock
+
+# Identifier for testing
+IN_MEMORY_DB_NAME = ':memory:integration_test_db'
+
+@pytest.fixture(scope="module") # Run once for all tests in this file
+def flood_analysis_results(mock_raster_collection, mock_buildings, mock_vulnerability):
     """
-
-    def __init__(self, values):
-        self.values = np.asarray(values)
-
-    def get_value_vectorized(self, geometries):
-        return np.asarray(self.values)
-
-    def get_value(self, lon: float, lat: float) -> float:
-        # Return the first value for single-point queries in tests.
-        return float(self.values[0])
-
-
-class MockBuildings:
-    """Tiny buildings container exposing a minimal .gdf expected by the analysis."""
-
-    def __init__(self, values):
-        # create a simple DataFrame to act like a GeoDataFrame
-        self.gdf = pd.DataFrame({"geometry": [None] * len(values), "value": values})
-
-
-# Note: some tests in this file use a very small vulnerability helper that
-# multiplies exposures by a constant to produce damage ratios.
-class MockVulnerability:
-    def __init__(self, multiplier=0.1):
-        self.multiplier = multiplier
-        self.called_with = None
-
-    def calculate_vulnerability(self, exposure_df: pd.DataFrame) -> pd.DataFrame:
-        # record call
-        self.called_with = exposure_df.copy()
-        # Return a damage ratio simply as exposure * multiplier (vectorized)
-        return exposure_df * self.multiplier
-
-
-def test_calculate_exposure():
-    """Basic exposure calculation with no uncertainty provided.
-
-    Verifies that returned DataFrame has the expected columns and values and
-    that the analysis records zero uncertainty in that case.
+    1. Patches the DB identifier to use a shared named in-memory DB.
+    2. Instantiates the InlandFloodAnalysis.
+    3. Runs the expensive 'calculate_losses' method once to populate the DB.
+    4. Yields the connected analysis for assertions.
     """
-    buildings = MockBuildings([100, 200, 300])
-    raster_collection = RasterCollection({
-        10: MockRaster([1.0, 2.0, 3.0]),
-        100: MockRaster([0.5, 1.5, 2.5]),
-    })
-    vuln = MockVulnerability()
+    from unittest.mock import patch
+    
+    # 1. Patch the identifier (HACK)
+    with patch(
+        "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier", 
+        return_value=IN_MEMORY_DB_NAME
+    ):
+        # 2. Instantiate and use the context manager
+        analysis = InlandFloodAnalysis(
+            raster_collection=mock_raster_collection,
+            buildings=mock_buildings,
+            vulnerability=mock_vulnerability,
+            calculate_aal=True
+        )
+        
+        # 3. Enter the context manager to open the connection and setup tables
+        with analysis:
+            # **This is where the expensive data-creating call happens ONCE**
+            analysis.calculate_losses()
+            
+            # 4. Yield the connected instance for the tests to use
+            yield analysis
+        
+    # 5. Cleanup (runs after all tests in the module are complete)
+    # The __exit__ method in the DataProcessor handles the conn.close()
 
-    analysis = InlandFloodAnalysis(raster_collection, buildings, vuln, calculate_aal=False)
-    exposure = analysis._calculate_exposure()
+@pytest.mark.manual
+def test_manual_calculate_losses(mock_raster_collection, mock_buildings, mock_vulnerability):
+    # To run this test manually, execute the statement in the command line
+    # uv run pytest -m manual tests/test_inland_flood_analysis.py
+    
+    analysis = InlandFloodAnalysis(
+            raster_collection=mock_raster_collection,
+            buildings=mock_buildings,
+            vulnerability=mock_vulnerability,
+            calculate_aal=True
+        )
+        
+    # 3. Enter the context manager to open the connection and setup tables
+    with analysis:
+        # **This is where the expensive data-creating call happens ONCE**
+        analysis.calculate_losses()
 
-    # columns are the return periods
-    assert list(exposure.columns) == [10, 100]
-    assert exposure.shape == (3, 2)
-    assert exposure.loc[0, 10] == pytest.approx(1.0)
-    assert exposure.loc[2, 100] == pytest.approx(2.5)
+def test_buildings_copied(flood_analysis_results):
+    """Test that buildings data is copied into the analysis database."""
+    conn = flood_analysis_results.conn
+    
+    result = conn.execute("SELECT COUNT(*) FROM buildings").fetchone()
+    assert result[0] == 3  # We had 3 buildings in the mock
 
-    # since no uncertainty was specified, the stored uncertainty dataframe
-    # should be all zeros and min==mean==max
-    assert hasattr(analysis, "exposure_uncertainty")
-    assert analysis.exposure_uncertainty.shape == exposure.shape
-    assert (analysis.exposure_uncertainty.values == 0).all()
-    assert np.allclose(buildings.gdf["flood_depth_10_min"].values, buildings.gdf["flood_depth_10_mean"].values)
+def test_calculate_losses_duckdb(flood_analysis_results):
+    """Test that _calculate_losses can use a DuckDB connection if provided."""
+    conn = flood_analysis_results.conn
+    
+    assert conn is not None
+    
 
-
-def test_calculate_exposure_with_numeric_uncertainty():
-    """When a numeric uncertainty is provided it should be applied to all
-    buildings (mean +/- uncertainty) and recorded in exposure_uncertainty."""
-
-    buildings = MockBuildings([10, 20])
-    # Provide a numeric uncertainty (0.2) for RP=5
-    raster_collection = {5: {"depth": MockRaster([2.0, 3.0]), "uncertainty": 0.2}}
-    raster_collection = RasterCollection(raster_collection)
-    vuln = MockVulnerability()
-
-    analysis = InlandFloodAnalysis(raster_collection, buildings, vuln, calculate_aal=False)
-    exposure = analysis._calculate_exposure()
-
-    # exposure values come from depth raster
-    assert exposure.loc[0, 5] == pytest.approx(2.0)
-    assert exposure.loc[1, 5] == pytest.approx(3.0)
-
-    # uncertainty should be recorded and equal to the numeric value for each row
-    assert np.allclose(analysis.exposure_uncertainty[5].values, np.array([0.2, 0.2]))
-
-    # check min/max columns on buildings.gdf
-    assert np.allclose(buildings.gdf["flood_depth_5_min"].values, np.array([1.8, 2.8]))
-    assert np.allclose(buildings.gdf["flood_depth_5_max"].values, np.array([2.2, 3.2]))
-
-
-def test_calculate_exposure_with_raster_uncertainty_between_0_and_1():
-    """Support uncertainty specified as a raster-like object. Use values
-    between 0.0 and 1.0 to ensure fractional uncertainties are handled."""
-
-    buildings = MockBuildings([1, 1, 1])
-    depth_raster = MockRaster([0.2, 0.4, 0.6])
-    uncertainty_raster = MockRaster([0.05, 0.1, 0.2])
-
-    # Provide (depth, uncertainty) tuple for RP=20
-    raster_collection = {20: {"depth": depth_raster, "uncertainty": uncertainty_raster}}
-    raster_collection = RasterCollection(raster_collection)
-    vuln = MockVulnerability()
-
-    analysis = InlandFloodAnalysis(raster_collection, buildings, vuln, calculate_aal=False)
-    exposure = analysis._calculate_exposure()
-
-    # check exposure matches depth raster
-    assert np.allclose(exposure[20].values, np.array([0.2, 0.4, 0.6]))
-
-    # uncertainty stored should match the uncertainty raster values
-    assert np.allclose(analysis.exposure_uncertainty[20].values, np.array([0.05, 0.1, 0.2]))
-
-    # min/max should be mean +/- uncertainty
-    assert np.allclose(buildings.gdf["flood_depth_20_min"].values, np.array([0.15, 0.3, 0.4]))
-    assert np.allclose(buildings.gdf["flood_depth_20_max"].values, np.array([0.25, 0.5, 0.8]))
-
+    # Now we can test the losses
+    

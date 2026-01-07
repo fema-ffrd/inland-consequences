@@ -18,6 +18,8 @@ dependencies = [
   "scipy>=1.15.3",
   "polars>=1.35.2",
   "typing==3.7.4.3",
+  "duckdb>=1.4.3",
+  "pyarrow>=22.0.0",
 ]
 
 [tool.uv.workspace]
@@ -53,9 +55,11 @@ packages = [
 ]
 
 [dependency-groups]
-dev = [    
+dev = [
+    "pyarrow>=22.0.0",
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
+    "pytest-mock>=3.15.1",
 ]
 
 [tool.mdformat]

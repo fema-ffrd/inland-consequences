@@ -33,7 +33,7 @@ class NsiBuildings(Buildings):
             "id": "target_fid",
             "occupancy_type": "occtype",
             "first_floor_height": "found_ht",
-            "foundation_type": "fndtype",  # mapped after preprocessing
+            "foundation_type": "foundation_type",  # mapped after preprocessing
             "number_stories": "num_story",
             "area": "sqft",
             "building_cost": "val_struct",
@@ -146,9 +146,12 @@ class NsiBuildings(Buildings):
                 6: "F",  # Fill
                 7: "S",  # Slab
             }
-            
             gdf["foundation_type"] = pd.to_numeric(gdf["fndtype"], errors='coerce') \
                                            .map(foundation_type_map) \
                                            .astype("category")
+            
+            # Drop fndtype after mapping 
+            # TODO: Consider keeping both fields for export later
+            gdf = gdf.drop(columns=["fndtype"])
 
         return gdf
