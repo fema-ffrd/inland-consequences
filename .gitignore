@@ -209,3 +209,4 @@ __marimo__/
 venv-inland/
 
 outputs/
+inland_flood_analysis*.duckdb

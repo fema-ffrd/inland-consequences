@@ -16,5 +16,23 @@ nav:
     - index.md
   - Methodlogy:
     - inventory_methodology.md
+    - inland_methodology.md
+    - coastal_methodology.md
   - Technical Implementation:
     - building_inventories.md
+    - AAL_tech_implementation.md
+
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+  - admonition
+  - toc:
+      permalink: true
+
+extra_css:
+  - https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js
+  - https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js
+  - javascripts/katex.js

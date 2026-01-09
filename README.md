@@ -37,7 +37,7 @@ uv run pytest -q
 3. Run the local `mkdocs` server.
 
 ```
-mkdocs serve
+uv run mkdocs serve
 ```
 
 ### Optional Setup - Markdown Formatting Pre-Commit Hook
