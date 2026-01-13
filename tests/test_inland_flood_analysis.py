@@ -19,10 +19,10 @@ def mock_buildings():
     """Provides a real NsiBuildings object with a small, fixed GeoDataFrame."""
     data = {
         'target_fid': [1, 2, 3],
-        'occtype': ['RES1', 'RES2', 'RES3'],
+        'occtype': ['RES1', 'RES1', 'COM1'],
         'found_ht': [2.5, 3.0, 2.0],
-        'fndtype': [1, 2, 3],
-        'num_story': [1, 2, 1],
+        'fndtype': [7, 4, 1],  # 7=Slab->S->SLAB, 4=Basement->B->BASE, 1=Pile->I->PILE
+        'num_story': [1, 2, 2],
         'sqft': [1000, 1500, 1200],
         'val_struct': [100000.0, 200000.0, 300000.0],
         'val_cont': [50000.0, 60000.0, 70000.0],
@@ -142,7 +142,56 @@ def test_calculate_losses_duckdb(flood_analysis_results):
     conn = flood_analysis_results.conn
     
     assert conn is not None
-    
 
+def test_gather_damage_functions(flood_analysis_results):
+    """Test that structure_damage_functions table is created with correct schema and data."""
+    conn = flood_analysis_results.conn
+    
+    # Check that table exists and has data
+    result = conn.execute("SELECT COUNT(*) FROM structure_damage_functions").fetchone()
+    assert result[0] > 0, "structure_damage_functions table should have at least one row"
+    
+    # Show the structure_damage_functions table
+    print("\n=== structure_damage_functions table ===")
+    df = conn.execute("SELECT * FROM structure_damage_functions ORDER BY building_id, damage_function_id").fetchdf()
+    print(df.to_string())
+    
+    # Check schema has expected columns
+    columns = conn.execute("DESCRIBE structure_damage_functions").fetchdf()
+    expected_columns = {'building_id', 'damage_function_id', 'first_floor_height', 'ffh_sig', 'weight'}
+    actual_columns = set(columns['column_name'].tolist())
+    assert expected_columns.issubset(actual_columns), f"Missing columns: {expected_columns - actual_columns}"
+    
+    # Check that each building has at least one damage function
+    building_counts = conn.execute("""
+        SELECT building_id, COUNT(*) as curve_count
+        FROM structure_damage_functions
+        GROUP BY building_id
+    """).fetchdf()
+    assert len(building_counts) == 3, "Should have damage functions for all 3 buildings"
+    assert all(building_counts['curve_count'] > 0), "Each building should have at least one damage function"
+    
+    # Check that weights sum to 1.0 per building
+    weight_sums = conn.execute("""
+        SELECT building_id, SUM(weight) as total_weight
+        FROM structure_damage_functions
+        GROUP BY building_id
+    """).fetchdf()
+    for _, row in weight_sums.iterrows():
+        assert abs(row['total_weight'] - 1.0) < 0.01, f"Weights for building {row['building_id']} should sum to 1.0"
+    
+    # Check that first_floor_height values are preserved from buildings table
+    ffh_check = conn.execute("""
+        SELECT DISTINCT sdf.building_id, sdf.first_floor_height, b.first_floor_height as original_ffh
+        FROM structure_damage_functions sdf
+        JOIN buildings b ON sdf.building_id = b.ID
+    """).fetchdf()
+    for _, row in ffh_check.iterrows():
+        assert row['first_floor_height'] == row['original_ffh'], f"first_floor_height should match for building {row['building_id']}"
+    
+    # Check that ffh_sig is 0 (as specified)
+    ffh_sig_check = conn.execute("SELECT DISTINCT ffh_sig FROM structure_damage_functions").fetchone()
+    assert ffh_sig_check[0] == 0, "ffh_sig should be 0"
+    
     # Now we can test the losses
     

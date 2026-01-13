@@ -399,15 +399,73 @@ class InlandFloodAnalysis:
         # For demonstration, assume columns: 'YearBuilt', 'BldgType', 'DesignLevel', etc.
         # and lookup tables have min/max columns for each attribute
 
-        # Structure Damage Functions
+        # # Structure Damage Functions
+        # structure_query = '''
+        #     CREATE TABLE structure_damage_functions AS
+        #     SELECT b.ID AS building_id, x.damage_function_id
+        #     FROM buildings b
+        #     JOIN xref_structures x
+        #         ON b.occupancy_type = x.occupancy_type
+        #         --AND b.BldgType = x.bldg_type
+        #         --AND b.DesignLevel = x.design_level
+        # '''
         structure_query = '''
-            CREATE TABLE structure_damage_functions AS
-            SELECT b.ID AS building_id, x.damage_function_id
+        CREATE TABLE structure_damage_functions AS
+        WITH 
+        curve_matches AS (
+            SELECT 
+                b.ID,
+                c.damage_function_id,
+                b.first_floor_height,
+                0 as ffh_sig,
+                -- NULL attributes match ANY value
+                -- Foundation type mapping: NSI codes (I,B,S,P,W,C,F) -> xref names (PILE,BASE,SLAB,SHAL)
+                CASE 
+                    WHEN b.foundation_type IS NOT NULL AND c.foundation_type IS NOT NULL AND 
+                        CASE 
+                            WHEN b.foundation_type = 'I' THEN 'PILE'
+                            WHEN b.foundation_type = 'B' THEN 'BASE'
+                            WHEN b.foundation_type = 'S' THEN 'SLAB'
+                            WHEN b.foundation_type = 'P' THEN 'PILE'
+                            WHEN b.foundation_type = 'W' THEN 'BASE'
+                            WHEN b.foundation_type = 'C' THEN 'SHAL'
+                            WHEN b.foundation_type = 'F' THEN 'SHAL'
+                            ELSE NULL
+                        END != c.foundation_type THEN 0
+                    WHEN b.number_stories IS NOT NULL AND c.story_min IS NOT NULL AND c.story_max IS NOT NULL 
+                        AND NOT (b.number_stories BETWEEN c.story_min AND c.story_max) THEN 0
+                    WHEN 'W' IS NOT NULL AND c.construction_type IS NOT NULL AND 'W' != c.construction_type THEN 0
+                    ELSE 1
+                END AS is_match
             FROM buildings b
-            JOIN xref_structures x
-                ON b.occupancy_type = x.occupancy_type
-                --AND b.BldgType = x.bldg_type
-                --AND b.DesignLevel = x.design_level
+            CROSS JOIN xref_structures c
+            WHERE b.occupancy_type = c.occupancy_type
+        ),
+        filtered_matches AS (
+            SELECT ID, damage_function_id, first_floor_height, ffh_sig
+            FROM curve_matches
+            WHERE is_match = 1
+        ),
+        curve_frequencies AS (
+            SELECT 
+                ID, damage_function_id, first_floor_height, ffh_sig,
+                COUNT(*) OVER (PARTITION BY ID) AS total_matches,
+                COUNT(*) OVER (PARTITION BY ID, damage_function_id) AS curve_count
+            FROM filtered_matches
+        ),
+        unique_scenarios AS (
+            SELECT DISTINCT
+                ID, damage_function_id, first_floor_height, ffh_sig,
+                CAST(curve_count AS DOUBLE) / NULLIF(total_matches, 0) AS weight
+            FROM curve_frequencies
+        )
+        SELECT 
+            ID AS building_id,
+            damage_function_id,
+            first_floor_height,
+            ffh_sig,
+            weight
+        FROM unique_scenarios;
         '''
         connection.execute(structure_query)
 
