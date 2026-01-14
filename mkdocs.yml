@@ -16,8 +16,11 @@ nav:
     - index.md
   - Methodlogy:
     - inventory_methodology.md
+    - buildingvalidation_techapproach.md
+    - hazardvalidation_techapproach.md
     - inland_methodology.md
     - coastal_methodology.md
+
   - Technical Implementation:
     - building_inventories.md
     - AAL_tech_implementation.md
