@@ -4,12 +4,12 @@ The **Consequence Modeling Solution** is designed to natively ingest the **Natio
 
 **Table 1. Supported Inventory Data Sources**
 
-| **Data Source**              | **Version**                | **Input File Type** | **Consequence Modeling** |
-| ---------------------------- | -------------------------- | ------------------- | ------------------------ |
-| **NSI**                      | 2022 Public Version        | GeoPackage          | Inland, Coastal          |
-| **NSI**                      | 2022 FEMA-Enhanced Version | File Geodatabase    | Inland only              |
-| **Milliman Market Baskets**  | 2021 Uniform, Uncorrelated | File Geodatabase    | Inland, Coastal          |
-| **User-defined Inventories** | User-defined               | User-defined        | Inland, Coastal          |
+| **Data Source**              | **Version**                | **Input File Type**          | **Consequence Modeling** |
+| ---------------------------- | -------------------------- | ---------------------------- | ------------------------ |
+| **NSI**                      | 2022 Public Version        | GeoPackage                   | Inland, Coastal          |
+| **NSI**                      | 2022 FEMA-Enhanced Version | File Geodatabase             | Inland only              |
+| **Milliman Market Baskets**  | 2021 Uniform, Uncorrelated | Comma-Separated Values (CSV) | Inland, Coastal          |
+| **User-defined Inventories** | User-defined               | User-defined                 | Inland, Coastal          |
 
 For additional details on inventory requirements and methodology, refer to the **[Inventory Methodology Documentation](inventory_methodology.md)**.
 
@@ -172,24 +172,25 @@ The Milliman Market Basket datasets support both coastal and inland loss calcula
 
 **Table 6. Milliman Data Attributes for Analysis**
 
-| **Analysis Attribute**            | **Data Type** | **Milliman Field Name** | **Assumption**                       | **Rule**                            | **Default if Missing**                                 |
-| --------------------------------- | ------------- | ----------------------- | ------------------------------------ | ----------------------------------- | ------------------------------------------------------ |
-| **Geometry**                      | Point         | Shape                   | Point geometry                       | Must be valid point geometry        | **Error (required)**                                   |
-| **Unique ID**                     | Object ID     | Location                | Provided                             | Must be present and unique          | **Error (required)**                                   |
-| **Occupancy Type**                | String        | *Not provided*          | Assume RES1                          | Assign default                      | **RES1**                                               |
-| **Building Value**                | Numeric       | BLDG_VALUE              | Full replacement cost (USD)          | Must be present                     | **Error (required)**                                   |
-| **Content Value**                 | Numeric       | CNT_VALUE               | Full replacement cost (USD)          | Validate > 0; assign default        | Default % by occupancy (Inventory Methodology Table 3) |
-| **Number of Stories**             | Numeric       | NUM_STORIE              | Provided                             | Validate > 0; assign default        | **1**                                                  |
-| **Area / Square Footage**         | Numeric       | *Not provided*          | Assume 1,800 sq ft                   | Assign default                      | Hazus RES1 default = **1,800 sq ft**                   |
-| **General Building Type**         | String        | *Not provided*          | Assume Wood                          | Assign default                      | **W (Wood)**                                           |
-| **Foundation Type**               | Numeric       | foundation              | Milliman codes: 2, 4, 6, 7, 8, 9     | Should be populated; assign default | **Slab**                                               |
-| **Foundation Height**             | Numeric       | FIRST_FLOO              | First-floor height above ground (ft) | Should be populated; assign default | Slab 1 ft; Shallow 3 ft; Pile 8 ft; Basement 2 ft      |
-| **Ground Elevation**              | Numeric       | DEMft                   | DEM ground elevation (ft, NAVD88)    | Must be present                     | **Error (required)**                                   |
-| **Basement Type**                 | Numeric       | BasementFi              | 0=None, 1=Unfinished, 2=Finished     | Provided                            | Default = None                                         |
-| **Content Insurance Deductible**  | Numeric       | CNT_DED                 | Provided                             | Not used in loss calculations       | None                                                   |
-| **Content Insurance Limit**       | Numeric       | CNT_LIM                 | Provided                             | Not used in loss calculations       | None                                                   |
-| **Building Insurance Deductible** | Numeric       | BLDG_DED                | Provided                             | Not used in loss calculations       | None                                                   |
-| **Building Insurance Limit**      | Numeric       | BLDG_LIMIT              | Provided                             | Not used in loss calculations       | None                                                   |
+| Analysis Attribute            | NSI Field Name     | Data Type | Notes                                                                                           |
+| ----------------------------- | ------------------ | --------- | ----------------------------------------------------------------------------------------------- |
+| X Location                    | LON                | Double    |                                                                                                 |
+| Y Location                    | LAT                | Double    |                                                                                                 |
+| Unique ID                     | Location           | String    |                                                                                                 |
+| Occupancy Type                | --                 | --        | All points are RES1                                                                             |
+| Building Value                | BLDG_VALUE         | Long      | Full replacement value                                                                          |
+| Building Insurance Deductible | BLDG_DED           | Long      |                                                                                                 |
+| Building Insurance Limit      | BLDG_LIMIT         | Long      |                                                                                                 |
+| Content Value                 | CNT_VALUE          | Long      | Full replacement value                                                                          |
+| Content Insurance Deductible  | CNT_DED            | Long      |                                                                                                 |
+| Content Insurance Limit       | CNT_LIMIT          | Long      |                                                                                                 |
+| Number of Stories             | NUM_STORIES        | Long      |                                                                                                 |
+| Area/Square Footage           | --                 | --        | Use default area for RES1 based on Hazus Methodolgy, i.e. sqft=1800                             |
+| General Building Type         | CONSTR_CODE        | Long      | Construction type, ( 1 = W, 2 = M), Use default value W if not provided.                        |
+| Foundation Type               | foundationtype     | Long      | Foundation type, (2 = basement; 4 = crawlspace; 6 = pier; 7 = fill or wall; 8 = slab; 9 = pile) |
+| Foundation Height             | FIRST_FLOOR_ELEV   | Long      | First floor height (feet above ground)                                                          |
+| Basement Type                 | BasementFinishType | Long      | Basement Finish type, (0 = no basement; 1 = unfinished basement; 2 = finished basement)         |
+| Ground Elevation              | elev_ft            | Float     | Digital Elevation Model (DEM) (ground) elevation (feet NAVD88)                                  |
 
 ### Milliman — Inland Foundation Type Mapping
 
