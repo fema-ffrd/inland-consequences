@@ -17,9 +17,11 @@ from sphere.core.schemas.abstract_vulnerability_function import AbstractVulnerab
 @pytest.fixture(scope="module")
 def mock_buildings():
     """Provides a real NsiBuildings object with a small, fixed GeoDataFrame."""
+
+    # Mock Data
     data = {
         'target_fid': [1, 2, 3],
-        'occtype': ['RES1', 'RES2', 'RES3'],
+        'occtype': ['RES1', 'RES2', 'RES3A'],
         'found_ht': [2.5, 3.0, 2.0],
         'fndtype': [1, 2, 3],
         'num_story': [1, 2, 1],
@@ -130,19 +132,57 @@ def test_manual_calculate_losses(mock_raster_collection, mock_buildings, mock_vu
         # **This is where the expensive data-creating call happens ONCE**
         analysis.calculate_losses()
 
-def test_buildings_copied(flood_analysis_results):
-    """Test that buildings data is copied into the analysis database."""
+def test_gather_damage_functions_table_exists(flood_analysis_results):
+    """Test that structure_damage_functions table is created with data."""
     conn = flood_analysis_results.conn
     
-    result = conn.execute("SELECT COUNT(*) FROM buildings").fetchone()
-    assert result[0] == 3  # We had 3 buildings in the mock
+    result = conn.execute("SELECT COUNT(*) FROM structure_damage_functions").fetchone()
+    assert result[0] > 0
 
-def test_calculate_losses_duckdb(flood_analysis_results):
-    """Test that _calculate_losses can use a DuckDB connection if provided."""
+def test_gather_damage_functions_schema(flood_analysis_results):
+    """Test that structure_damage_functions table has expected columns."""
     conn = flood_analysis_results.conn
     
-    assert conn is not None
-    
+    columns = conn.execute("DESCRIBE structure_damage_functions").fetchdf()
+    expected_columns = {'building_id', 'damage_function_id', 'first_floor_height', 'ffh_sig', 'weight'}
+    actual_columns = set(columns['column_name'].tolist())
+    assert expected_columns.issubset(actual_columns)
 
-    # Now we can test the losses
+def test_all_buildings_have_damage_functions(flood_analysis_results):
+    """Test that all buildings from buildings table are paired with damage functions."""
+    conn = flood_analysis_results.conn
     
+    unpaired = conn.execute("""
+        SELECT b.ID 
+        FROM buildings b
+        LEFT JOIN structure_damage_functions sdf ON b.ID = sdf.building_id
+        WHERE sdf.building_id IS NULL
+    """).fetchdf()
+    
+    assert len(unpaired) == 0
+
+def test_gather_damage_functions_weights_sum_to_one(flood_analysis_results):
+    """Test that weights sum to 1.0 per building."""
+    conn = flood_analysis_results.conn
+    
+    weight_sums = conn.execute("""
+        SELECT building_id, SUM(weight) as total_weight
+        FROM structure_damage_functions
+        GROUP BY building_id
+    """).fetchdf()
+    for _, row in weight_sums.iterrows():
+        assert abs(row['total_weight'] - 1.0) < 0.01
+
+def test_gather_damage_functions_preserves_ffh(flood_analysis_results):
+    """Test that first_floor_height values match the buildings table."""
+    conn = flood_analysis_results.conn
+    
+    ffh_check = conn.execute("""
+        SELECT DISTINCT sdf.building_id, sdf.first_floor_height, b.first_floor_height as original_ffh
+        FROM structure_damage_functions sdf
+        JOIN buildings b ON sdf.building_id = b.ID
+    """).fetchdf()
+    for _, row in ffh_check.iterrows():
+        assert row['first_floor_height'] == row['original_ffh']
+
+

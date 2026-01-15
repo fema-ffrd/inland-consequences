@@ -409,6 +409,8 @@ class InlandFloodAnalysis:
         #         --AND b.BldgType = x.bldg_type
         #         --AND b.DesignLevel = x.design_level
         # '''
+
+        # TODO: Remove case statements for construction type and foundation type once inventory import has these handled.
         structure_query = '''
         CREATE TABLE structure_damage_functions AS
         WITH 
@@ -434,7 +436,20 @@ class InlandFloodAnalysis:
                         END != c.foundation_type THEN 0
                     WHEN b.number_stories IS NOT NULL AND c.story_min IS NOT NULL AND c.story_max IS NOT NULL 
                         AND NOT (b.number_stories BETWEEN c.story_min AND c.story_max) THEN 0
-                    WHEN 'W' IS NOT NULL AND c.construction_type IS NOT NULL AND 'W' != c.construction_type THEN 0
+                    WHEN CASE 
+                            WHEN b.occupancy_type = 'RES2' THEN 'MH'
+                            WHEN b.occupancy_type = 'RES3' THEN 'M'
+                            WHEN b.occupancy_type LIKE 'RES%' THEN 'W'
+                            WHEN b.occupancy_type LIKE 'COM%' THEN 'M'
+                            ELSE 'W'
+                        END IS NOT NULL AND c.construction_type IS NOT NULL AND 
+                        CASE 
+                            WHEN b.occupancy_type = 'RES2' THEN 'MH'
+                            WHEN b.occupancy_type = 'RES3' THEN 'M'
+                            WHEN b.occupancy_type LIKE 'RES%' THEN 'W'
+                            WHEN b.occupancy_type LIKE 'COM%' THEN 'M'
+                            ELSE 'W'
+                        END != c.construction_type THEN 0
                     ELSE 1
                 END AS is_match
             FROM buildings b
