@@ -10,6 +10,8 @@ import duckdb
 import pyarrow as pa
 from pathlib import Path
 from datetime import datetime
+import time
+import secrets
 
 # Raster inputs are provided via a RasterCollection instance which
 # enforces labeled rasters per return period (depth required, optional
@@ -264,6 +266,9 @@ class InlandFloodAnalysis:
             conn.execute("LOAD spatial;")
             conn.execute("CALL register_geoarrow_extensions()")
             
+            # Ensure the shared validation table exists before running checks
+            self._create_validation_table(conn)
+            
             # Copy buildings to database
             self._create_buildings_table(conn)
             
@@ -272,6 +277,12 @@ class InlandFloodAnalysis:
             
             # Copy hazard inputs to database
             self._create_hazard_tables(conn)    
+
+            # Run building-level validation logic (non-fatal)
+            self._run_building_logic(conn)
+
+            # Run hazard-level validation logic (non-fatal)
+            self._run_hazard_logic(conn)
 
             # Gather damage functions from vulnerability function
             self._gather_damage_functions(conn)
@@ -284,6 +295,9 @@ class InlandFloodAnalysis:
 
             # Run AAL
             self._calculate_aal(conn)
+
+            # Run results-level validation logic (non-fatal)
+            self._run_results_logic(conn)
 
         finally:
             # Only close if we created it ourselves (Standalone Mode)
@@ -393,6 +407,241 @@ class InlandFloodAnalysis:
             ) rp
         ''')
     
+    def _create_validation_table(self, connection: duckdb.DuckDBPyConnection) -> None:
+        """Create a shared validation log table for recording non-fatal issues.
+
+        The table is intentionally permissive: messages are logged but do not
+        interrupt execution. Fields follow validation best-practices: the
+        record includes the related building id (if any), the source/table,
+        the validation rule identifier, a human message, severity and a
+        timestamp.
+        """
+        sql = '''
+            CREATE TABLE IF NOT EXISTS validation_log (
+                id uuid PRIMARY KEY default uuidv7(),
+                building_id INTEGER,
+                table_name VARCHAR,
+                source VARCHAR,
+                rule VARCHAR,
+                message VARCHAR,
+                severity VARCHAR
+            )
+        '''
+        connection.execute(sql)
+
+    def _run_building_logic(self, connection: duckdb.DuckDBPyConnection) -> None:
+        """Run comprehensive building validation checks and log any issues.
+
+        These checks are non-fatal — they identify likely problems in the
+        inventory (missing IDs, missing/zero cost, missing occupancy_type,
+        unusual area/valuation, unusual story heights, foundation type issues).
+        """
+        try:
+            # Load hzSqFtFactors for area validation
+            base_path = Path(__file__).parent / "data"
+            hz_factors_path = base_path / "hzSqFtFactors.csv"
+            hz_factors_df = pd.read_csv(hz_factors_path)
+            hz_factors_arrow = pa.Table.from_pandas(hz_factors_df)
+            connection.execute("DROP TABLE IF EXISTS hz_sq_ft_factors")
+            connection.execute("CREATE TABLE hz_sq_ft_factors AS SELECT * FROM hz_factors_arrow")
+            
+            sql = '''
+                -- Basic validation: missing or non-positive building_cost
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT id, 'buildings', 'building_validation', 'BUILDING_COST_MISSING_OR_ZERO', 'building_cost is null or non-positive', 'WARNING' 
+                FROM buildings 
+                WHERE building_cost IS NULL OR building_cost <= 0;
+
+                -- Occupancy type missing or empty
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT id, 'buildings', 'building_validation', 'OCCUPANCY_TYPE_MISSING', 'occupancy_type is null or empty', 'WARNING' 
+                FROM buildings 
+                WHERE occupancy_type IS NULL OR occupancy_type = '';
+
+                -- Check for unusual area/valuation: > 5x the Hazus hzSqFtFactors table
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT b.id, 'buildings', 'building_validation', 'UNUSUAL_AREA_OR_VALUATION', 
+                    'Structure area/valuation is >5x expected for occupancy type ' || b.occupancy_type || '; review occupancy type assignment or building area', 
+                    'WARNING'
+                FROM buildings b
+                JOIN hz_sq_ft_factors h ON TRIM(b.occupancy_type) = TRIM(h.Occupancy)
+                WHERE COALESCE(b.area, 0) > (h.SquareFootage * 5);
+
+                -- Check for unusual story counts by occupancy type
+                -- Not mid-rise (> 3 stories): RES1, RES2, RES6, COM9, IND1, IND4, IND6, GOV2, EDU1
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT id, 'buildings', 'building_validation', 'UNUSUAL_STORY_COUNT_RES1', 
+                    'RES1 with >' || number_stories || ' stories is unusual; assuming 3 stories for loss purposes', 
+                    'WARNING'
+                FROM buildings
+                WHERE occupancy_type = 'RES1' AND number_stories > 3;
+
+                -- Not mid-rise (> 3 stories) for other occupancies
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT id, 'buildings', 'building_validation', 'UNUSUAL_STORY_COUNT_MID_RISE', 
+                    'Occupancy type ' || occupancy_type || ' with >' || number_stories || ' stories is unusual; review assignment', 
+                    'WARNING'
+                FROM buildings
+                WHERE occupancy_type IN ('RES2', 'RES6', 'COM9', 'IND1', 'IND4', 'IND6', 'GOV2', 'EDU1')
+                  AND number_stories > 3;
+
+                -- Not high-rise (> 7 stories)
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT id, 'buildings', 'building_validation', 'UNUSUAL_STORY_COUNT_HIGH_RISE', 
+                    'Occupancy type ' || occupancy_type || ' with >' || number_stories || ' stories is unusual; review assignment', 
+                    'WARNING'
+                FROM buildings
+                WHERE occupancy_type IN ('COM2', 'COM3', 'COM8', 'IND2', 'IND3', 'IND5', 'EDU2', 'GOV1', 'REL1')
+                  AND number_stories > 7;
+
+                -- Check for unusual foundation types based on zone (basements in V-zone)
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT id, 'buildings', 'building_validation', 'UNUSUAL_FOUNDATION_TYPE', 
+                    'Foundation type assignment may need review; check for anomalies (e.g., basements in V-zone)', 
+                    'WARNING'
+                FROM buildings
+                WHERE (zone_type = 'V' AND foundation_type IN ('Basement', 'BASEMENT'))
+                   OR (zone_type = 'AE' AND foundation_type IN ('Basement', 'BASEMENT'));
+            '''
+
+            connection.sql(sql)
+
+        except Exception:
+            # Do not let validation break processing
+            pass
+
+    def _run_hazard_logic(self, connection: duckdb.DuckDBPyConnection) -> None:
+        """Run comprehensive hazard validation checks and log any issues.
+
+        These checks look for null/negative depths/velocities/durations, unusual
+        depths and velocities by return period, and monotonicity issues.
+        """
+        try:
+            sql = '''
+                -- Basic validation: null or negative depths
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT ID, 'hazard', 'hazard_validation', 'DEPTH_INVALID', 
+                    'depth is null or negative for return_period=' || return_period, 
+                    'WARNING' 
+                FROM hazard 
+                WHERE depth IS NULL OR depth < 0;
+
+                -- Null or negative std_dev
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT ID, 'hazard', 'hazard_validation', 'STD_DEV_INVALID', 
+                    'std_dev is null or negative for return_period=' || return_period, 
+                    'WARNING' 
+                FROM hazard 
+                WHERE std_dev IS NULL OR std_dev < 0;
+
+                -- Unusual depths and velocities by return period
+                -- 10-year or 25-year: > 5 feet depth or velocity > 10 feet/second
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT ID, 'hazard', 'hazard_validation', 'UNUSUAL_HAZARD_PARAMETERS_10YR', 
+                    'Unusually high hazard parameters at ' || return_period || '-year return period (depth=' || ROUND(depth, 2) || ' ft, velocity=' || COALESCE(ROUND(velocity, 2), 0) || ' ft/s); review for erroneous building location or anomalies in hazard data', 
+                    'WARNING'
+                FROM hazard
+                WHERE return_period IN (10, 25)
+                  AND (COALESCE(depth, 0) > 5 OR COALESCE(velocity, 0) > 10);
+
+                -- Other return periods: > 20 feet depth or velocity > 30 feet/second
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT ID, 'hazard', 'hazard_validation', 'UNUSUAL_HAZARD_PARAMETERS', 
+                    'Unusually high hazard parameters at ' || return_period || '-year return period (depth=' || ROUND(depth, 2) || ' ft, velocity=' || COALESCE(ROUND(velocity, 2), 0) || ' ft/s); review for erroneous building location or anomalies in hazard data', 
+                    'WARNING'
+                FROM hazard
+                WHERE return_period > 25
+                  AND (COALESCE(depth, 0) > 20 OR COALESCE(velocity, 0) > 30);
+
+                -- Check for monotonicity: depths and velocities should increase with longer return periods
+                -- This requires joining hazard records for the same building at different return periods
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                WITH hazard_sequences AS (
+                    SELECT 
+                        h1.ID,
+                        h1.return_period as rp1,
+                        h2.return_period as rp2,
+                        h1.depth as depth1,
+                        h2.depth as depth2,
+                        h1.std_dev as std1,
+                        h2.std_dev as std2
+                    FROM hazard h1
+                    JOIN hazard h2 ON h1.ID = h2.ID
+                    WHERE h1.return_period < h2.return_period
+                )
+                SELECT DISTINCT
+                    ID, 
+                    'hazard', 
+                    'hazard_validation', 
+                    'DEPTH_DECREASES_WITH_RETURN_PERIOD', 
+                    'Flood depth does not monotonically increase with return period; minimum depth at ' || rp2 || '-year (mean - std=' || ROUND(depth2 - std2, 2) || ') is less than ' || rp1 || '-year (mean + std=' || ROUND(depth1 + std1, 2) || ')',
+                    'WARNING'
+                FROM hazard_sequences
+                WHERE (depth2 - std2) < (depth1 + std1);
+            '''
+
+            connection.sql(sql)
+
+        except Exception:
+            # Do not let validation break processing
+            pass
+    
+    def _run_results_logic(self, connection: duckdb.DuckDBPyConnection) -> None:
+        """Run comprehensive results validation checks and log any issues.
+
+        These checks validate loss ratios, 10-year losses, AAL ratios, and
+        other result-based metrics that may indicate anomalies in assignments
+        or hazard data.
+        """
+        try:
+            sql = '''
+                -- Check for loss ratios > 1 (100%) in building or content loss
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT DISTINCT
+                    l.ID,
+                    'losses',
+                    'results_validation',
+                    'LOSS_RATIO_EXCEEDS_100',
+                    'Building or content loss ratio exceeds 100% (loss=' || ROUND(l.loss_mean, 2) || ', value=' || ROUND(b.building_cost, 2) || '); indicates issues with DDF assignment',
+                    'WARNING'
+                FROM losses l
+                JOIN buildings b ON l.ID = b.id
+                WHERE (l.loss_mean / NULLIF(b.building_cost, 0)) > 1.0;
+
+                -- Check for 10-year loss > 50% of building value
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT 
+                    l.ID,
+                    'losses',
+                    'results_validation',
+                    'HIGH_10YR_LOSS',
+                    '10-year return period loss >50% of building value (' || ROUND((l.loss_mean / NULLIF(b.building_cost, 0)) * 100, 1) || '%); review for erroneous location or anomalies with hazard data',
+                    'WARNING'
+                FROM losses l
+                JOIN buildings b ON l.ID = b.id
+                WHERE l.return_period = 10 
+                  AND (l.loss_mean / NULLIF(b.building_cost, 0)) > 0.5;
+
+                -- Check for AAL loss ratio > 10% of building value
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT 
+                    a.ID,
+                    'aal_losses',
+                    'results_validation',
+                    'HIGH_AAL_LOSS_RATIO',
+                    'AAL loss ratio >10% of building value (' || ROUND((a.aal_mean / NULLIF(b.building_cost, 0)) * 100, 1) || '%); review for erroneous location or anomalies with return period hazard data',
+                    'WARNING'
+                FROM aal_losses a
+                JOIN buildings b ON a.ID = b.id
+                WHERE (a.aal_mean / NULLIF(b.building_cost, 0)) > 0.1;
+            '''
+
+            connection.sql(sql)
+
+        except Exception:
+            # Do not let validation break processing
+            pass
+
     def _gather_damage_functions(self, connection: duckdb.DuckDBPyConnection) -> None:
 
         # Example attribute columns for matching (update as needed)
