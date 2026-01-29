@@ -29,7 +29,47 @@ ______________________________________________________________________
 
 ## Base Buildings Class
 
-> *TODO:* Define the **Base Buildings Schema** used for consequence analysis in both inland and coastal applications. All `target_fields` referenced in subsequent sections should be defined here.
+The **Base Buildings Class** provides standardized field mapping for building inventories. It defines target fields that all consequence analysis operations use, but **does not validate or impute missing fields**. The base class simply maps source field names (via auto-detection or explicit overrides) to standardized target field names.
+
+**Subclasses extend the base class** with schema validation and field imputation:
+- **NsiBuildings**: Validates NSI required fields and imputes optional fields using NSI-specific defaults
+- **MillimanBuildings**: Validates Milliman required fields and imputes optional fields (including creating fields not present in source data like `occupancy_type` and `area`)
+- **User-defined**: Can use base Buildings class directly (requires all fields present) or create a custom subclass with validation/imputation
+
+The Buildings class provides flexible field mapping through:
+
+- **Automatic field detection** using case-insensitive matching against common aliases
+- **Explicit field overrides** for non-standard field names
+- **Property-based access** to all target fields regardless of source naming
+
+### Base Buildings Schema
+
+The following schema defines all target fields used by the Consequence Modeling Solution. **Table 1** provides a summary of the target fields, their data types, and usage context.
+
+**Table 1. Base Buildings Target Fields**
+
+| **Target Field**          | **Data Type** | **Description**                                                  | **Used In**       | **Common Aliases**                                                |
+| ------------------------- | ------------- | ---------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------- |
+| **id**                    | String        | Unique identifier for the building                               | Inland, Coastal   | id, building_id, bldg_id, fd_id                                   |
+| **occupancy_type**        | String        | HAZUS occupancy classification (e.g., RES1, COM1, IND2)          | Inland, Coastal   | occupancy_type, occtype, occupancy, occ_type, building_type       |
+| **first_floor_height**    | Numeric       | First floor height above ground elevation (feet)                 | Inland, Coastal   | first_floor_height, found_ht, first_floor_ht, ffh, floor_height  |
+| **foundation_type**       | String        | Foundation type code (I, P, W, B, C, F, S)                       | Inland, Coastal   | foundation_type, fndtype, found_type, fnd_type                    |
+| **number_stories**        | Numeric       | Number of stories (floors) in the building                       | Inland, Coastal   | number_stories, num_story, numstories, stories, num_floors        |
+| **area**                  | Numeric       | Building floor area (square feet)                                | Inland, Coastal   | area, sqft, building_area, floor_area                             |
+| **building_cost**         | Numeric       | Building structural replacement cost (USD)                       | Inland, Coastal   | buildingcostusd, building_cost, val_struct, cost, building_value  |
+| **content_cost**          | Numeric       | Contents replacement cost (USD)                                  | Inland, Coastal   | contentcostusd, content_cost, val_cont, contents_cost             |
+| **inventory_cost**        | Numeric       | Business inventory replacement cost (USD)                        | Inland, Coastal   | inventorycostusd, inventory_cost, val_inv, inv_cost               |
+| **general_building_type** | String        | Construction material code (W, M, C, S, MH)                      | Inland            | general_building_type, bldgtype, generalbuildingtype              |
+| **eq_building_type**      | String        | Earthquake-specific building type classification                 | Earthquake        | eqbldgtypeid, eq_building_type, earthquake_building_type          |
+| **eq_design_level**       | String        | Earthquake design level classification                           | Earthquake        | eqdesignlevelid, eq_design_level, design_level                    |
+
+### *Base Buildings Data Schema:*
+
+```json
+{%
+   include "schemas/buildings_schema.json"
+%}
+```
 
 ______________________________________________________________________
 
@@ -153,6 +193,26 @@ For the FEMA-Enhanced NSI, parcel-derived fields (`P_FNDTYPE` and `P_BSMNT`) are
 | E             | Earth           | SLAB                                                           |
 | Z             | Placeholder     | If `P_BSMNT` indicates basement → **BASE**, otherwise **Slab** |
 
+### *NSI Data Schema:*
+
+```json
+{%
+   include "schemas/nsi_schema.json"
+%}
+```
+
+However, users may provide a crosswalk (a.k.a. override) from the target fields to the user's non-standard
+fields.
+
+*Example of User-Provided Override for NSI Field Names:*
+(keys=target_field, values=user's field)
+
+```json
+{
+    "building_cost": "my_custom_building_cost_field"
+}
+```
+
 ______________________________________________________________________
 
 ## Milliman Market Baskets Data
@@ -233,4 +293,186 @@ fields.
 
 ## User Defined Data
 
-TODO: Insert definitions a user-defined buildings dataset. Seems this should reflect the base class.
+Users can provide custom building inventories for consequence analysis by ensuring their data conforms to the **Base Buildings Schema** defined above. The Buildings class provides flexible ingestion pathways that support various data formats and field naming conventions.
+
+### Requirements for User-Defined Inventories
+
+1. **Geometry**: Must include valid point geometry (latitude/longitude coordinates)
+2. **Required Fields**: Must contain or allow imputation of:
+   - Unique building identifier (`id`)
+   - Number of stories (`number_stories`)  
+   - Building floor area (`area`)
+   - Building replacement cost (`building_cost`)
+
+3. **Optional Fields**: May include (or rely on defaults):
+   - Occupancy type, foundation type, first floor height
+   - Content cost, inventory cost, construction type
+   - Any output fields from previous analyses
+
+### Field Mapping Approaches
+
+**Approach 1: Use Standard Field Names**
+
+Create a GeoDataFrame with columns matching target field names or their aliases:
+
+```python
+import geopandas as gpd
+import pandas as pd
+from inland_consequences.buildings import Buildings
+
+# Create DataFrame with standard field names
+data = {
+    'id': ['B001', 'B002', 'B003'],
+    'occupancy_type': ['RES1', 'COM1', 'IND2'],
+    'building_cost': [250000, 500000, 1000000],
+    'content_cost': [125000, 500000, 1500000],
+    'number_stories': [2, 1, 3],
+    'area': [2000, 5000, 10000],
+    'first_floor_height': [1.0, 2.0, 3.0],
+    'foundation_type': ['S', 'S', 'B'],
+    'general_building_type': ['W', 'M', 'C'],
+    'latitude': [40.7, 40.8, 40.9],
+    'longitude': [-74.0, -74.1, -74.2]
+}
+
+# Create GeoDataFrame with point geometry
+gdf = gpd.GeoDataFrame(
+    data,
+    geometry=gpd.points_from_xy(data['longitude'], data['latitude']),
+    crs='EPSG:4326'
+)
+
+# No overrides needed - fields auto-detected
+buildings = Buildings(gdf)
+```
+
+**Approach 2: Provide Field Overrides**
+
+Map your custom field names to target fields using the `overrides` parameter:
+
+```python
+# User has non-standard field names
+data = {
+    'building_id': ['B001', 'B002', 'B003'],
+    'use_code': ['RES1', 'COM1', 'IND2'],
+    'struct_value': [250000, 500000, 1000000],
+    'contents_value': [125000, 500000, 1500000],
+    'floors': [2, 1, 3],
+    'sqft': [2000, 5000, 10000],
+    'ffh_ft': [1.0, 2.0, 3.0],
+    'foundation': ['SLAB', 'SLAB', 'BASEMENT'],
+    'construction': ['WOOD', 'MASONRY', 'CONCRETE'],
+    'lat': [40.7, 40.8, 40.9],
+    'lon': [-74.0, -74.1, -74.2]
+}
+
+gdf = gpd.GeoDataFrame(
+    data,
+    geometry=gpd.points_from_xy(data['lon'], data['lat']),
+    crs='EPSG:4326'
+)
+
+# Provide explicit mapping from target fields to user's fields
+overrides = {
+    'id': 'building_id',
+    'occupancy_type': 'use_code', 
+    'building_cost': 'struct_value',
+    'content_cost': 'contents_value',
+    'number_stories': 'floors',
+    'area': 'sqft',
+    'first_floor_height': 'ffh_ft',
+    'foundation_type': 'foundation',
+    'general_building_type': 'construction'
+}
+
+buildings = Buildings(gdf, overrides=overrides)
+```
+
+**Approach 3: Rely on Default Imputation**
+
+Provide only required fields; optional fields will be imputed using documented defaults:
+
+```python
+# Minimal dataset - only required fields
+data = {
+    'building_id': ['B001', 'B002', 'B003'],
+    'building_cost': [250000, 500000, 1000000],
+    'number_stories': [2, 1, 3],
+    'area': [2000, 5000, 10000],
+    'latitude': [40.7, 40.8, 40.9],
+    'longitude': [-74.0, -74.1, -74.2]
+}
+
+gdf = gpd.GeoDataFrame(
+    data,
+    geometry=gpd.points_from_xy(data['longitude'], data['latitude']),
+    crs='EPSG:4326'
+)
+
+overrides = {'id': 'building_id'}
+
+# Optional fields will be imputed:
+# - occupancy_type: RES1
+# - foundation_type: S (Slab)
+# - first_floor_height: 1.0 ft (slab default)
+# - general_building_type: W (Wood)
+# - content_cost: 50% of building_cost (RES1 default)
+buildings = Buildings(gdf, overrides=overrides)
+```
+
+### Foundation Type Coding
+
+If your data uses different foundation type codes than the standardized codes (I, P, W, B, C, F, S), you must preprocess your data to translate to the standard codes:
+
+| **Standard Code** | **Description**      | **Inland Foundation Type** |
+| ----------------- | -------------------- | -------------------------- |
+| **I**             | Pile (Infilled)      | PILE                       |
+| **P**             | Pier/Post            | SHAL (Shallow)             |
+| **W**             | Solid Wall           | SHAL (Shallow)             |
+| **B**             | Basement             | BASE (Basement)            |
+| **C**             | Crawlspace           | SHAL (Shallow)             |
+| **F**             | Fill                 | SLAB                       |
+| **S**             | Slab on Grade        | SLAB                       |
+
+### Data Validation
+
+The Buildings class performs automatic validation:
+- **Required fields present**: Verifies all required fields exist (either directly or through aliases)
+- **No missing required values**: Ensures required fields have no NULL/NaN values
+- **Valid geometry**: Confirms point geometry is valid and has a coordinate reference system
+
+If validation fails, the class raises descriptive errors indicating which fields are missing or invalid.
+
+### Example: Complete User-Defined Workflow
+
+```python
+from inland_consequences.buildings import Buildings
+from inland_consequences.inland_flood_analysis import InlandFloodAnalysis
+from inland_consequences.raster_collection import RasterCollection
+from inland_consequences.default_vulnerability import DefaultVulnerability
+
+# 1. Load user's building data
+user_buildings_gdf = gpd.read_file('my_buildings.gpkg')
+
+# 2. Define field mappings
+field_overrides = {
+    'id': 'UNIQUE_ID',
+    'occupancy_type': 'OCCUPANCY',
+    'building_cost': 'REPLACEMENT_VALUE',
+    'number_stories': 'NUM_FLOORS',
+    'area': 'FLOOR_AREA_SQFT'
+}
+
+# 3. Create Buildings object (auto-validates and imputes defaults)
+buildings = Buildings(user_buildings_gdf, overrides=field_overrides)
+
+# 4. Use in analysis
+hazard_rasters = RasterCollection('flood_depth_*.tif')
+vulnerability = DefaultVulnerability()
+
+with InlandFloodAnalysis(hazard_rasters, buildings, vulnerability) as analysis:
+    analysis.calculate_losses()
+    results_gdf = analysis.buildings.gdf  # GeoDataFrame with loss results
+```
+
+For additional guidance on default values and imputation strategies, see the **[Inventory Methodology Documentation](inventory_methodology.md)**.
