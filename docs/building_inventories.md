@@ -32,6 +32,7 @@ ______________________________________________________________________
 The **Base Buildings Class** provides standardized field mapping for building inventories. It defines target fields that all consequence analysis operations use, but **does not validate or impute missing fields**. The base class simply maps source field names (via auto-detection or explicit overrides) to standardized target field names.
 
 **Subclasses extend the base class** with schema validation and field imputation:
+
 - **NsiBuildings**: Validates NSI required fields and imputes optional fields using NSI-specific defaults
 - **MillimanBuildings**: Validates Milliman required fields and imputes optional fields (including creating fields not present in source data like `occupancy_type` and `area`)
 - **User-defined**: Can use base Buildings class directly (requires all fields present) or create a custom subclass with validation/imputation
@@ -48,20 +49,20 @@ The following schema defines all target fields used by the Consequence Modeling 
 
 **Table 1. Base Buildings Target Fields**
 
-| **Target Field**          | **Data Type** | **Description**                                                  | **Used In**       | **Common Aliases**                                                |
-| ------------------------- | ------------- | ---------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------- |
-| **id**                    | String        | Unique identifier for the building                               | Inland, Coastal   | id, building_id, bldg_id, fd_id                                   |
-| **occupancy_type**        | String        | HAZUS occupancy classification (e.g., RES1, COM1, IND2)          | Inland, Coastal   | occupancy_type, occtype, occupancy, occ_type, building_type       |
-| **first_floor_height**    | Numeric       | First floor height above ground elevation (feet)                 | Inland, Coastal   | first_floor_height, found_ht, first_floor_ht, ffh, floor_height  |
-| **foundation_type**       | String        | Foundation type code (I, P, W, B, C, F, S)                       | Inland, Coastal   | foundation_type, fndtype, found_type, fnd_type                    |
-| **number_stories**        | Numeric       | Number of stories (floors) in the building                       | Inland, Coastal   | number_stories, num_story, numstories, stories, num_floors        |
-| **area**                  | Numeric       | Building floor area (square feet)                                | Inland, Coastal   | area, sqft, building_area, floor_area                             |
-| **building_cost**         | Numeric       | Building structural replacement cost (USD)                       | Inland, Coastal   | buildingcostusd, building_cost, val_struct, cost, building_value  |
-| **content_cost**          | Numeric       | Contents replacement cost (USD)                                  | Inland, Coastal   | contentcostusd, content_cost, val_cont, contents_cost             |
-| **inventory_cost**        | Numeric       | Business inventory replacement cost (USD)                        | Inland, Coastal   | inventorycostusd, inventory_cost, val_inv, inv_cost               |
-| **general_building_type** | String        | Construction material code (W, M, C, S, MH)                      | Inland            | general_building_type, bldgtype, generalbuildingtype              |
-| **eq_building_type**      | String        | Earthquake-specific building type classification                 | Earthquake        | eqbldgtypeid, eq_building_type, earthquake_building_type          |
-| **eq_design_level**       | String        | Earthquake design level classification                           | Earthquake        | eqdesignlevelid, eq_design_level, design_level                    |
+| **Target Field**          | **Data Type** | **Description**                                         | **Used In**     | **Common Aliases**                                               |
+| ------------------------- | ------------- | ------------------------------------------------------- | --------------- | ---------------------------------------------------------------- |
+| **id**                    | String        | Unique identifier for the building                      | Inland, Coastal | id, building_id, bldg_id, fd_id                                  |
+| **occupancy_type**        | String        | HAZUS occupancy classification (e.g., RES1, COM1, IND2) | Inland, Coastal | occupancy_type, occtype, occupancy, occ_type, building_type      |
+| **first_floor_height**    | Numeric       | First floor height above ground elevation (feet)        | Inland, Coastal | first_floor_height, found_ht, first_floor_ht, ffh, floor_height  |
+| **foundation_type**       | String        | Foundation type code (I, P, W, B, C, F, S)              | Inland, Coastal | foundation_type, fndtype, found_type, fnd_type                   |
+| **number_stories**        | Numeric       | Number of stories (floors) in the building              | Inland, Coastal | number_stories, num_story, numstories, stories, num_floors       |
+| **area**                  | Numeric       | Building floor area (square feet)                       | Inland, Coastal | area, sqft, building_area, floor_area                            |
+| **building_cost**         | Numeric       | Building structural replacement cost (USD)              | Inland, Coastal | buildingcostusd, building_cost, val_struct, cost, building_value |
+| **content_cost**          | Numeric       | Contents replacement cost (USD)                         | Inland, Coastal | contentcostusd, content_cost, val_cont, contents_cost            |
+| **inventory_cost**        | Numeric       | Business inventory replacement cost (USD)               | Inland, Coastal | inventorycostusd, inventory_cost, val_inv, inv_cost              |
+| **general_building_type** | String        | Construction material code (W, M, C, S, MH)             | Inland          | general_building_type, bldgtype, generalbuildingtype             |
+| **eq_building_type**      | String        | Earthquake-specific building type classification        | Earthquake      | eqbldgtypeid, eq_building_type, earthquake_building_type         |
+| **eq_design_level**       | String        | Earthquake design level classification                  | Earthquake      | eqdesignlevelid, eq_design_level, design_level                   |
 
 ### *Base Buildings Data Schema:*
 
@@ -298,13 +299,16 @@ Users can provide custom building inventories for consequence analysis by ensuri
 ### Requirements for User-Defined Inventories
 
 1. **Geometry**: Must include valid point geometry (latitude/longitude coordinates)
-2. **Required Fields**: Must contain or allow imputation of:
+
+1. **Required Fields**: Must contain or allow imputation of:
+
    - Unique building identifier (`id`)
-   - Number of stories (`number_stories`)  
+   - Number of stories (`number_stories`)
    - Building floor area (`area`)
    - Building replacement cost (`building_cost`)
 
-3. **Optional Fields**: May include (or rely on defaults):
+1. **Optional Fields**: May include (or rely on defaults):
+
    - Occupancy type, foundation type, first floor height
    - Content cost, inventory cost, construction type
    - Any output fields from previous analyses
@@ -424,19 +428,20 @@ buildings = Buildings(gdf, overrides=overrides)
 
 If your data uses different foundation type codes than the standardized codes (I, P, W, B, C, F, S), you must preprocess your data to translate to the standard codes:
 
-| **Standard Code** | **Description**      | **Inland Foundation Type** |
-| ----------------- | -------------------- | -------------------------- |
-| **I**             | Pile (Infilled)      | PILE                       |
-| **P**             | Pier/Post            | SHAL (Shallow)             |
-| **W**             | Solid Wall           | SHAL (Shallow)             |
-| **B**             | Basement             | BASE (Basement)            |
-| **C**             | Crawlspace           | SHAL (Shallow)             |
-| **F**             | Fill                 | SLAB                       |
-| **S**             | Slab on Grade        | SLAB                       |
+| **Standard Code** | **Description** | **Inland Foundation Type** |
+| ----------------- | --------------- | -------------------------- |
+| **I**             | Pile (Infilled) | PILE                       |
+| **P**             | Pier/Post       | SHAL (Shallow)             |
+| **W**             | Solid Wall      | SHAL (Shallow)             |
+| **B**             | Basement        | BASE (Basement)            |
+| **C**             | Crawlspace      | SHAL (Shallow)             |
+| **F**             | Fill            | SLAB                       |
+| **S**             | Slab on Grade   | SLAB                       |
 
 ### Data Validation
 
 The Buildings class performs automatic validation:
+
 - **Required fields present**: Verifies all required fields exist (either directly or through aliases)
 - **No missing required values**: Ensures required fields have no NULL/NaN values
 - **Valid geometry**: Confirms point geometry is valid and has a coordinate reference system
