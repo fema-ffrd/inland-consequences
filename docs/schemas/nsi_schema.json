@@ -16,23 +16,23 @@
             "type": "string",
             "description": "Occupancy type code (e.g., RES1, COM1)",
             "default target field": "occupancy_type",
-            "required": true,
-            "nullable": false
+            "required": false,
+            "nullable": true
         },
         "found_ht": {
             "type": "number",
             "description": "First floor height (feet above ground)",
             "default target field": "first_floor_height",
-            "required": true,
-            "nullable": false
+            "required": false,
+            "nullable": true
         },
-        "fndtype": {
+        "found_type": {
             "type": "string",
             "description": "Foundation type code (I=Pile, P=Pier, W=Solid Wall, B=Basement, C=Crawl, F=Fill, S=Slab)",
             "default target field": "foundation_type",
             "enum": ["I", "P", "W", "B", "C", "F", "S"],
-            "required": true,
-            "nullable": false
+            "required": false,
+            "nullable": true
         },
         "num_story": {
             "type": "number",
@@ -59,8 +59,15 @@
             "type": "number",
             "description": "Contents replacement cost ($USD)",
             "default target field": "content_cost",
-            "required": true,
-            "nullable": false
+            "required": false,
+            "nullable": true
+        },
+        "bldgtype": {
+            "type": "string",
+            "description": "General building type code (e.g., W=Wood, M=Masonry, C=Concrete, S=Steel)",
+            "default target field": "general_building_type",
+            "required": false,
+            "nullable": true
         }
     }
 }
