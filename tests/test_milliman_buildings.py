@@ -11,7 +11,7 @@ def milliman_sample_gdf():
     Create a sample GeoDataFrame with Milliman-specific column names.
     
     Based on milliman uniform sample data from Maryland and typical columns:
-    BLDG_VALUE, CNT_VALUE, NUM_STORIE, foundation, FIRST_FLOO
+    BLDG_VALUE, CNT_VALUE, NUM_STORIES, FoundationType, FIRST_FLOOR_ELEV, CONSTR_CODE
     """
     df = pd.DataFrame({
         "location": ["MD00414640", "MD01230741", "MD00255922"],  # Can serve as "id" alias
@@ -21,21 +21,21 @@ def milliman_sample_gdf():
         "CNT_VALUE": [50000, 50000, 50000],
         "BLDG_LIMIT": [200000, 200000, 200000],
         "CNT_LIM": [50000, 50000, 50000],
-        "NUM_STORIE": [1, 1, 1],
+        "NUM_STORIES": [1, 1, 1],
         "BLDG_DED": [1500, 1500, 1500],
         "CNT_DED": [1500, 1500, 1500],
-        "foundation": [8, 8, 8],
-        "BasementFi": [0, 0, 0],
-        "FIRST_FLOO": [1, 1, 1],
-        "DEMft": [13.419362, 244.269119, 224.764328],
+        "FoundationType": [8, 8, 8],
+        "BasementFinishType": [0, 0, 0],
+        "FIRST_FLOOR_ELEV": [1, 1, 1],
+        "CONSTR_CODE": [1, 1, 2],
         # longitude and latitude not in original fields, but assumed present as a geospatial file
-        "Longitude": [-76.27738, -76.49555, -76.93276],
-        "Latitude": [38.96829, 39.36650, 38.79571],
+        "LON": [-76.27738, -76.49555, -76.93276],
+        "LAT": [38.96829, 39.36650, 38.79571],
     })
 
     gdf = gpd.GeoDataFrame(
         df, 
-        geometry=gpd.points_from_xy(df.Longitude, df.Latitude), 
+        geometry=gpd.points_from_xy(df.LON, df.LAT), 
         crs="EPSG:4326"
     )
     return gdf
@@ -51,19 +51,18 @@ def milliman_sample_gdf_missing_values():
         # "area": [1800, 1800, 2500],  # Required field, but not provided from source
         "BLDG_VALUE": [200000, None, 250000],
         "CNT_VALUE": [50000, 60000, None],
-        "NUM_STORIE": [1, None, 2],
-        "foundation": [8, 8, None],
-        "BasementFi": [0, 0, 0],
-        "FIRST_FLOO": [1, 1, 1],
-        "DEMft": [13.419362, 244.269119, None],
-        # longitude and latitude not in original fields, but assumed present as a geospatial file
-        "Longitude": [-76.27738, -76.49555, -76.93276],
-        "Latitude": [38.96829, 39.36650, 38.79571],
+        "NUM_STORIES": [1, None, 2],
+        "FoundationType": [8, 8, None],
+        "BasementFinishType": [0, 0, 0],
+        "FIRST_FLOOR_ELEV": [1, 1, 1],
+        "CONSTR_CODE": [1, 1, 2],
+        "LON": [-76.27738, -76.49555, -76.93276],
+        "LAT": [38.96829, 39.36650, 38.79571],
     })
 
     gdf = gpd.GeoDataFrame(
         df, 
-        geometry=gpd.points_from_xy(df.Longitude, df.Latitude), 
+        geometry=gpd.points_from_xy(df.LON, df.LAT), 
         crs="EPSG:4326"
     )
     return gdf
@@ -81,21 +80,21 @@ def milliman_sample_gdf_missing_required_fields():
         "CNT_VALUE": [50000, 50000, 50000],
         "BLDG_LIMIT": [200000, 200000, 200000],
         "CNT_LIM": [50000, 50000, 50000],
-        "NUM_STORIE": [1, 1, 1],
+        "NUM_STORIES": [1, 1, 1],
         "BLDG_DED": [1500, 1500, 1500],
         "CNT_DED": [1500, 1500, 1500],
-        "foundation": [8, 8, 8],
-        "BasementFi": [0, 0, 0],
-        "FIRST_FLOO": [1, 1, 1],
-        "DEMft": [13.419362, 244.269119, 224.764328],
+        "FoundationType": [8, 8, 8],
+        "BasementFinishType": [0, 0, 0],
+        "FIRST_FLOOR_ELEV": [1, 1, 1],
+        "CONSTR_CODE": [1, 1, 2],
         # longitude and latitude not in original fields, but assumed present as a geospatial file
-        "Longitude": [-76.27738, -76.49555, -76.93276],
-        "Latitude": [38.96829, 39.36650, 38.79571],
+        "LON": [-76.27738, -76.49555, -76.93276],
+        "LAT": [38.96829, 39.36650, 38.79571],
     })
 
     gdf = gpd.GeoDataFrame(
         df, 
-        geometry=gpd.points_from_xy(df.Longitude, df.Latitude), 
+        geometry=gpd.points_from_xy(df.LON, df.LAT), 
         crs="EPSG:4326"
     )
     return gdf
@@ -121,15 +120,22 @@ def test_milliman_building_cost_mapping(milliman_sample_gdf):
     assert all(costs == 200000)
 
 def test_milliman_field_mapping_visible(milliman_sample_gdf):
-    """Test that we can see the field mapping based on Milliman defaults."""
+    """Test that we can see the field mapping based on Milliman defaults.
+    
+    Note: foundation_type and general_building_type are preprocessed from 
+    FoundationType and CONSTR_CODE respectively, so they appear as direct columns
+    rather than mapped fields.
+    """
     mb = MillimanBuildings(milliman_sample_gdf)
     
     # Check that the mappings are as expected
     assert mb.fields.get_field_name("building_cost") == "BLDG_VALUE"
     assert mb.fields.get_field_name("content_cost") == "CNT_VALUE"
-    assert mb.fields.get_field_name("number_stories") == "NUM_STORIE"
-    assert mb.fields.get_field_name("foundation_type") == "foundation"
-    assert mb.fields.get_field_name("first_floor_height") == "FIRST_FLOO"
+    assert mb.fields.get_field_name("number_stories") == "NUM_STORIES"
+    assert mb.fields.get_field_name("first_floor_height") == "FIRST_FLOOR_ELEV"
+    # foundation_type and general_building_type are preprocessed, not mapped
+    assert mb.fields.get_field_name("foundation_type") == "foundation_type"
+    assert mb.fields.get_field_name("general_building_type") == "general_building_type"
 
 def test_milliman_with_user_overrides(milliman_sample_gdf):
     """Test that user overrides take precedence over Milliman defaults."""

@@ -38,6 +38,7 @@ class NsiBuildings(Buildings):
             "area": "sqft",
             "building_cost": "val_struct",
             "content_cost": "val_cont",
+            "general_building_type": "bldgtype",
         }
         
         # Merge with user overrides (user overrides take precedence)
@@ -120,6 +121,85 @@ class NsiBuildings(Buildings):
         if missing_value_fields:
             raise ValueError(f"Required fields have missing values in GeoDataFrame: {missing_value_fields}")
 
+    def _impute_optional_fields(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        """
+        Impute missing values in NSI optional fields using appropriate strategies. Note that defaults
+        must align with any preprocessing steps applied earlier.
+        """
+        # impute occupancy_type if missing
+        if "occtype" in gdf.columns:
+            gdf["occtype"] = gdf["occtype"].fillna("RES1")  # Default to RES1 if missing
+
+        # impute general_building_type if missing
+        if "bldgtype" in gdf.columns:
+            gdf["bldgtype"] = gdf["bldgtype"].fillna("W")  # Default to WOOD if missing
+
+        # impute foundation_type if missing
+        if "foundation_type" in gdf.columns:
+            gdf["foundation_type"] = gdf["foundation_type"].fillna("S")  # Default to Slab
+
+        # impute first floor height (found_ht) if missing based on foundation_type
+        if "found_ht" in gdf.columns and "foundation_type" in gdf.columns:
+            found_ht_defaults = {
+                "I": 8.0,  # Pile
+                "P": 3.0,  # Pier, aligns with Shallow Foundation default
+                "W": 3.0,  # Solid Wall, aligns with Shallow Foundation default
+                "B": 2.0,  # Basement
+                "C": 3.0,  # Crawl, aligns with Shallow Foundation default
+                "F": 1.0,  # Fill, aligns with Slab default
+                "S": 1.0,  # Slab
+            }
+            # Convert categorical to float before filling
+            defaults = gdf["foundation_type"].map(found_ht_defaults).fillna(1.0).astype(float)
+            gdf["found_ht"] = gdf["found_ht"].fillna(defaults)
+        
+        # impute content value (val_cont) if missing based on occupancy type
+        # using lookup table from docs/inventory_methodology.md Table 3
+        if "val_cont" in gdf.columns and "val_struct" in gdf.columns and "occtype" in gdf.columns:
+            content_value_ratios = {
+                "AGR1": 1.00,
+                "COM1": 1.00,
+                "COM10": 0.50,
+                "COM2": 1.00,
+                "COM3": 1.00,
+                "COM4": 1.00,
+                "COM5": 1.00,
+                "COM6": 1.50,
+                "COM7": 1.50,
+                "COM8": 1.00,
+                "COM9": 1.00,
+                "EDU1": 1.00,
+                "EDU2": 1.50,
+                "GOV1": 1.00,
+                "GOV2": 1.50,
+                "IND1": 1.50,
+                "IND2": 1.50,
+                "IND3": 1.50,
+                "IND4": 1.50,
+                "IND5": 1.50,
+                "IND6": 1.00,
+                "REL1": 1.00,
+                "RES1": 0.50,
+                "RES2": 0.50,
+                "RES3A": 0.50,
+                "RES3B": 0.50,
+                "RES3C": 0.50,
+                "RES3D": 0.50,
+                "RES3E": 0.50,
+                "RES3F": 0.50,
+                "RES4": 0.50,
+                "RES5": 0.50,
+                "RES6": 0.50,
+            }
+            # Calculate content value as percentage of building value based on occupancy
+            content_ratio = gdf["occtype"].map(content_value_ratios).fillna(0.50)  # Default to 50% if unknown
+            imputed_content = gdf["val_struct"] * content_ratio
+            # Use mask to avoid FutureWarning about downcasting
+            mask = gdf["val_cont"].isna()
+            gdf.loc[mask, "val_cont"] = imputed_content[mask]
+        
+        return gdf
+
     def _preprocess_gdf(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         """
         Pre-process the GeoDataFrame by cleaning occupancy and foundation types.
@@ -132,26 +212,17 @@ class NsiBuildings(Buildings):
         """
         # Pre-process the occupancy type field to remove content after dash
         if "occtype" in gdf.columns:
-            gdf["occtype"] = gdf["occtype"].astype(str)
-            gdf["occtype"] = gdf["occtype"].str.split('-', n=1).str[0]
+            # Only process non-null values to preserve NaN for imputation
+            mask = gdf["occtype"].notna()
+            gdf.loc[mask, "occtype"] = gdf.loc[mask, "occtype"].astype(str).str.split('-', n=1).str[0]
          
-        # Pre-process the foundation type field to map numeric values to string codes
-        if "fndtype" in gdf.columns and "foundation_type" not in gdf.columns:
-            foundation_type_map = {
-                1: "I",  # Pile
-                2: "P",  # Pier
-                3: "W",  # Solid Wall
-                4: "B",  # Basement
-                5: "C",  # Crawl
-                6: "F",  # Fill
-                7: "S",  # Slab
-            }
-            gdf["foundation_type"] = pd.to_numeric(gdf["fndtype"], errors='coerce') \
-                                           .map(foundation_type_map) \
-                                           .astype("category")
-            
-            # Drop fndtype after mapping 
-            # TODO: Consider keeping both fields for export later
-            gdf = gdf.drop(columns=["fndtype"])
+        # Pre-process the foundation type field
+        # found_type contains string codes (S, C, I, etc.) - rename to foundation_type
+        if "found_type" in gdf.columns and "foundation_type" not in gdf.columns:
+            gdf["foundation_type"] = gdf["found_type"].astype("category")
+            gdf = gdf.drop(columns=["found_type"])
+        
+        # Impute optional fields with default values if missing
+        gdf = self._impute_optional_fields(gdf)
 
         return gdf

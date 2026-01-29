@@ -25,6 +25,40 @@ class InlandFloodAnalysis:
     and contain a column with monetary values (building_value_col).
     The vulnerability object must implement calculate_vulnerability(exposure_df)
     and return a DataFrame of damage ratios with the same shape as exposure_df.
+    
+    Damage Function Matching:
+        The damage function matching algorithm can be configured using wildcard_fields
+        to control which building attributes are used for matching:
+        
+        - Default (wildcard_fields=None or []): Match on all available attributes
+          * occupancy_type (if not NULL)
+          * foundation_type (if not NULL)
+          * number_stories (if not NULL)
+          * general_building_type (if not NULL)
+        
+        - Selective wildcarding: Specify fields to ignore even when values present
+          * wildcard_fields=['general_building_type'] - ignore construction material
+          * wildcard_fields=['foundation_type', 'number_stories'] - match on occupancy + construction
+          * wildcard_fields=['occupancy_type'] - match all curves regardless of occupancy type
+          * wildcard_fields=['occupancy_type', 'foundation_type', 'number_stories', 'general_building_type'] - 
+            match ALL curves (no attribute filtering)
+        
+        Example:
+            # Match on all attributes (default)
+            analysis = InlandFloodAnalysis(
+                raster_collection=rasters,
+                buildings=buildings,
+                vulnerability=vuln,
+                wildcard_fields=[]
+            )
+            
+            # Ignore construction type in matching (useful for testing sensitivity)
+            analysis = InlandFloodAnalysis(
+                raster_collection=rasters,
+                buildings=buildings,
+                vulnerability=vuln,
+                wildcard_fields=['general_building_type']
+            )
     """
 
     def __init__(
@@ -34,6 +68,7 @@ class InlandFloodAnalysis:
         vulnerability: AbstractVulnerabilityFunction,
         calculate_aal: bool = True,
         aal_rate_limits: Optional[Tuple[float, float]] = None,
+        wildcard_fields: Optional[List[str]] = None,
     ) -> None:
         # Must be a RasterCollection instance (validated by its constructor)
         if not isinstance(raster_collection, RasterCollection):
@@ -44,6 +79,7 @@ class InlandFloodAnalysis:
         self.vulnerability: AbstractVulnerabilityFunction = vulnerability
         self.calculate_aal = calculate_aal
         self.aal_rate_limits = aal_rate_limits
+        self.wildcard_fields = wildcard_fields or []  # Fields to ignore in matching even when values present
 
         # Since the vulnerability needs the buildings right now we need to think about how to choose them and apply to keep the buildings in sync.
 
@@ -394,86 +430,131 @@ class InlandFloodAnalysis:
         ''')
     
     def _gather_damage_functions(self, connection: duckdb.DuckDBPyConnection) -> None:
+        """
+        Match buildings to damage functions based on building attributes.
+        
+        This method performs a multi-attribute matching algorithm that assigns appropriate
+        damage function IDs to each building. When multiple damage functions match a building,
+        they are assigned with equal probability weights. Damage functions that are matched n-times 
+        will receive n*(weight) to ensure total weights sum to 1.0.
+        
+        Matching Logic:
+        - All attributes are optional (NULL = wildcard, matches any value):
+          * occupancy_type: building use type (e.g., RES1, COM1)
+          * foundation_type: building foundation (e.g., basement, slab, pile)
+          * number_stories: building height in stories
+          * general_building_type: construction material (e.g., wood, masonry, concrete)
+        
+        Wildcard Configuration:
+        - Use self.wildcard_fields to force certain attributes to be treated as wildcards
+          even when values are present. This allows flexible matching strategies:
+          * [] (empty): Match on all attributes (default)
+          * ['occupancy_type']: Ignore occupancy type, match on other attributes
+          * ['number_stories']: Ignore story count, match on occupancy + foundation + construction
+          * ['foundation_type', 'general_building_type']: Match only on occupancy + stories
+          * ['occupancy_type', 'foundation_type', 'number_stories', 'general_building_type']: Match ALL curves
+        
+        Output:
+        - Creates structure_damage_functions table with building_id, damage_function_id, 
+          first_floor_height, ffh_sig (uncertainty), and weight (probability)
+        - Weights sum to 1.0 for each building
+        """
+        
+        # Build conditional checks for wildcarded fields
+        # If a field is in wildcard_fields, we skip the matching check for it
+        use_occupancy = 'occupancy_type' not in self.wildcard_fields
+        use_foundation = 'foundation_type' not in self.wildcard_fields
+        use_stories = 'number_stories' not in self.wildcard_fields
+        use_construction = 'general_building_type' not in self.wildcard_fields
 
-        # Example attribute columns for matching (update as needed)
-        # For demonstration, assume columns: 'YearBuilt', 'BldgType', 'DesignLevel', etc.
-        # and lookup tables have min/max columns for each attribute
-
-        # # Structure Damage Functions
-        # structure_query = '''
-        #     CREATE TABLE structure_damage_functions AS
-        #     SELECT b.ID AS building_id, x.damage_function_id
-        #     FROM buildings b
-        #     JOIN xref_structures x
-        #         ON b.occupancy_type = x.occupancy_type
-        #         --AND b.BldgType = x.bldg_type
-        #         --AND b.DesignLevel = x.design_level
-        # '''
-
-        # TODO: Remove case statements for construction type and foundation type once inventory import has these handled.
         structure_query = '''
         CREATE TABLE structure_damage_functions AS
         WITH 
+        -- STEP 1: Generate all potential building-to-curve matches
+        -- Cross join creates all possible combinations, then filter by attribute matching
         curve_matches AS (
             SELECT 
                 b.ID,
                 c.damage_function_id,
                 b.first_floor_height,
-                0 as ffh_sig,
-                -- NULL attributes match ANY value
-                -- Foundation type mapping: NSI codes (I,B,S,P,W,C,F) -> xref names (PILE,BASE,SLAB,SHAL)
+                0 as ffh_sig,  -- Fixed uncertainty for first floor height (could be extended)
+                
+                -- Attribute Matching Logic:
+                -- Each WHEN clause checks if an attribute mismatch should disqualify the curve.
+                -- NULL values in either building or curve act as wildcards (match anything).
+                -- Wildcarded fields (via wildcard_fields parameter) are skipped entirely.
+                -- If all attributes match (or are NULL/wildcarded), is_match = 1; otherwise 0.
                 CASE 
-                    WHEN b.foundation_type IS NOT NULL AND c.foundation_type IS NOT NULL AND 
+                    -- Occupancy Type Matching (conditionally enabled):
+                    -- Direct comparison of occupancy codes (e.g., RES1, RES2, COM1, AGR1)
+                    WHEN {use_occupancy} AND b.occupancy_type IS NOT NULL AND c.occupancy_type IS NOT NULL
+                        AND b.occupancy_type != c.occupancy_type THEN 0
+                    
+                    -- Foundation Type Matching (conditionally enabled):
+                    -- Buildings use short codes (I,B,S,P,W,C,F) from NSI/Milliman schemas
+                    -- Curves use descriptive names (PILE,BASE,SLAB,SHAL) from HAZUS
+                    -- This mapping translates building codes to curve names for comparison
+                    WHEN {use_foundation} AND b.foundation_type IS NOT NULL AND c.foundation_type IS NOT NULL AND 
                         CASE 
-                            WHEN b.foundation_type = 'I' THEN 'PILE'
-                            WHEN b.foundation_type = 'B' THEN 'BASE'
-                            WHEN b.foundation_type = 'S' THEN 'SLAB'
-                            WHEN b.foundation_type = 'P' THEN 'PILE'
-                            WHEN b.foundation_type = 'W' THEN 'BASE'
-                            WHEN b.foundation_type = 'C' THEN 'SHAL'
-                            WHEN b.foundation_type = 'F' THEN 'SHAL'
+                            WHEN b.foundation_type = 'I' THEN 'PILE'  -- Infilled wall -> Pile
+                            WHEN b.foundation_type = 'B' THEN 'BASE'  -- Basement -> Basement
+                            WHEN b.foundation_type = 'S' THEN 'SLAB'  -- Slab on grade -> Slab
+                            WHEN b.foundation_type = 'P' THEN 'PILE'  -- Pier/Post/Pile -> Pile
+                            WHEN b.foundation_type = 'W' THEN 'BASE'  -- Wall with opening -> Basement
+                            WHEN b.foundation_type = 'C' THEN 'SHAL'  -- Crawlspace -> Shallow
+                            WHEN b.foundation_type = 'F' THEN 'SHAL'  -- Fill -> Shallow
                             ELSE NULL
                         END != c.foundation_type THEN 0
-                    WHEN b.number_stories IS NOT NULL AND c.story_min IS NOT NULL AND c.story_max IS NOT NULL 
+                    
+                    -- Story Count Matching (conditionally enabled):
+                    -- Check if building story count falls within curve's min/max range
+                    -- Example: 2-story building matches curves with story_min=1, story_max=3
+                    WHEN {use_stories} AND b.number_stories IS NOT NULL AND c.story_min IS NOT NULL AND c.story_max IS NOT NULL 
                         AND NOT (b.number_stories BETWEEN c.story_min AND c.story_max) THEN 0
-                    WHEN CASE 
-                            WHEN b.occupancy_type = 'RES2' THEN 'MH'
-                            WHEN b.occupancy_type = 'RES3' THEN 'M'
-                            WHEN b.occupancy_type LIKE 'RES%' THEN 'W'
-                            WHEN b.occupancy_type LIKE 'COM%' THEN 'M'
-                            ELSE 'W'
-                        END IS NOT NULL AND c.construction_type IS NOT NULL AND 
-                        CASE 
-                            WHEN b.occupancy_type = 'RES2' THEN 'MH'
-                            WHEN b.occupancy_type = 'RES3' THEN 'M'
-                            WHEN b.occupancy_type LIKE 'RES%' THEN 'W'
-                            WHEN b.occupancy_type LIKE 'COM%' THEN 'M'
-                            ELSE 'W'
-                        END != c.construction_type THEN 0
+                    
+                    -- Construction Type Matching (conditionally enabled):
+                    -- Direct comparison of construction material codes (W=Wood, M=Masonry, C=Concrete, S=Steel, MH=Manufactured Housing)
+                    -- Preprocessed from numeric codes in Milliman data, direct field in NSI data
+                    WHEN {use_construction} AND b.general_building_type IS NOT NULL 
+                        AND b.general_building_type != c.construction_type THEN 0
+                    
+                    -- If none of the mismatch conditions triggered, it's a valid match
                     ELSE 1
                 END AS is_match
             FROM buildings b
             CROSS JOIN xref_structures c
-            WHERE b.occupancy_type = c.occupancy_type
         ),
+        
+        -- STEP 2: Filter to only valid matches
+        -- Remove all building-curve pairs where is_match = 0
         filtered_matches AS (
             SELECT ID, damage_function_id, first_floor_height, ffh_sig
             FROM curve_matches
             WHERE is_match = 1
         ),
+        
+        -- STEP 3: Calculate match frequencies for weight assignment
+        -- Count how many total curves match each building, and how many times each specific curve appears
+        -- (Some curves may appear multiple times due to different flood peril types, etc.)
         curve_frequencies AS (
             SELECT 
                 ID, damage_function_id, first_floor_height, ffh_sig,
-                COUNT(*) OVER (PARTITION BY ID) AS total_matches,
-                COUNT(*) OVER (PARTITION BY ID, damage_function_id) AS curve_count
+                COUNT(*) OVER (PARTITION BY ID) AS total_matches,                    -- Total curves for this building
+                COUNT(*) OVER (PARTITION BY ID, damage_function_id) AS curve_count   -- Times this curve appears
             FROM filtered_matches
         ),
+        
+        -- STEP 4: Calculate probability weights and deduplicate
+        -- Each curve gets weight = (# times it appears) / (total # of curve matches)
+        -- This ensures weights sum to 1.0
         unique_scenarios AS (
             SELECT DISTINCT
                 ID, damage_function_id, first_floor_height, ffh_sig,
                 CAST(curve_count AS DOUBLE) / NULLIF(total_matches, 0) AS weight
             FROM curve_frequencies
         )
+        
+        -- STEP 5: Final output with renamed columns
         SELECT 
             ID AS building_id,
             damage_function_id,
@@ -481,7 +562,12 @@ class InlandFloodAnalysis:
             ffh_sig,
             weight
         FROM unique_scenarios;
-        '''
+        '''.format(
+            use_occupancy=use_occupancy,
+            use_foundation=use_foundation,
+            use_stories=use_stories,
+            use_construction=use_construction
+        )
         connection.execute(structure_query)
 
         # Content Damage Functions

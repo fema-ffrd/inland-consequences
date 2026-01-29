@@ -6,6 +6,7 @@ import pytest
 import duckdb
 from unittest.mock import MagicMock
 from inland_consequences.nsi_buildings import NsiBuildings
+from inland_consequences.milliman_buildings import MillimanBuildings
 
 from inland_consequences.inland_flood_analysis import InlandFloodAnalysis
 from inland_consequences.raster_collection import RasterCollection
@@ -15,15 +16,16 @@ from sphere.core.schemas.abstract_vulnerability_function import AbstractVulnerab
 # --- Fixtures for Mocking External Dependencies ---
 
 @pytest.fixture(scope="module")
-def mock_buildings():
+def nsi_buildings():
     """Provides a real NsiBuildings object with a small, fixed GeoDataFrame."""
 
     # Mock Data
     data = {
         'target_fid': [1, 2, 3],
         'occtype': ['RES1', 'RES2', 'RES3A'],
+        'bldgtype': ['W', 'MH', 'M'],  # Wood, Manufactured Housing, Masonry
         'found_ht': [2.5, 3.0, 2.0],
-        'fndtype': [1, 2, 3],
+        'found_type': ['S', 'C', 'I'],  # Slab, Crawl, Pile (string codes)
         'num_story': [1, 2, 1],
         'sqft': [1000, 1500, 1200],
         'val_struct': [100000.0, 200000.0, 300000.0],
@@ -37,6 +39,38 @@ def mock_buildings():
         crs="EPSG:4326"
     )
     return NsiBuildings(gdf)
+
+@pytest.fixture(scope="module")
+def milliman_buildings():
+    """Provides a real MillimanBuildings object with a small, fixed GeoDataFrame."""
+
+    # Mock Data with Milliman schema
+    data = {
+        'location': ['CO00000001', 'CO00000002', 'CO00000003'],
+        'BLDG_VALUE': [100000.0, 200000.0, 300000.0],
+        'CNT_VALUE': [50000.0, 60000.0, 70000.0],
+        'NUM_STORIES': [1, 2, 1],
+        'FoundationType': [8, 8, 8],
+        'FIRST_FLOOR_ELEV': [2.5, 3.0, 2.0],
+        'CONSTR_CODE': [1, 2, 1],
+        'LON': [-76.27738, -76.49555, -76.93276],
+        'LAT': [38.96829, 39.36650, 38.79571],
+    }
+
+    gdf = gpd.GeoDataFrame(
+        pd.DataFrame(data),
+        geometry=gpd.points_from_xy(data['LON'], data['LAT']),
+        crs="EPSG:4326"
+    )
+    return MillimanBuildings(gdf)
+
+@pytest.fixture(scope="module", params=["nsi", "milliman"])
+def mock_buildings(request, nsi_buildings, milliman_buildings):
+    """Parametrized fixture that provides both NSI and Milliman building types."""
+    if request.param == "nsi":
+        return nsi_buildings
+    elif request.param == "milliman":
+        return milliman_buildings
 
 @pytest.fixture(scope="module")
 def mock_raster_collection():
