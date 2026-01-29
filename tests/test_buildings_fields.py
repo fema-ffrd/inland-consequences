@@ -15,6 +15,7 @@ def test_buildings_field_mapping_and_output_creation():
         "building_cost": [100000, 250000, 150000],
         "content_cost": [50000, 100000, 75000],
         "inventory_cost": [0.0, 1000.0, 0.0],
+        "general_building_type": ["Wood", "Masonry", "Steel"],
         "Longitude": [-157.0, -157.1, -157.2],
         "Latitude": [21.0, 21.1, 21.2],
     })
@@ -27,6 +28,7 @@ def test_buildings_field_mapping_and_output_creation():
     assert buildings.fields.get_field_name("id") in gdf.columns
     assert buildings.fields.get_field_name("occupancy_type") == "occupancy_type"
     assert buildings.fields.get_field_name("first_floor_height") == "first_floor_height"
+    assert buildings.fields.get_field_name("general_building_type") == "general_building_type"
 
     # Accessing input properties returns underlying series
     assert buildings.id.equals(gdf[buildings.fields.get_field_name("id")])
