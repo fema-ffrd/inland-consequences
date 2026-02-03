@@ -259,7 +259,7 @@ class _PFRACoastal_Lib:
         geom_data_wkb = b_tab.loc[:,'geometry']
         
         # add unique building ID
-        b_tab.loc[:,"BID"] = list(range(1,b_tab.shape[0]+1))
+        b_tab["BID"] = pd.Series(list(range(1,b_tab.shape[0]+1)), dtype='int32')
         
         # find required attributes and make them if they dont exist
         for att in inputs.bldg_attr_map["IN"].to_list():
