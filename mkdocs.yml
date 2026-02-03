@@ -23,6 +23,7 @@ nav:
 
   - Technical Implementation:
     - building_inventories.md
+    - ddf_tech_implementation.md
     - AAL_tech_implementation.md
 
 markdown_extensions:
