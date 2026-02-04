@@ -65,3 +65,9 @@ dev = [
 [tool.mdformat]
 wrap = "no"
 number = false
+
+[tool.pytest.ini_options]
+# This is present here for running from the command line
+markers = [
+    "manual: mark test to run only when specifically requested (uv run pytest -m manual)"
+]

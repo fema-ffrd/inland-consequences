@@ -6,14 +6,19 @@ ______________________________________________________________________
 
 **Inland and Coastal Framework**
 
-This solution introduces a **novel inland modeling capability** that applies best practices and lessons learned from a variety of existing tools.
-By aligning inland and coastal modeling approaches within a single framework, the tool ensures consistency in how losses are calculated and reported across FEMA programs.
+This solution introduces a **unified inland and coastal modeling framework** that applies best practices and lessons learned from existing hazard and loss modeling tools. By aligning inland and coastal approaches within a single architecture, the framework enables loss calculations for both flood types using a common solution. The framework is intentionally designed to be modular, allowing individual components to be updated, extended, or replaced over time as methodologies evolve or new data sources and capabilities are introduced.
 
 ______________________________________________________________________
 
 **Integration with Coastal FFRD Methodology**
 
 The **Consequences Solution** migrates the **Coastal Future of Flood Risk Data (FFRD) Average Annualized Loss Calculation Tool** from **R** to **Python**, integrating its core methodology into a modular, scalable architecture.This migration facilitates continued development and performance enhancements while ensuring methodological consistency with ongoing FEMA projects.
+
+______________________________________________________________________
+
+**Phased Approach to Inland Consequence**
+
+The Inland Consequences Solution enables inland flood loss modeling using depth-based hazard inputs, supporting both **single-event loss** calculations and **multi–return-period average annualized loss (AAL)** analyses. In the context of Future Flood Risk Data (FFRD), the current phase of development focuses on calculating AAL from **post-processed annual exceedance probability (AEP)** depth rasters and their associated velocity, duration, and uncertainty layers. A planned future enhancement is to leverage the full FFRD event catalog to support event-based loss calculations and a more comprehensive treatment of uncertainty.
 
 ______________________________________________________________________
 
