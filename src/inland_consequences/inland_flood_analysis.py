@@ -359,7 +359,7 @@ class InlandFloodAnalysis:
         Args:
             connection: Active DuckDB connection.
         """
-        gdf = self.buildings.gdf
+        gdf = self.buildings.gdf.copy()
 
         # Build a standardized DataFrame where columns are the internal field
         # names used by the Buildings/FieldMapping system. This ensures the
@@ -372,11 +372,18 @@ class InlandFloodAnalysis:
 
         # Build a rename map from source column name -> internal property name
         # (only include columns that actually exist and need renaming).
-        rename_map = {
-            fm.get_field_name(prop): prop
-            for prop in props
-            if fm.get_field_name(prop) in gdf.columns and fm.get_field_name(prop) != prop
-        }
+        rename_map = {}
+        for prop in props:
+            source_col = fm.get_field_name(prop)
+            if source_col in gdf.columns:
+                if source_col != prop:
+                    # Source column exists and needs renaming
+                    rename_map[source_col] = prop
+                # else: source column already has the standardized name, no rename needed
+            #else:
+                # Source column doesn't exist - create a NULL column with
+                # the standardized name so SQL queries don't fail
+                #gdf[prop] = None
         
         # Rename in a lightweight way (returns a view/copy as needed) so we do
         # not re-create every column manually; this keeps column objects intact
@@ -390,7 +397,7 @@ class InlandFloodAnalysis:
         standardized_arrow = standardized.to_arrow()
 
         
-        
+        connection.register("standardized_arrow", standardized_arrow)
         connection.execute("DROP TABLE IF EXISTS buildings")
         connection.execute("CREATE TABLE buildings AS SELECT * FROM standardized_arrow")
 

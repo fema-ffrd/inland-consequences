@@ -35,8 +35,9 @@ def buildings_unusual_characteristics():
     data = {
         'target_fid': [1, 2, 3],
         'occtype': ['RES1', 'COM1', 'RES2'],
+        'bldgtype': ['W', 'C', 'MH'],
         'found_ht': [2.5, 3.0, 2.0],
-        'fndtype': [1, 2, 3],
+        'found_type': ['P', 'S', 'S'],
         'num_story': [5, 2, 4],  # RES1 with 5 stories is unusual (>3)
         'sqft': [1000, 600000, 1500],  # COM1 with 600k is >5x the typical 110k
         'val_struct': [100000.0, 5000000.0, 200000.0],
@@ -64,8 +65,9 @@ def buildings_hazard_anomalies():
     data = {
         'target_fid': [1, 2, 3],
         'occtype': ['RES3', 'RES4', 'RES5'],
+        'bldgtype': ['W', 'W', 'MH'],
         'found_ht': [2.5, 3.0, 2.0],
-        'fndtype': [1, 2, 3],
+        'found_type': ['P', 'S', 'S'],
         'num_story': [2, 3, 2],
         'sqft': [2200, 135000, 25000],
         'val_struct': [150000.0, 250000.0, 200000.0],
@@ -92,8 +94,9 @@ def buildings_normal():
     data = {
         'target_fid': [1, 2, 3],
         'occtype': ['RES1', 'RES2', 'RES3'],
+        'bldgtype': ['W', 'W', 'W'],
         'found_ht': [2.5, 3.0, 2.0],
-        'fndtype': [1, 2, 3],
+        'found_type': ['P', 'S', 'S'],
         'num_story': [1, 2, 1],
         'sqft': [1800, 1475, 2200],
         'val_struct': [100000.0, 120000.0, 150000.0],
