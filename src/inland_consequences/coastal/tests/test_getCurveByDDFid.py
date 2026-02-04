@@ -77,7 +77,6 @@ def test_data():
         "+24":[0.54,0.79,np.nan]
     }
     results_df = pd.DataFrame.from_dict(results_dict)
-    ret_tup = (ddf_lut_df, results_df)
     return (ddf_lut_df, results_df)
 
 def test_ddf_105_curve(test_data, lib=lib):
