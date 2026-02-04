@@ -402,18 +402,21 @@ class _PFRACoastal_Lib:
     #	buildBldgFloodDepthTable6()
     # calls:
     #	removeNonNumeric()
-    def getCurveByDDFid(self, in_lut: pd.DataFrame, in_ddf: int) -> pd.Series:
+    def getCurveByDDFid(self, in_lut: pd.DataFrame, in_ddf: str) -> pd.Series:
+        in_ddf = int(in_ddf)
         sel = [in_lut.columns.get_loc(col) for col in in_lut.columns.to_list() if len(self.removeNonNumeric(col)) > 0]
         
         BldgDmgFnID_series = in_lut["BldgDmgFnID"]
         if in_lut["BldgDmgFnID"].isin([in_ddf]).any():
             ddf_row = in_lut.query(f"BldgDmgFnID == {in_ddf}")
-            ddf_curve = ddf_row.iloc[min(sel):max(sel)+1].div(100)
+            ddf_curve = ddf_row.iloc[0,min(sel):max(sel)+1].div(100)
         else:
-            ddf_curve = pd.Series([np.nan]).repeat(len(sel))
+            nan_data_dict = {in_lut.columns.to_list()[i]:np.nan for i in sel}
+            ddf_curve = pd.Series(data={in_lut.columns.to_list()[i]:np.nan for i in sel}, index=list(nan_data_dict), name=None)
         
         repl_func = lambda x: "0" if x=="p0" else x.replace("p","+") if "p" in x else x.replace("m","-")
         ddf_curve.index = [repl_func(label) for label in in_lut.columns.take(sel).to_list()]
+        print(ddf_curve)
         return ddf_curve
     # Example,
     #> bldg_ddf_lut.head(2)
