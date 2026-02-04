@@ -6,11 +6,10 @@ from os import path
 
 lib = _pfracoastal_lib._PFRACoastal_Lib()
 
-
 @pytest.fixture
 def test_data():
-    root_dir = path.abspath(path.dirname(__file__))
-    ddf_lut_csv = path.join(root_dir, "_data", "Building_DDF_LUT_CPFRAworking.csv")
+    root_dir = path.abspath(path.dirname(path.dirname(__file__)))
+    ddf_lut_csv = path.join(root_dir, "Building_DDF_LUT_CPFRAworking.csv")
     ddf_lut_df = pd.read_csv(ddf_lut_csv)
 
     results_df = ddf_lut_df.iloc[:,2:].div(100)
