@@ -22,6 +22,7 @@ class Buildings:
             "building_cost": ["buildingcostusd", "building_cost", "val_struct", "cost", "replacement_cost", "building_value"],
             "content_cost": ["contentcostusd", "content_cost", "val_cont", "contents_cost"],
             "inventory_cost": ["inventorycostusd", "inventory_cost", "val_inv", "inv_cost"],
+            "general_building_type": ["general_building_type", "bldgtype", "generalbuildingtype"],
             "eq_building_type": ["eqbldgtypeid", "eq_building_type", "earthquake_building_type"],
             "eq_design_level": ["eqdesignlevelid", "eq_design_level", "design_level"], 
             #"flood_type": ["floodtype", "flood_type", "flooding_type"],
@@ -136,6 +137,11 @@ class Buildings:
     @property
     def inventory_cost(self) -> pd.Series:
         field_name = self.fields.get_field_name("inventory_cost")
+        return self._gdf[field_name]
+
+    @property
+    def general_building_type(self) -> pd.Series:
+        field_name = self.fields.get_field_name("general_building_type")
         return self._gdf[field_name]
 
     @property

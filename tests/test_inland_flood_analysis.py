@@ -20,8 +20,9 @@ def mock_buildings():
     data = {
         'target_fid': [1, 2, 3],
         'occtype': ['RES1', 'RES2', 'RES3'],
+        'bldgtype': ['W', 'MH', 'M'],  # Wood, Manufactured Housing, Masonry
         'found_ht': [2.5, 3.0, 2.0],
-        'fndtype': [1, 2, 3],
+        'found_type': ['S', 'C', 'I'],  # Slab, Crawl, Pile
         'num_story': [1, 2, 1],
         'sqft': [1000, 1500, 1200],
         'val_struct': [100000.0, 200000.0, 300000.0],
