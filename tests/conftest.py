@@ -16,9 +16,57 @@ def _add_src_to_path():
 
 _add_src_to_path()
 import pytest
+import numpy as np
 import pandas as pd
 import geopandas as gpd
 from sphere.core.schemas.buildings import Buildings
+
+
+def create_sample_for_rp_mock(return_periods_data):
+    """
+    Creates a sample_for_rp side_effect function for mocking RasterCollection.
+    
+    Args:
+        return_periods_data: dict mapping return_period -> dict with keys:
+            - depth: list of depth values
+            - uncertainty: list of uncertainty values (defaults to 0.0 if not provided)
+            - velocity: list of velocity values (defaults to NaN if not provided)
+            - duration: list of duration values (defaults to NaN if not provided)
+    
+    Returns:
+        A function suitable for use as MagicMock.side_effect for sample_for_rp
+    
+    Example:
+        data = {
+            100: {"depth": [1.0, 2.0, 3.0]},
+            500: {"depth": [1.5, 2.5, 3.5], "uncertainty": [0.5, 0.5, 0.5]}
+        }
+        mock_collection.sample_for_rp.side_effect = create_sample_for_rp_mock(data)
+    """
+    def mock_sample_for_rp(rp, geometries):
+        n = len(geometries)
+        idx = pd.Index(range(n))
+        
+        if rp in return_periods_data:
+            rp_data = return_periods_data[rp]
+            depth_vals = rp_data.get("depth", [0.0] * n)[:n]
+            unc_vals = rp_data.get("uncertainty", [0.0] * n)[:n]
+            vel_vals = rp_data.get("velocity", [np.nan] * n)[:n]
+            dur_vals = rp_data.get("duration", [np.nan] * n)[:n]
+        else:
+            depth_vals = [0.0] * n
+            unc_vals = [0.0] * n
+            vel_vals = [np.nan] * n
+            dur_vals = [np.nan] * n
+        
+        return {
+            "depth": pd.Series(depth_vals, index=idx),
+            "uncertainty": pd.Series(unc_vals, index=idx),
+            "velocity": pd.Series(vel_vals, index=idx),
+            "duration": pd.Series(dur_vals, index=idx),
+        }
+    
+    return mock_sample_for_rp
 
 
 class DummyBuildingPoints(Buildings):

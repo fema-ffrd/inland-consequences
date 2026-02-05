@@ -35,8 +35,9 @@ def buildings_unusual_characteristics():
     data = {
         'target_fid': [1, 2, 3],
         'occtype': ['RES1', 'COM1', 'RES2'],
+        'bldgtype': ['W', 'C', 'MH'],
         'found_ht': [2.5, 3.0, 2.0],
-        'fndtype': [1, 2, 3],
+        'found_type': ['P', 'S', 'S'],
         'num_story': [5, 2, 4],  # RES1 with 5 stories is unusual (>3)
         'sqft': [1000, 600000, 1500],  # COM1 with 600k is >5x the typical 110k
         'val_struct': [100000.0, 5000000.0, 200000.0],
@@ -64,8 +65,9 @@ def buildings_hazard_anomalies():
     data = {
         'target_fid': [1, 2, 3],
         'occtype': ['RES3', 'RES4', 'RES5'],
+        'bldgtype': ['W', 'W', 'MH'],
         'found_ht': [2.5, 3.0, 2.0],
-        'fndtype': [1, 2, 3],
+        'found_type': ['P', 'S', 'S'],
         'num_story': [2, 3, 2],
         'sqft': [2200, 135000, 25000],
         'val_struct': [150000.0, 250000.0, 200000.0],
@@ -92,8 +94,9 @@ def buildings_normal():
     data = {
         'target_fid': [1, 2, 3],
         'occtype': ['RES1', 'RES2', 'RES3'],
+        'bldgtype': ['W', 'W', 'W'],
         'found_ht': [2.5, 3.0, 2.0],
-        'fndtype': [1, 2, 3],
+        'found_type': ['P', 'S', 'S'],
         'num_story': [1, 2, 1],
         'sqft': [1800, 1475, 2200],
         'val_struct': [100000.0, 120000.0, 150000.0],
@@ -191,7 +194,47 @@ def raster_collection_hazard_anomalies():
             }
         return {"depth": None, "uncertainty": None, "velocity": None, "duration": None}
 
+    def mock_sample_for_rp(rp, geometries):
+        """Mock sample_for_rp to return pd.Series for each raster type."""
+        n = len(geometries)
+        idx = pd.Index(range(n))
+        if rp == 25:
+            return {
+                "depth": pd.Series([6.0, 7.0, 8.0][:n], index=idx),
+                "uncertainty": pd.Series([0.5, 0.6, 0.7][:n], index=idx),
+                "velocity": pd.Series([11.0, 12.0, 13.0][:n], index=idx),
+                "duration": pd.Series([np.nan] * n, index=idx),
+            }
+        elif rp == 100:
+            return {
+                "depth": pd.Series([2.0, 3.0, 4.0][:n], index=idx),
+                "uncertainty": pd.Series([1.0, 1.2, 1.4][:n], index=idx),
+                "velocity": pd.Series([5.0, 6.0, 7.0][:n], index=idx),
+                "duration": pd.Series([np.nan] * n, index=idx),
+            }
+        elif rp == 500:
+            return {
+                "depth": pd.Series([3.5, 4.5, 5.5][:n], index=idx),
+                "uncertainty": pd.Series([1.5, 1.8, 2.0][:n], index=idx),
+                "velocity": pd.Series([7.0, 8.0, 9.0][:n], index=idx),
+                "duration": pd.Series([np.nan] * n, index=idx),
+            }
+        elif rp == 1000:
+            return {
+                "depth": pd.Series([4.0, 5.0, 6.0][:n], index=idx),
+                "uncertainty": pd.Series([2.0, 2.2, 2.4][:n], index=idx),
+                "velocity": pd.Series([8.0, 9.0, 10.0][:n], index=idx),
+                "duration": pd.Series([np.nan] * n, index=idx),
+            }
+        return {
+            "depth": pd.Series([0.0] * n, index=idx),
+            "uncertainty": pd.Series([0.0] * n, index=idx),
+            "velocity": pd.Series([np.nan] * n, index=idx),
+            "duration": pd.Series([np.nan] * n, index=idx),
+        }
+
     mock_collection.get.side_effect = mock_get
+    mock_collection.sample_for_rp.side_effect = mock_sample_for_rp
     return mock_collection
 
 
@@ -273,7 +316,49 @@ def raster_collection_normal():
             }
         return {"depth": None, "uncertainty": None, "velocity": None, "duration": None}
 
+    def mock_sample_for_rp(rp, geometries):
+        """Mock sample_for_rp to return pd.Series for each raster type."""
+        n = len(geometries)
+        idx = pd.Index(range(n))
+        # Use very small uncertainties to ensure proper monotonic progression
+        # (lower bound of higher RP always exceeds upper bound of lower RP)
+        if rp == 25:
+            return {
+                "depth": pd.Series([1.0, 1.5, 2.0][:n], index=idx),
+                "uncertainty": pd.Series([0.1, 0.1, 0.1][:n], index=idx),
+                "velocity": pd.Series([3.0, 4.0, 5.0][:n], index=idx),
+                "duration": pd.Series([np.nan] * n, index=idx),
+            }
+        elif rp == 100:
+            return {
+                "depth": pd.Series([2.5, 3.0, 3.5][:n], index=idx),
+                "uncertainty": pd.Series([0.1, 0.1, 0.1][:n], index=idx),
+                "velocity": pd.Series([5.0, 6.0, 7.0][:n], index=idx),
+                "duration": pd.Series([np.nan] * n, index=idx),
+            }
+        elif rp == 500:
+            return {
+                "depth": pd.Series([4.0, 4.5, 5.0][:n], index=idx),
+                "uncertainty": pd.Series([0.1, 0.1, 0.1][:n], index=idx),
+                "velocity": pd.Series([8.0, 9.0, 10.0][:n], index=idx),
+                "duration": pd.Series([np.nan] * n, index=idx),
+            }
+        elif rp == 1000:
+            return {
+                "depth": pd.Series([5.5, 6.0, 6.5][:n], index=idx),
+                "uncertainty": pd.Series([0.1, 0.1, 0.1][:n], index=idx),
+                "velocity": pd.Series([10.0, 11.0, 12.0][:n], index=idx),
+                "duration": pd.Series([np.nan] * n, index=idx),
+            }
+        return {
+            "depth": pd.Series([0.0] * n, index=idx),
+            "uncertainty": pd.Series([0.0] * n, index=idx),
+            "velocity": pd.Series([np.nan] * n, index=idx),
+            "duration": pd.Series([np.nan] * n, index=idx),
+        }
+
     mock_collection.get.side_effect = mock_get
+    mock_collection.sample_for_rp.side_effect = mock_sample_for_rp
     return mock_collection
 
 
@@ -443,6 +528,58 @@ def test_hazard_monotonic_progression(
             assert monotonic_violations[0] == 0, "Normal hazard data should not violate monotonicity"
 
 
+def test_hazard_non_monotonic_depth_with_uncertainty(
+    buildings_normal, raster_collection_hazard_anomalies, mock_vulnerability, tmp_path
+):
+    """
+    Test that non-monotonic depth progression triggers validation warnings.
+    
+    The hazard_anomalies fixture has:
+    - 25yr depth=6.0 with std=0.5 → upper bound = 6.5
+    - 100yr depth=2.0 with std=1.0 → lower bound = 1.0
+    
+    The validation rule checks: (depth_rp2 - std_rp2) < (depth_rp1 + std_rp1)
+    For 25yr→100yr: 1.0 < 6.5 → True → triggers DEPTH_DECREASES_WITH_RETURN_PERIOD
+    
+    This is a real-world scenario where flood modeling might have errors causing
+    lower return periods to show higher depths than expected.
+    """
+    with patch(
+        "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
+        return_value=str(tmp_path / "test_non_monotonic.duckdb")
+    ):
+        analysis = InlandFloodAnalysis(
+            raster_collection=raster_collection_hazard_anomalies,
+            buildings=buildings_normal,
+            vulnerability=mock_vulnerability,
+            calculate_aal=True
+        )
+        
+        with analysis:
+            analysis.calculate_losses()
+            
+            # Query for monotonicity violations
+            monotonic_violations = analysis.conn.sql(
+                "SELECT COUNT(*) FROM validation_log WHERE rule = 'DEPTH_DECREASES_WITH_RETURN_PERIOD'"
+            ).fetchone()
+            
+            assert monotonic_violations[0] > 0, (
+                "Non-monotonic hazard data (25yr depth > 100yr depth) should trigger "
+                "DEPTH_DECREASES_WITH_RETURN_PERIOD warnings"
+            )
+            
+            # Verify the validation log contains specific details
+            violation_details = analysis.conn.sql("""
+                SELECT building_id, message 
+                FROM validation_log 
+                WHERE rule = 'DEPTH_DECREASES_WITH_RETURN_PERIOD'
+                LIMIT 1
+            """).fetchone()
+            
+            assert violation_details is not None
+            assert "monotonically increase" in violation_details[1].lower() or "return period" in violation_details[1].lower()
+
+
 # --- Test Suite 3: Results/Loss Validation Rules ---
 
 def test_loss_unusual_hazard_data(
@@ -588,3 +725,89 @@ def test_sources_present(
             # Hazard validation may or may not have records depending on random data
             # but all three sources are available in the code
             assert len(source_names) >= 2, "Should have at least 2 validation sources"
+
+
+# --- Test Suite 4: Flood Peril Type Assignment ---
+
+def test_flood_peril_type_no_nulls(
+    buildings_normal, raster_collection_normal, mock_vulnerability, tmp_path
+):
+    """
+    Test that all buildings are assigned a flood_peril_type with no null values.
+    
+    After hazard assignment and peril type calculation, every building should
+    have a valid flood_peril_type string (e.g., RLS, RHL, RHS, RLL).
+    """
+    with patch(
+        "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
+        return_value=str(tmp_path / "test_flood_peril_type.duckdb")
+    ):
+        analysis = InlandFloodAnalysis(
+            raster_collection=raster_collection_normal,
+            buildings=buildings_normal,
+            vulnerability=mock_vulnerability,
+            calculate_aal=True
+        )
+        
+        with analysis:
+            analysis.calculate_losses()
+            
+            # Check that flood_peril_type column exists and has no nulls
+            null_count = analysis.conn.sql(
+                "SELECT COUNT(*) FROM buildings WHERE flood_peril_type IS NULL"
+            ).fetchone()
+            
+            assert null_count[0] == 0, "All buildings should have a non-null flood_peril_type"
+            
+            # Verify valid peril types (R + velocity class + duration class)
+            peril_types = analysis.conn.sql(
+                "SELECT DISTINCT flood_peril_type FROM buildings ORDER BY flood_peril_type"
+            ).fetchall()
+            
+            valid_patterns = ['RLS', 'RHS', 'RLL', 'RHL']
+            for pt in peril_types:
+                assert pt[0] in valid_patterns, f"Invalid flood_peril_type: {pt[0]}"
+            
+            # Check validation log for no FLOOD_PERIL_TYPE_NULL errors
+            null_errors = analysis.conn.sql(
+                "SELECT COUNT(*) FROM validation_log WHERE rule = 'FLOOD_PERIL_TYPE_NULL'"
+            ).fetchone()
+            
+            assert null_errors[0] == 0, "Should have no FLOOD_PERIL_TYPE_NULL validation errors"
+
+
+def test_flood_peril_type_classification(
+    buildings_normal, raster_collection_hazard_anomalies, mock_vulnerability, tmp_path
+):
+    """
+    Test that flood peril type classification logic correctly assigns H/L and S/L codes.
+    
+    The hazard_anomalies fixture has high velocities (>= 5 ft/s) so buildings
+    should be classified as 'H' (high velocity). Duration is null so 'S' (short).
+    Expected pattern: RHS
+    """
+    with patch(
+        "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
+        return_value=str(tmp_path / "test_peril_classification.duckdb")
+    ):
+        analysis = InlandFloodAnalysis(
+            raster_collection=raster_collection_hazard_anomalies,
+            buildings=buildings_normal,
+            vulnerability=mock_vulnerability,
+            calculate_aal=True
+        )
+        
+        with analysis:
+            analysis.calculate_losses()
+            
+            # With high velocities (11-13 ft/s in hazard_anomalies fixture) and no duration,
+            # we expect RHS (Riverine High velocity Short duration)
+            peril_types = analysis.conn.sql(
+                "SELECT DISTINCT flood_peril_type FROM buildings"
+            ).fetchall()
+            
+            # All buildings should have 'H' for high velocity (>= 5 ft/s)
+            for pt in peril_types:
+                assert pt[0].startswith('R'), "Should start with R for Riverine"
+                assert 'H' in pt[0], f"Expected high velocity (H) classification with velocities >= 5, got {pt[0]}"
+                assert 'S' in pt[0], f"Expected short duration (S) with null duration, got {pt[0]}"
