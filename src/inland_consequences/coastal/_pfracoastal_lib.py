@@ -389,6 +389,41 @@ class _PFRACoastal_Lib:
         return ddf_tab
     
     ####################
+    # Calc_Nrp_AnnLoss4()
+    #	Calculate Average Annualized Loss from N return periods
+    #	Forumala adapted from HAZUS Technical Manual, 
+    # in:
+    #	in_losses = a Pandas Series of the losses ($) corresponding to,
+    #	in_rpnames = a Pandas Series of return periods at which in_losses occur
+    # out:
+    #	Average Annualized Loss
+    # called by:
+    #	runMC_AALU_x4()
+    # calls:
+    #	NULL
+    def Calc_Nrp_AnnLoss4(self, in_losses: pd.Series, in_rpnames: pd.Series) -> float:
+        sel = in_rpnames.notna().to_list()
+        in_losses = in_losses.iloc[sel]
+        in_rpnames = in_rpnames.iloc[sel]
+        
+        sumAnnLoss = 0
+        for i in range(in_losses.size):
+            if i == in_losses.size-1:
+                recur_2 = in_rpnames.iat[i]
+                sumAnnLoss += (1/recur_2)*in_losses.iat[i]
+            else:
+                recur_1 = in_rpnames.iat[i]
+                recur_2 = in_rpnames.iat[i+1]
+                sumAnnLoss += ((1/recur_1)-(1/recur_2))*((in_losses.iat[i]+in_losses.iat[i+1])/2)
+        return sumAnnLoss
+    # Example,
+    ## 
+    # > rpvals = pd.Series([10, 25, 50, 100, 500])
+    # > lossvals = pd.Series([0,0,79142,285939,436903])
+    # > Calc_Nrp_AnnLoss4(lossvals, rpvals)
+    ## [1] 6381.999
+    
+    #####################
     # getCurveByDDFid()
     # 	Given a DDF lookup table and a specific DDF id, the depth-damage curve values for that DDF will be returned
     # in:
