@@ -314,6 +314,9 @@ class InlandFloodAnalysis:
             # Copy hazard inputs to database
             self._create_hazard_tables(conn)    
 
+            # Assign peril type
+            self._assign_flood_peril_type(conn)
+
             # Run building-level validation logic (non-fatal)
             self._run_building_logic(conn)
 
@@ -425,30 +428,90 @@ class InlandFloodAnalysis:
         df_structure = pd.read_csv(base_path / "df_structure.csv")
         structure_arrow_table = pa.Table.from_pandas(df_structure)
 
+        # TODO: Not sure I like this implementation because of the repeated automated test.
+        #   I feel like the parameterized tests should be handling this.
+        connection.execute("DROP TABLE IF EXISTS ddf_structure")
         connection.execute(f"CREATE TABLE ddf_structure AS SELECT * FROM structure_arrow_table")
         
     def _create_hazard_tables(self, connection: duckdb.DuckDBPyConnection) -> None:
-        """Create a hazard table using DuckDB SQL from building IDs and return periods, with random depth and std_dev."""
+        """Create a hazard table by sampling raster values at building point locations.
+        
+        Uses the RasterCollection to sample depth (required), uncertainty, velocity, 
+        and duration rasters at each building's geometry. Creates columns:
+        - id: building identifier
+        - return_period: the return period for this hazard scenario
+        - depth: flood depth value (required)
+        - std_dev: uncertainty/standard deviation (0 if not provided)
+        - velocity: flood velocity (NULL if not provided)
+        - duration: flood duration (NULL if not provided)
+        """
         # Drop the hazard table if it exists
         connection.execute("DROP TABLE IF EXISTS hazard")
 
-        # Use DuckDB SQL to cross join buildings with return periods and randomize depth and std_dev
-        # Assumes buildings table has an 'ID' column
-        connection.execute('''
-            CREATE TABLE hazard AS
-            SELECT
-                b.ID,
-                rp.return_period,
-                1 + random() * 6 AS depth,
-                CASE WHEN round(random()) = 0 THEN 0 ELSE 2 END AS std_dev
-            FROM buildings b
-            CROSS JOIN (
-                SELECT 25 AS return_period UNION ALL
-                SELECT 100 UNION ALL
-                SELECT 500 UNION ALL
-                SELECT 1000
-            ) rp
-        ''')
+        # Get building geometries and IDs from the buildings GeoDataFrame
+        gdf = self.buildings.gdf
+        geometries = gdf.geometry if "geometry" in gdf.columns else gdf.geometry
+        
+        # Get the ID column - use the field mapping if available
+        fm = self.buildings.fields
+        id_col = fm.get_field_name("id") if hasattr(fm, "get_field_name") else "id"
+        building_ids = gdf[id_col].values if id_col in gdf.columns else gdf.index.values
+
+        # Build hazard DataFrames for all return periods (vectorized)
+        rp_dataframes = []
+        
+        for rp in self.raster_collection.return_periods():
+            # Sample all raster values for this return period (vectorized via get_value_vectorized)
+            samples = self.raster_collection.sample_for_rp(rp, geometries)
+            
+            # Build DataFrame directly from vectorized series (no row-by-row iteration)
+            rp_df = pd.DataFrame({
+                "id": building_ids,
+                "return_period": rp,
+                "depth": samples["depth"].values,
+                "std_dev": samples["uncertainty"].values,  # Already 0 if not provided
+                "velocity": samples["velocity"].values,    # NaN if not provided
+                "duration": samples["duration"].values,    # NaN if not provided
+            })
+            rp_dataframes.append(rp_df)
+        
+        # Concatenate all return period DataFrames
+        hazard_df = pd.concat(rp_dataframes, ignore_index=True)
+        
+        # Load into DuckDB using pyarrow (pa.Table.from_pandas works with pandas DataFrame)
+        hazard_arrow = pa.Table.from_pandas(hazard_df)
+        connection.register("hazard_arrow", hazard_arrow)
+        connection.execute("CREATE TABLE hazard AS SELECT * FROM hazard_arrow")
+    
+    def _assign_flood_peril_type(self, conn: duckdb.DuckDBPyConnection) -> None:
+        """Assign flood peril type to each building based on velocity and duration.
+        
+        Classifies buildings into flood peril types using the pattern R[V][D]:
+        - R: Riverine (constant prefix)
+        - V: Velocity class (H=High if >= 5 ft/s, L=Low otherwise including NULL)
+        - D: Duration class (L=Long if >= 72 hours, S=Short otherwise including NULL)
+        
+        Examples: RLS (Riverine Low Short), RHL (Riverine High Long), etc.
+        
+        Uses the maximum velocity and duration across all return periods for each building.
+        """
+        sql = '''
+            -- Add column if it doesn't exist
+            ALTER TABLE buildings ADD COLUMN IF NOT EXISTS flood_peril_type VARCHAR;
+            
+            -- Update flood peril type based on max velocity and duration
+            UPDATE buildings
+            SET flood_peril_type = (
+                SELECT 
+                    'R' || 
+                    CASE WHEN MAX(COALESCE(h.velocity, 0)) >= 5 THEN 'H' ELSE 'L' END ||
+                    CASE WHEN MAX(COALESCE(h.duration, 0)) >= 72 THEN 'L' ELSE 'S' END
+                FROM hazard h
+                WHERE h.ID = buildings.id
+                GROUP BY h.ID
+            );
+        '''
+        conn.execute(sql)
     
     def _create_validation_table(self, connection: duckdb.DuckDBPyConnection) -> None:
         """Create a shared validation log table for recording non-fatal issues.
@@ -638,6 +701,18 @@ class InlandFloodAnalysis:
         """
         try:
             sql = '''
+                -- Check for missing flood peril type assignments
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT 
+                    id,
+                    'buildings',
+                    'results_validation',
+                    'FLOOD_PERIL_TYPE_NULL',
+                    'flood_peril_type is null; indicates missing hazard data or processing issue',
+                    'ERROR'
+                FROM buildings
+                WHERE flood_peril_type IS NULL;
+
                 -- Check for loss ratios > 1 (100%) in building or content loss
                 INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
                 SELECT DISTINCT
@@ -824,6 +899,7 @@ class InlandFloodAnalysis:
             use_stories=use_stories,
             use_construction=use_construction
         )
+        connection.execute("DROP TABLE IF EXISTS structure_damage_functions")
         connection.execute(structure_query)
 
         # Content Damage Functions
@@ -836,6 +912,7 @@ class InlandFloodAnalysis:
                 --AND b.BldgType = x.bldg_type
                 --AND b.DesignLevel = x.design_level
         '''
+        connection.execute("DROP TABLE IF EXISTS content_damage_functions")
         connection.execute(content_query)
 
         # Inventory Damage Functions
@@ -848,6 +925,7 @@ class InlandFloodAnalysis:
                 --AND b.BldgType = x.bldg_type
                 --AND b.DesignLevel = x.design_level
         '''
+        connection.execute("DROP TABLE IF EXISTS inventory_damage_functions")
         connection.execute(inventory_query)          
 
     def _compute_damage_function_statistics(self, connection: duckdb.DuckDBPyConnection) -> None:

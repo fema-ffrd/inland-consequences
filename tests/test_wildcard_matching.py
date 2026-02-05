@@ -5,6 +5,7 @@ This test demonstrates how to use the wildcard_fields parameter to
 control which building attributes are used for matching damage functions.
 """
 
+import numpy as np
 import pytest
 import pandas as pd
 import geopandas as gpd
@@ -56,6 +57,26 @@ def mock_raster_collection():
         "velocity": None,
         "duration": None
     }
+    
+    # Add sample_for_rp mock
+    def mock_sample_for_rp(rp, geometries):
+        n = len(geometries)
+        idx = pd.Index(range(n))
+        if rp == 100:
+            return {
+                "depth": pd.Series([1.0, 1.0, 1.0][:n], index=idx),
+                "uncertainty": pd.Series([0.0] * n, index=idx),
+                "velocity": pd.Series([np.nan] * n, index=idx),
+                "duration": pd.Series([np.nan] * n, index=idx),
+            }
+        return {
+            "depth": pd.Series([0.0] * n, index=idx),
+            "uncertainty": pd.Series([0.0] * n, index=idx),
+            "velocity": pd.Series([np.nan] * n, index=idx),
+            "duration": pd.Series([np.nan] * n, index=idx),
+        }
+    
+    mock_collection.sample_for_rp.side_effect = mock_sample_for_rp
     return mock_collection
 
 
