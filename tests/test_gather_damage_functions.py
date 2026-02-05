@@ -101,6 +101,33 @@ def mock_raster_collection():
         return {"depth": None, "uncertainty": None, "velocity": None, "duration": None}
 
     mock_collection.get.side_effect = mock_get
+    
+    # Add sample_for_rp mock
+    def mock_sample_for_rp(rp, geometries):
+        n = len(geometries)
+        idx = pd.Index(range(n))
+        if rp == 100:
+            return {
+                "depth": pd.Series([1.0, 2.0, 3.0][:n], index=idx),
+                "uncertainty": pd.Series([0.0] * n, index=idx),
+                "velocity": pd.Series([np.nan] * n, index=idx),
+                "duration": pd.Series([np.nan] * n, index=idx),
+            }
+        elif rp == 500:
+            return {
+                "depth": pd.Series([1.5, 2.5, 3.5][:n], index=idx),
+                "uncertainty": pd.Series([0.0] * n, index=idx),
+                "velocity": pd.Series([np.nan] * n, index=idx),
+                "duration": pd.Series([np.nan] * n, index=idx),
+            }
+        return {
+            "depth": pd.Series([0.0] * n, index=idx),
+            "uncertainty": pd.Series([0.0] * n, index=idx),
+            "velocity": pd.Series([np.nan] * n, index=idx),
+            "duration": pd.Series([np.nan] * n, index=idx),
+        }
+    
+    mock_collection.sample_for_rp.side_effect = mock_sample_for_rp
     return mock_collection
 
 @pytest.fixture(scope="module")
