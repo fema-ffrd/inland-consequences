@@ -8,6 +8,9 @@ from unittest.mock import MagicMock
 from inland_consequences.nsi_buildings import NsiBuildings
 from inland_consequences.milliman_buildings import MillimanBuildings
 
+# tmp_path is a built-in pytest fixture for temporary directories.  
+# To create the duckdb files in a known location use: uv run pytest --basetemp=outputs
+
 from inland_consequences.inland_flood_analysis import InlandFloodAnalysis
 from inland_consequences.raster_collection import RasterCollection
 from sphere.core.schemas.abstract_raster_reader import AbstractRasterReader
@@ -112,23 +115,23 @@ def mock_vulnerability():
     mock.calculate_vulnerability.side_effect = mock_calculate_vulnerability
     return mock
 
-# Identifier for testing
-IN_MEMORY_DB_NAME = ':memory:integration_test_db'
-
 @pytest.fixture(scope="module") # Run once for all tests in this file
-def flood_analysis_results(mock_raster_collection, mock_buildings, mock_vulnerability):
+def flood_analysis_results(mock_raster_collection, mock_buildings, mock_vulnerability, tmp_path_factory):
     """
-    1. Patches the DB identifier to use a shared named in-memory DB.
+    1. Patches the DB identifier to use a file-based DB.
     2. Instantiates the InlandFloodAnalysis.
     3. Runs the expensive 'calculate_losses' method once to populate the DB.
     4. Yields the connected analysis for assertions.
     """
     from unittest.mock import patch
     
-    # 1. Patch the identifier (HACK)
+    # Create a temporary directory for this module's tests
+    tmp_path = tmp_path_factory.mktemp("flood_analysis")
+    
+    # 1. Patch the identifier to use file-based DB
     with patch(
         "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier", 
-        return_value=IN_MEMORY_DB_NAME
+        return_value=str(tmp_path / "test_gather_damage_functions.duckdb")
     ):
         # 2. Instantiate and use the context manager
         analysis = InlandFloodAnalysis(

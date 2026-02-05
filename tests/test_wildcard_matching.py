@@ -65,13 +65,13 @@ def mock_vulnerability():
     return MagicMock(spec=AbstractVulnerabilityFunction)
 
 
-def test_default_matching_all_attributes(sample_buildings, mock_raster_collection, mock_vulnerability):
+def test_default_matching_all_attributes(sample_buildings, mock_raster_collection, mock_vulnerability, tmp_path):
     """Test default behavior - match on all attributes (no wildcards)."""
     from unittest.mock import patch
     
     with patch(
         "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
-        return_value=":memory:test_default"
+        return_value=str(tmp_path / "test_default.duckdb")
     ):
         analysis = InlandFloodAnalysis(
             raster_collection=mock_raster_collection,
@@ -99,13 +99,13 @@ def test_default_matching_all_attributes(sample_buildings, mock_raster_collectio
             print(result)
 
 
-def test_wildcard_construction_type(sample_buildings, mock_raster_collection, mock_vulnerability):
+def test_wildcard_construction_type(sample_buildings, mock_raster_collection, mock_vulnerability, tmp_path):
     """Test wildcarding construction type - should match more curves per building."""
     from unittest.mock import patch
     
     with patch(
         "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
-        return_value=":memory:test_wildcard_construction"
+        return_value=str(tmp_path / "test_wildcard_construction.duckdb")
     ):
         analysis = InlandFloodAnalysis(
             raster_collection=mock_raster_collection,
@@ -131,13 +131,13 @@ def test_wildcard_construction_type(sample_buildings, mock_raster_collection, mo
             print(result)
 
 
-def test_wildcard_all_optional(sample_buildings, mock_raster_collection, mock_vulnerability):
+def test_wildcard_all_optional(sample_buildings, mock_raster_collection, mock_vulnerability, tmp_path):
     """Test wildcarding all optional attributes - match only on occupancy type."""
     from unittest.mock import patch
     
     with patch(
         "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
-        return_value=":memory:test_wildcard_all"
+        return_value=str(tmp_path / "test_wildcard_all.duckdb")
     ):
         analysis = InlandFloodAnalysis(
             raster_collection=mock_raster_collection,
@@ -169,13 +169,13 @@ def test_wildcard_all_optional(sample_buildings, mock_raster_collection, mock_vu
             print(result)
 
 
-def test_wildcard_occupancy_type(sample_buildings, mock_raster_collection, mock_vulnerability):
+def test_wildcard_occupancy_type(sample_buildings, mock_raster_collection, mock_vulnerability, tmp_path):
     """Test wildcarding occupancy_type - should match ALL curves regardless of occupancy."""
     from unittest.mock import patch
     
     with patch(
         "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
-        return_value=":memory:test_wildcard_occupancy"
+        return_value=str(tmp_path / "test_wildcard_occupancy.duckdb")
     ):
         analysis = InlandFloodAnalysis(
             raster_collection=mock_raster_collection,
