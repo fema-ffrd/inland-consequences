@@ -500,3 +500,77 @@ class _PFRACoastal_Lib:
         self.write_log('.packaging nodes.')
         
         return s_tab
+    
+    ####################
+    # Calc_Nrp_AnnLoss4()
+    #	Calculate Average Annualized Loss from N return periods
+    #	Forumala adapted from HAZUS Technical Manual, 
+    # in:
+    #	in_losses = a Pandas Series of the losses ($) corresponding to,
+    #	in_rpnames = a Pandas Series of return periods at which in_losses occur
+    # out:
+    #	Average Annualized Loss
+    # called by:
+    #	runMC_AALU_x4()
+    # calls:
+    #	NULL
+    def Calc_Nrp_AnnLoss4(self, in_losses: pd.Series, in_rpnames: pd.Series) -> float:
+        sel = in_rpnames.notna().to_list()
+        in_losses = in_losses.iloc[sel]
+        in_rpnames = in_rpnames.iloc[sel]
+        
+        sumAnnLoss = 0
+        for i in range(in_losses.size):
+            if i == in_losses.size-1:
+                recur_2 = in_rpnames.iat[i]
+                sumAnnLoss += (1/recur_2)*in_losses.iat[i]
+            else:
+                recur_1 = in_rpnames.iat[i]
+                recur_2 = in_rpnames.iat[i+1]
+                sumAnnLoss += ((1/recur_1)-(1/recur_2))*((in_losses.iat[i]+in_losses.iat[i+1])/2)
+        return sumAnnLoss
+    # Example,
+    ## 
+    # > rpvals = pd.Series([10, 25, 50, 100, 500])
+    # > lossvals = pd.Series([0,0,79142,285939,436903])
+    # > Calc_Nrp_AnnLoss4(lossvals, rpvals)
+    ## [1] 6381.999
+    
+    #####################
+    # getCurveByDDFid()
+    # 	Given a DDF lookup table and a specific DDF id, the depth-damage curve values for that DDF will be returned
+    # in:
+    #	in_lut = DDF lookup table, columns = {BldgDmgFnID, m4, m3, m2, m1, p0, p1, p2, ..., p24}
+    #	in_ddf = a DDF id
+    # out:
+    #	a Pandas Series representing % damage for depths (ft) relative to FFE (i.e. freeboard) = {-4ft, ..., +24ft}, 
+    #		with index lables = depth (ft) relative to FFE
+    #	if DDF does not exist, a Series of NA will be returned
+    # called by:
+    #	buildBldgFloodDepthTable6()
+    # calls:
+    #	removeNonNumeric()
+    def getCurveByDDFid(self, in_lut: pd.DataFrame, in_ddf: int) -> pd.Series:
+        sel = [in_lut.columns.get_loc(col) for col in in_lut.columns.to_list() if len(self.removeNonNumeric(col)) > 0]
+        
+        if in_lut["BldgDmgFnID"].isin([in_ddf]).any():
+            ddf_row = in_lut.query(f"BldgDmgFnID == {in_ddf}")
+            ddf_curve = ddf_row.iloc[0,min(sel):max(sel)+1].div(100)
+        else:
+            nan_data_dict = {in_lut.columns.to_list()[i]:np.nan for i in sel}
+            ddf_curve = pd.Series(data={in_lut.columns.to_list()[i]:np.nan for i in sel}, index=list(nan_data_dict), name=None)
+        
+        repl_func = lambda x: "0" if x=="p0" else x.replace("p","+") if "p" in x else x.replace("m","-")
+        ddf_curve.index = [repl_func(label) for label in in_lut.columns.take(sel).to_list()]
+        return ddf_curve
+    # Example,
+    #> bldg_ddf_lut.head(2)
+    ##  BldgDmgFnID Occupancy     Source                               Description m4 m3 m2 m1 p0 p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16 p17 p18 p19 p20 p21 p22 p23 p24 Comment
+    ##1         105      RES1        FIA one floor, no basement, Structure, A-Zone  0  0  0  0 18 22 25 28 30 31 40 43 43 45  46  47  47  49  50  50  50  51  51  52  52  53  53  54  54    NULL
+    ##2         106      RES1 FIA (MOD.) one floor, w/ basement, Structure, A-Zone  7  7  7 11 17 21 29 34 38 43 50 50 54 55  55  57  58  60  62  63  65  67  69  70  72  74  76  77  79    NULL
+    #> bldg_ddf = 105
+    #> bldg_curve = getCurveByDDFid(bldg_ddf_lut,bldg_ddf)
+    ##> bldg_curve
+    ##  -4 -3 -2 -1    0    1    2    3   4    5   6    7    8    9   10   11   12   13  14  15  16   17   18   19   20   21   22   23   24
+    ##1  0  0  0  0 0.18 0.22 0.25 0.28 0.3 0.31 0.4 0.43 0.43 0.45 0.46 0.47 0.47 0.49 0.5 0.5 0.5 0.51 0.51 0.52 0.52 0.53 0.53 0.54 0.54
+    # ####################
