@@ -461,3 +461,26 @@ class _PFRACoastal_Lib:
     ##  -4 -3 -2 -1    0    1    2    3   4    5   6    7    8    9   10   11   12   13  14  15  16   17   18   19   20   21   22   23   24
     ##1  0  0  0  0 0.18 0.22 0.25 0.28 0.3 0.31 0.4 0.43 0.43 0.45 0.46 0.47 0.47 0.49 0.5 0.5 0.5 0.51 0.51 0.52 0.52 0.53 0.53 0.54 0.54
     # ####################
+    
+    ####################
+    # calcKernelDensity()
+    # 	function to calculate the weighted kernel density 
+    #	Inputs:
+    #		NNtab = Pandas dataframe of nearby points within distance=bandwidth
+    #			BID = point ID
+    #			AAL = building AAL = the weight
+    #			Dist = distance (feet) of building to cell centroid
+    #		bw = bandwidth
+    #	Outputs:
+    #		weighted 2D kernel density calculation
+    # 	https://desktop.arcgis.com/en/arcmap/latest/tools/spatial-analyst-toolbox/how-kernel-density-works.htm
+    #	called by:
+    #		main()
+    #	calls:
+    #		NULL
+    def calcKernelDensity(self, NNtab:pd.DataFrame, bw:int) -> float:
+        NNtab = NNtab.assign('radius':[bw for i in range(NNtab.shape[0])])
+        in_sigma = NNtab.apply(lambda x: ((3/scipy.contants.pi)*x[1]*(1-(x[2]/x[3])**2)**2), axis=1)
+        sum_sigma = in_sigma.sum()
+        out_val = (1/(bw**2))*sum_sigma
+        return out_val
