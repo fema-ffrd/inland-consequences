@@ -34,6 +34,7 @@ class Buildings:
             "flood_depth": "flood_depth",
             "depth_in_structure": "depth_in_structure",
             "bddf_id": "bddf_id",
+            "flood_peril_type": "flood_peril_type",
             "building_damage_percent": "building_damage_percent",
             "building_loss": "building_loss",
             "cddf_id": "cddf_id",
@@ -75,8 +76,9 @@ class Buildings:
         
         self.fields = FieldMapping(gdf, aliases, output_fields, overrides)
 
+        
         # Ensure damage-function ID output columns exist on the GeoDataFrame
-        for df_prop in ("bddf_id", "cddf_id", "iddf_id"):
+        for df_prop in ("flood_peril_type"):
             col_name = self.fields.get_field_name(df_prop)
             if col_name and col_name not in self._gdf.columns:
                 self._gdf[col_name] = None
@@ -107,6 +109,11 @@ class Buildings:
     @property
     def first_floor_height(self) -> pd.Series:
         field_name = self.fields.get_field_name("first_floor_height")
+        return self._gdf[field_name]
+
+    @property
+    def flood_peril_type(self) -> pd.Series:
+        field_name = self.fields.get_field_name("flood_peril_type")
         return self._gdf[field_name]
 
     @property

@@ -1,9 +1,6 @@
-#####NOTE: The test for validateSurgeAttr2 is included in this test as the formatSurge function is the only function that calls validateSurgeAttr2#####
-
 import os
 import sys
 import pytest
-import numpy as np
 
 # Get the path of the current directory's parent
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -18,43 +15,40 @@ import geopandas as gpd
 working_dir = path.abspath(path.dirname(__file__))
 
 @pytest.fixture
-def get_comparison_data(run_type:str) -> dict:
-    # Gathers input data sources for the run type
+def get_comparison_data() -> dict:
+    
     src_data_dict = {
-        'surgeA':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/formatSurge_surgeA_results.csv"), float_precision='round_trip'),
-        'surgeB':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/formatSurge_surgeB_results.csv"), float_precision='round_trip'),
-        'waveA':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/formatSurge_waveA_results.csv"), float_precision='round_trip'),
-        'waveB':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/formatSurge_waveB_results.csv"), float_precision='round_trip'),
-    }
-
-    src_dbf_path = {
-        'surgeA':path.join(working_dir,"_data/TEST_CALC/input/Calc_SWL_BE_sample.dbf"),
-        'surgeB':path.join(working_dir,"_data/TEST_CALC/input/Calc_SWL_84_sample.dbf"),
-        'waveA':path.join(working_dir,"_data/TEST_CALC/input/Calc_Hc_BE_sample.dbf"),
-        'waveB':path.join(working_dir,"_data/TEST_CALC/input/Calc_Hc_84_sample.dbf")
+        'src_data': {
+            'surgeA':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/formatSurge_surgeA_results.csv"), float_precision='round_trip'),
+            'surgeB':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/formatSurge_surgeB_results.csv"), float_precision='round_trip'),
+            'waveA':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/formatSurge_waveA_results.csv"), float_precision='round_trip'),
+            'waveB':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/formatSurge_waveB_results.csv"), float_precision='round_trip'),
+        },
+        'dbf_path':{
+            'surgeA':path.join(working_dir,"_data/TEST_CALC/input/Calc_SWL_BE_sample.dbf"),
+            'surgeB':path.join(working_dir,"_data/TEST_CALC/input/Calc_SWL_84_sample.dbf"),
+            'waveA':path.join(working_dir,"_data/TEST_CALC/input/Calc_Hc_BE_sample.dbf"),
+            'waveB':path.join(working_dir,"_data/TEST_CALC/input/Calc_Hc_84_sample.dbf")
+        },
+        'shp_path':{
+            'surgeA':path.join(working_dir,"_data/TEST_CALC/input/Calc_SWL_BE_sample.shp"),
+            'surgeB':path.join(working_dir,"_data/TEST_CALC/input/Calc_SWL_84_sample.shp"),
+            'waveA':path.join(working_dir,"_data/TEST_CALC/input/Calc_Hc_BE_sample.shp"),
+            'waveB':path.join(working_dir,"_data/TEST_CALC/input/Calc_Hc_84_sample.shp")
+        }
     }
     
-    src_shp_path = {
-        'surgeA':path.join(working_dir,"_data/TEST_CALC/input/Calc_SWL_BE_sample.shp"),
-        'surgeB':path.join(working_dir,"_data/TEST_CALC/input/Calc_SWL_84_sample.shp"),
-        'waveA':path.join(working_dir,"_data/TEST_CALC/input/Calc_Hc_BE_sample.shp"),
-        'waveB':path.join(working_dir,"_data/TEST_CALC/input/Calc_Hc_84_sample.shp")
-    }
+    return src_data_dict
 
-    return {
-        'target_df':src_data_dict[run_type],
-        'dbf':src_dbf_path[run_type],
-        'shp':src_shp_path[run_type]
-    }
 
-def test_formatSurge():
+def test_formatSurge(get_comparison_data):
     lib = _PFRACoastal_Lib()
     for run_type in ['surgeA','surgeB','waveA','waveB']:
 
-        run_data = get_comparison_data(run_type)
+        run_data = get_comparison_data
 
         # create extensible swel attribute map
-        temp_tab = gpd.read_file(run_data['shp'], ignore_geometry=True)
+        temp_tab = gpd.read_file(run_data['shp_path'][run_type], ignore_geometry=True)
 
         #get all names that begin with 'e'
         temp_cols = [col for col in temp_tab.columns.to_list() if col[0]=='e']
@@ -73,6 +67,6 @@ def test_formatSurge():
             "DDC":[0]+[1 for i in range(len(temp_cols))]
         }
         attr_map = pd.DataFrame(attr_dict)
-        ret = lib.formatSurge(run_data['dbf'], attr_map)
+        ret = lib.formatSurge(run_data['dbf_path'][run_type], attr_map)
 
-        assert ret.equals(run_data['target_df'])
+        assert ret.equals(run_data['src_data'][run_type])
