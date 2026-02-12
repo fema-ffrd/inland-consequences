@@ -7,6 +7,7 @@ import logging
 import typing
 import multiprocessing
 import os
+import csv
 from re import sub
 import sys
 
@@ -387,6 +388,118 @@ class _PFRACoastal_Lib:
         
         ddf_tab = pd.DataFrame(ddf_data)
         return ddf_tab
+            
+    ####################
+    # validateSurgeAttr2()
+    #	function to test the attribute table of a surge dataset in order 
+    #	to determine if 
+    #		the required fields exist,
+    #		the fields contain the correct type (numeric vs character) of data
+    #		the fields contain valid data
+    #	If required fields are missing, they will be created an populated with default value
+    #	If required fields contain unexpected values (inc NULLS), they will be replaced by the defalt
+    # In:
+    #	intab = geodataframe from surge/wave dataset
+    #	this_attr_map = pandas dataframe of SWEL data, loaded from the surge/wave datasets
+    # Out:
+    #	validated surge/wave attribute table 
+    # called by:
+    #	formatSurge()
+    # calls:
+    #	NULL
+    def validateSurgeAttr2(self, intab:gpd.GeoDataFrame, this_att_map:pd.DataFrame) -> gpd.GeoDataFrame:
+        
+        self.write_log('.start s validation')
+        # initialize attribute error flags as FALSE
+        # Create a series of False values the number of rows in the dataframe
+        valflag = pd.Series(False, index=this_att_map.index)
+        
+        self.write_log('.cast numeric fields.')
+        # Replace non-numeric values for numeric-type attributes with the default value
+        sel = this_att_map.index[this_att_map["CHECK"].astype(int) == 1].tolist()
+        for i in sel:
+            self.write_log(f".Check {this_att_map['OUT'].iloc[i]}.")
+            # Force column to be numeric
+            intab.iloc[:,i] = pd.to_numeric(intab.iloc[:,i], errors='coerce')
+            # Gather list of NA row indicies
+            NArows = intab.index[intab.iloc[:,i].astype(int) <= -99].tolist()
+            # If there are null values, populate them with default values
+            if len(NArows) > 0:
+                intab.iloc[NArows,i] = pd.to_numeric(this_att_map.iloc[i,'DEF'], errors='coerce')
+            intab.iloc[:,i] = intab.iloc[:,i].apply(lambda x: this_att_map['DEF'][i] if pd.isnull(x) else x)
+            # Update valflag to True if there are null values
+            for i, row in enumerate(intab.iloc[:,i]):
+                if pd.isnull(row):
+                    valflag[i] = True
+                    
+            self.write_log('.snitching on s.')
+            for i in range(len(valflag)):
+                if valflag[i]:
+                    self.write_log(f"Invalid values of node attribute {this_att_map[i,'OUT']} found. Replace with value {this_att_map[i,'DEF']}")
+            
+            self.write_log('.finish s validation')
+
+            return intab
+            
+    ####################
+    # formatSurge()
+    #	given a path to a surge shapefile,
+    #	the shapefile will be read/loaded, with attributes formatted and validated
+    # In:
+    #	s_path = path to surge/wave datasets
+    #   this_att_map = dataframe of SWEL data, loaded from the surge/wave datasets
+    # Out:
+    #	sp::SpatialPointsDataFrame of surge/wave dataset
+    # called by:
+    #	main()
+    # calls:
+    #	validateSurgeAttr2()
+    #	haltscript()
+    def formatSurge(self, s_path:str, this_att_map:pd.DataFrame) -> gpd.GeoDataFrame:
+        self.write_log('.loading surge shapefile.')
+
+        # Open shapefile, if that fails, kill script
+        try:
+            s_tab = gpd.read_file(s_path)
+        except Exception as e:
+            self.write_log(f'Error loading node shapefile, {s_path}')
+            self.write_log("Here's the original error message:")
+            self.write_log(e)
+            self.haltscript()
+        
+        self.write_log('.reformatting node table')
+        # add unique surge ID
+        s_tab['SID'] = range(1, len(s_tab)+1)
+        
+        # if incoming surge shape is Z-aware or M-aware,
+        # then strip away all but the first two coordinate-columns
+        s_tab['geometry'] = s_tab['geometry'].force_2d()
+        
+        # find required attributes and make them if they dont exist
+        for column in this_att_map.columns:
+            if column not in s_tab.columns:
+                s_tab[column] = pd.NA
+        
+        # filter and sort incoming attributes
+        col_in_vals = this_att_map['IN'].tolist()
+        s_tab = s_tab[col_in_vals]
+        # map new attribute names
+        col_out_vals = this_att_map['OUT'].tolist()
+        s_tab.columns = col_out_vals
+        
+        self.write_log('.validating nodes.')
+        try:
+            s_tab = self.validateSurgeAttr2(s_tab, this_att_map)
+        except Exception as e:
+            self.write_log(f'Error validating shapefile, {s_path}')
+            self.write_log("Here's the original error message:")
+            self.write_log(e)
+            print(e)
+            self.haltscript()
+            
+        self.write_log('.packaging nodes.')
+
+        return s_tab
     
     ####################
     # Calc_Nrp_AnnLoss4()
