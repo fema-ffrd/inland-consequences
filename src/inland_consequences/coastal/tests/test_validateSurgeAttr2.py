@@ -21,10 +21,10 @@ working_dir = path.abspath(path.dirname(__file__))
 def get_comparison_data(run_type:str) -> dict:
     # Gathers input data sources for the run type
     src_data_dict = {
-        'surgeA':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/formatSurge_surgeA_results.csv"), float_precision='round_trip'),
-        'surgeB':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/formatSurge_surgeB_results.csv"), float_precision='round_trip'),
-        'waveA':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/formatSurge_waveA_results.csv"), float_precision='round_trip'),
-        'waveB':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/formatSurge_waveB_results.csv"), float_precision='round_trip'),
+        'surgeA':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/validateSurgeAttr2_surgeA_results.csv"), float_precision='round_trip'),
+        'surgeB':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/validateSurgeAttr2_surgeB_results.csv"), float_precision='round_trip'),
+        'waveA':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/validateSurgeAttr2_waveA_results.csv"), float_precision='round_trip'),
+        'waveB':pd.read_csv(path.join(working_dir,"_data/TEST_CALC/output/validateSurgeAttr2_waveB_results.csv"), float_precision='round_trip'),
     }
 
     src_dbf_path = {
@@ -47,7 +47,7 @@ def get_comparison_data(run_type:str) -> dict:
         'shp':src_shp_path[run_type]
     }
 
-def test_formatSurge():
+def test_validateSurgeAttr2():
     lib = _PFRACoastal_Lib()
     for run_type in ['surgeA','surgeB','waveA','waveB']:
 
@@ -73,6 +73,28 @@ def test_formatSurge():
             "DDC":[0]+[1 for i in range(len(temp_cols))]
         }
         attr_map = pd.DataFrame(attr_dict)
-        ret = lib.formatSurge(run_data['dbf'], attr_map)
+
+        s_tab = gpd.read_file(run_data['dbf'])
+
+        # add unique surge ID
+        s_tab['SID'] = range(1, len(s_tab)+1)
+        
+        # if incoming surge shape is Z-aware or M-aware,
+        # then strip away all but the first two coordinate-columns
+        s_tab['geometry'] = s_tab['geometry'].force_2d()
+        
+        # find required attributes and make them if they dont exist
+        for column in attr_map.columns:
+            if column not in s_tab.columns:
+                s_tab[column] = pd.NA
+        
+        # filter and sort incoming attributes
+        col_in_vals = attr_map['IN'].tolist()
+        s_tab = s_tab[col_in_vals]
+        # map new attribute names
+        col_out_vals = attr_map['OUT'].tolist()
+        s_tab.columns = col_out_vals
+        
+        ret = lib.validateSurgeAttr2(run_data['target_df'], attr_map)
 
         assert ret.equals(run_data['target_df'])

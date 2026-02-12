@@ -7,6 +7,7 @@ import logging
 import typing
 import multiprocessing
 import os
+import csv
 from re import sub
 import sys
 
@@ -437,7 +438,7 @@ class _PFRACoastal_Lib:
                     self.write_log(f"Invalid values of node attribute {this_att_map[i,'OUT']} found. Replace with value {this_att_map[i,'DEF']}")
             
             self.write_log('.finish s validation')
-            
+
             return intab
             
     ####################
@@ -479,7 +480,6 @@ class _PFRACoastal_Lib:
             if column not in s_tab.columns:
                 s_tab[column] = pd.NA
         
-        
         # filter and sort incoming attributes
         col_in_vals = this_att_map['IN'].tolist()
         s_tab = s_tab[col_in_vals]
@@ -498,5 +498,5 @@ class _PFRACoastal_Lib:
             self.haltscript()
             
         self.write_log('.packaging nodes.')
-        
+
         return s_tab
