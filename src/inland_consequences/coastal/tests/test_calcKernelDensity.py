@@ -8,7 +8,7 @@ import rasterio
 import numpy as np
 
 @pytest.fixture
-def test_heatmap():
+def make_test_heatmap():
     lib = _pfracoastal_lib._PFRACoastal_Lib()
 
     root_dir = path.abspath(path.dirname(__file__))
@@ -62,7 +62,7 @@ def test_heatmap():
         out_hm.write(kde_mat,1)
     return temp_raster_file_path
 
-def test_calcKernelDensity(test_heatmap):
+def test_calcKernelDensity(make_test_heatmap):
     root_dir = path.abspath(path.dirname(__file__))
     test_data_dir = "tests/_data/TEST_CALC/output"
     correct_heatmap_tif = path.join(root_dir, test_data_dir, "Test1_heatmap.tif")
@@ -71,7 +71,7 @@ def test_calcKernelDensity(test_heatmap):
         correct_hm_ul_xy = correct_hm.transform * (0,0)
         correct_hm_vals = correct_hm.read(1)
 
-    with rasterio.open(test_heatmap, 'r') as test_hm:
+    with rasterio.open(make_test_heatmap, 'r') as test_hm:
         test_hm_ul_xy = test_hm.transform * (0,0)
         test_hm_vals = test_hm.read(1)
 
