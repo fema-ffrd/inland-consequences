@@ -3,6 +3,43 @@ import pandas as pd
 import numpy as np
 
 
+def update_foundation_types(df):
+    """
+    Update the FLSBT codes (4-letter strings) to the NSI-style foundation codes (1-letter abbreviations).
+    This allows for separation of FLSBT naming conventions from the DDF lookup logic.
+
+    Parameters:
+    -----------
+    df : DataFrame with 'foundation_type' column containing FLSBT-style codes (e.g., 'PILE', 'SHAL', 'SLAB', 'BASE')
+    
+    Returns:
+    DataFrame with 'foundation_type' column updated to NSI-style codes
+    """
+
+    # dictionary to map NSI-style foundation types to FLSBT foundation types (note many-to-one mapping)
+    foundation_lookups = {
+        "C": "SHAL", # Crawl
+        "B": "BASE", # Basement
+        "S": "SLAB", # Slab
+        "P": "SHAL", # Pier
+        "F": "SLAB", # Fill
+        "W": "SHAL", # Solid Wall
+        "I": "PILE"  # Pile
+    }
+
+    # Create a DataFrame for the foundation lookups
+    foundation_df = pd.DataFrame(list(foundation_lookups.items()), columns=['found_type', 'FLSBT_Foundation_Type'])
+
+    # join the foundation lookups to the original DataFrame to get the NSI-style foundation type
+    df_merge = pd.merge(df, foundation_df, left_on='foundation_type', right_on='FLSBT_Foundation_Type', how='left')
+
+    # overwrite the original column values with the new values from the lookup, then drop the extra columns
+    df_merge['foundation_type'] = df_merge['found_type']
+    df_merge = df_merge.drop(columns=['FLSBT_Foundation_Type', 'found_type'])
+
+    return df_merge
+
+
 def generate_flsbt_lookup_table():
     """
     Generate a complete lookup table (for contents) that maps:
@@ -590,6 +627,9 @@ def create_complete_lookup_table(foundation_flood_csv_path, occupancy_flood_csv_
 
     # cast all columns to lowercase
     complete_table.columns = [col.lower() for col in complete_table.columns]
+
+    # update foundation types to NSI-style codes
+    complete_table = update_foundation_types(complete_table)
     
     return complete_table
 
