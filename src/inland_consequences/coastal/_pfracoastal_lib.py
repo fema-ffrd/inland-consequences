@@ -207,7 +207,7 @@ class _PFRACoastal_Lib:
     def get_NNx(self, b_coords: np.ndarray, a_coord: np.ndarray, x=3) -> pd.DataFrame:
         nn_dist = scipy.spatial.distance.cdist(b_coords, a_coord, metric='euclidean')
         nn_res = pd.DataFrame(nn_dist, columns=['NN.dist'])
-        nn_res['rowid'] = list(range(1, nn_dist.shape[0]+1))
+        nn_res['rowid'] = list(range(nn_dist.shape[0]))
         
         #get rowids for the three min distances
         nn_res.sort_values(by='NN.dist', axis=0, inplace=True)
