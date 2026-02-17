@@ -460,7 +460,7 @@ class _PFRACoastal_Lib:
 
         # Open shapefile, if that fails, kill script
         try:
-            s_tab = gpd.read_file(s_path)
+            s_gdf = gpd.read_file(s_path)
         except Exception as e:
             self.write_log(f'Error loading node shapefile, {s_path}')
             self.write_log("Here's the original error message:")
@@ -469,11 +469,12 @@ class _PFRACoastal_Lib:
         
         self.write_log('.reformatting node table')
         # add unique surge ID
-        s_tab['SID'] = range(1, len(s_tab)+1)
+        s_gdf['SID'] = range(1, len(s_tab)+1)
         
         # if incoming surge shape is Z-aware or M-aware,
         # then strip away all but the first two coordinate-columns
-        s_tab['geometry'] = s_tab['geometry'].force_2d()
+        s_gdf['geometry'] = s_tab['geometry'].force_2d()
+        s_tab = s_gdf.drop(columns=s_gdf.geometry.name)
         
         # find required attributes and make them if they dont exist
         for column in this_att_map.columns:
@@ -498,8 +499,8 @@ class _PFRACoastal_Lib:
             self.haltscript()
             
         self.write_log('.packaging nodes.')
-
-        return s_tab
+        
+        return gpd.GeoDataFrame(s_tab, geometry=s_gdf.geometry, crs=s_gdf.geometry.crs)
     
     ####################
     # Calc_Nrp_AnnLoss4()
