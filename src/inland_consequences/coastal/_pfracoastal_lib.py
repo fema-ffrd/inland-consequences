@@ -469,11 +469,11 @@ class _PFRACoastal_Lib:
         
         self.write_log('.reformatting node table')
         # add unique surge ID
-        s_gdf['SID'] = range(1, len(s_tab)+1)
+        s_gdf['SID'] = range(1, len(s_gdf)+1)
         
         # if incoming surge shape is Z-aware or M-aware,
         # then strip away all but the first two coordinate-columns
-        s_gdf['geometry'] = s_tab['geometry'].force_2d()
+        s_gdf['geometry'] = s_gdf['geometry'].force_2d()
         s_tab = s_gdf.drop(columns=s_gdf.geometry.name)
         
         # find required attributes and make them if they dont exist
