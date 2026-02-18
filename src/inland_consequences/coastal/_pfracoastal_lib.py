@@ -647,3 +647,52 @@ class _PFRACoastal_Lib:
         # create output row and add to table
         full_row = pd.concat([row_prefix,row_suffix], axis='columns')
         return full_row
+    
+    ####################
+    # buildSampledLoss2()
+    # 	
+    # in:
+    #	FBtab0 = a buildings loss table
+    #   pvals = N probabilistoc events 0..1
+    # out:
+    #	N x 5 dataframe
+    #	with a row for each pval
+    #	and columns for pval, return period, Low curve value, best estimate curve value, high curve value 
+    # called by:
+    #	runMC_AALU_x4()
+    # calls:
+    #	NULL
+    def buildSampledLoss2(self, FBtab0: pd.DataFrame, pvals: pd.DataFrame) -> pd.DataFrame:
+        MC_prob = pvals.iloc[:,0].sort_values(ascending=False)
+        MC_rp = mc_prob.copy().apply(lambda x: 1/x)
+        FBrp = FBtab0["RP"].copy()
+        
+        # make sure there are at least two RPs between 1 & 10k
+        if FBrp.iloc[FBrp.notna().to_list()].shape[0] < 2:
+            return pd.DataFrame(data={"MC_prob":[NA], "MC_rp":[NA], "MC_Lw":[0], "MC_Be":[0], "MC_Up":[0]})
+        
+        # initialize final loss = raw loss
+        FBpLw = FBtab0["Loss_Lw"]
+        FBpBe = FBtab0["Loss_BE"]
+        FBpUp = FBtab0["Loss_Up"]
+        
+        # sample the loss curve
+        if FBtab0["RP"].count() > 1:
+            FBrp_log10 = numpy.log10(FBrp.to_numpy().flatten())
+            MCrp_log10 = np.log10(MC_rp.to_numpy())
+            
+            MC_Lw = np.interp(x=MCrp_log10, xp=FBrp_log10, fp=FBpLw.to_numpy(), left=pd.NA, right=pd.NA)
+            MC_Be = np.interp(x=MCrp_log10, xp=FBrp_log10, fp=FBpBe.to_numpy(), left=pd.NA, right=pd.NA)
+            MC_Up = np.interp(x=MCrp_log10, xp=FBrp_log10, fp=FBpUp.to_numpy(), left=pd.NA, right=pd.NA)
+        else:
+            sel = FBtab0["RP"].notna().to_list()
+            MC_prob = FBtab0["PVAL"].iloc[sel]
+            MC_rp = FBtab0["RP"].iloc[sel]
+            MC_Lw = FBpLw.iloc[sel]
+            MC_Be = FBpBe.iloc[sel]
+            MC_Up = FBpUp.iloc[sel]
+        
+        # create output table
+        out_tab = pd.DataFrame(data={"MC_prob":MC_prob, "MC_rp":MC_rp, "MC_Lw":MC_Lw, "MC_Be":MC_Be, "MC_Up":MC_Up})
+        out_tab.mask(out_tab.isna(), 0, inplace=True)
+        return out_tab
