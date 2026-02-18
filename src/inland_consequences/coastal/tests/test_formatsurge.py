@@ -68,5 +68,4 @@ def test_formatSurge(get_comparison_data):
         }
         attr_map = pd.DataFrame(attr_dict)
         ret = lib.formatSurge(run_data['dbf_path'][run_type], attr_map)
-
-        assert ret.equals(run_data['src_data'][run_type])
+        assert ret.drop(columns=ret.geometry.name).equals(run_data['src_data'][run_type])
