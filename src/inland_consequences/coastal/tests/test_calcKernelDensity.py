@@ -30,7 +30,7 @@ def make_test_heatmap():
     aal_field = "BAAL"
 
     # create starting grid with value 0
-    with rasterio.open(test_heatmap_tif, 'r') as test_hm:
+    with rasterio.open(test_heatmap_tif, 'r', driver="GTiff") as test_hm:
         out_width = test_hm.width
         out_height = test_hm.height
         out_crs = test_hm.crs
@@ -76,11 +76,11 @@ def test_calcKernelDensity(make_test_heatmap):
     test_data_dir = "_data/TEST_CALC/output"
     correct_heatmap_tif = path.join(root_dir, test_data_dir, "Test1_heatmap.tif")
 
-    with rasterio.open(correct_heatmap_tif, 'r') as correct_hm:
+    with rasterio.open(correct_heatmap_tif, 'r', driver="GTiff") as correct_hm:
         correct_hm_ul_xy = correct_hm.transform * (0,0)
         correct_hm_vals = correct_hm.read(1)
 
-    with rasterio.open(make_test_heatmap, 'r') as test_hm:
+    with rasterio.open(make_test_heatmap, 'r', driver="GTiff") as test_hm:
         test_hm_ul_xy = test_hm.transform * (0,0)
         test_hm_vals = test_hm.read(1)
 
