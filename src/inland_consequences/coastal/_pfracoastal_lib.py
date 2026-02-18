@@ -7,6 +7,7 @@ import logging
 import typing
 import multiprocessing
 import os
+import csv
 from re import sub
 import sys
 
@@ -206,7 +207,7 @@ class _PFRACoastal_Lib:
     def get_NNx(self, b_coords: np.ndarray, a_coord: np.ndarray, x=3) -> pd.DataFrame:
         nn_dist = scipy.spatial.distance.cdist(b_coords, a_coord, metric='euclidean')
         nn_res = pd.DataFrame(nn_dist, columns=['NN.dist'])
-        nn_res['rowid'] = list(range(1, nn_dist.shape[0]+1))
+        nn_res['rowid'] = list(range(nn_dist.shape[0]))
         
         #get rowids for the three min distances
         nn_res.sort_values(by='NN.dist', axis=0, inplace=True)
@@ -387,6 +388,119 @@ class _PFRACoastal_Lib:
         
         ddf_tab = pd.DataFrame(ddf_data)
         return ddf_tab
+            
+    ####################
+    # validateSurgeAttr2()
+    #	function to test the attribute table of a surge dataset in order 
+    #	to determine if 
+    #		the required fields exist,
+    #		the fields contain the correct type (numeric vs character) of data
+    #		the fields contain valid data
+    #	If required fields are missing, they will be created an populated with default value
+    #	If required fields contain unexpected values (inc NULLS), they will be replaced by the defalt
+    # In:
+    #	intab = geodataframe from surge/wave dataset
+    #	this_attr_map = pandas dataframe of SWEL data, loaded from the surge/wave datasets
+    # Out:
+    #	validated surge/wave attribute table 
+    # called by:
+    #	formatSurge()
+    # calls:
+    #	NULL
+    def validateSurgeAttr2(self, intab:gpd.GeoDataFrame, this_att_map:pd.DataFrame) -> gpd.GeoDataFrame:
+        
+        self.write_log('.start s validation')
+        # initialize attribute error flags as FALSE
+        # Create a series of False values the number of rows in the dataframe
+        valflag = pd.Series(False, index=this_att_map.index)
+        
+        self.write_log('.cast numeric fields.')
+        # Replace non-numeric values for numeric-type attributes with the default value
+        sel = this_att_map.index[this_att_map["CHECK"].astype(int) == 1].tolist()
+        for i in sel:
+            self.write_log(f".Check {this_att_map['OUT'].iloc[i]}.")
+            # Force column to be numeric
+            intab.iloc[:,i] = pd.to_numeric(intab.iloc[:,i], errors='coerce')
+            # Gather list of NA row indicies
+            NArows = intab.index[intab.iloc[:,i].astype(int) <= -99].tolist()
+            # If there are null values, populate them with default values
+            if len(NArows) > 0:
+                intab.iloc[NArows,i] = pd.to_numeric(this_att_map.iloc[i,'DEF'], errors='coerce')
+            intab.iloc[:,i] = intab.iloc[:,i].apply(lambda x: this_att_map['DEF'][i] if pd.isnull(x) else x)
+            # Update valflag to True if there are null values
+            for i, row in enumerate(intab.iloc[:,i]):
+                if pd.isnull(row):
+                    valflag[i] = True
+                    
+            self.write_log('.snitching on s.')
+            for i in range(len(valflag)):
+                if valflag[i]:
+                    self.write_log(f"Invalid values of node attribute {this_att_map[i,'OUT']} found. Replace with value {this_att_map[i,'DEF']}")
+            
+            self.write_log('.finish s validation')
+
+            return intab
+            
+    ####################
+    # formatSurge()
+    #	given a path to a surge shapefile,
+    #	the shapefile will be read/loaded, with attributes formatted and validated
+    # In:
+    #	s_path = path to surge/wave datasets
+    #   this_att_map = dataframe of SWEL data, loaded from the surge/wave datasets
+    # Out:
+    #	sp::SpatialPointsDataFrame of surge/wave dataset
+    # called by:
+    #	main()
+    # calls:
+    #	validateSurgeAttr2()
+    #	haltscript()
+    def formatSurge(self, s_path:str, this_att_map:pd.DataFrame) -> gpd.GeoDataFrame:
+        self.write_log('.loading surge shapefile.')
+
+        # Open shapefile, if that fails, kill script
+        try:
+            s_gdf = gpd.read_file(s_path)
+        except Exception as e:
+            self.write_log(f'Error loading node shapefile, {s_path}')
+            self.write_log("Here's the original error message:")
+            self.write_log(e)
+            self.haltscript()
+        
+        self.write_log('.reformatting node table')
+        # add unique surge ID
+        s_gdf['SID'] = range(1, len(s_gdf)+1)
+        
+        # if incoming surge shape is Z-aware or M-aware,
+        # then strip away all but the first two coordinate-columns
+        s_gdf['geometry'] = s_gdf['geometry'].force_2d()
+        s_tab = s_gdf.drop(columns=s_gdf.geometry.name)
+        
+        # find required attributes and make them if they dont exist
+        for column in this_att_map.columns:
+            if column not in s_tab.columns:
+                s_tab[column] = pd.NA
+        
+        # filter and sort incoming attributes
+        col_in_vals = this_att_map['IN'].tolist()
+        s_tab = s_tab[col_in_vals]
+        # map new attribute names
+        col_out_vals = this_att_map['OUT'].tolist()
+        s_tab.columns = col_out_vals
+        
+        self.write_log('.validating nodes.')
+        try:
+            s_tab = self.validateSurgeAttr2(s_tab, this_att_map)
+        except Exception as e:
+            self.write_log(f'Error validating shapefile, {s_path}')
+            self.write_log("Here's the original error message:")
+            self.write_log(e)
+            print(e)
+            self.haltscript()
+            
+        self.write_log('.packaging nodes.')
+        
+        return gpd.GeoDataFrame(s_tab, geometry=s_gdf.geometry, crs=s_gdf.geometry.crs)
     
     ####################
     # Calc_Nrp_AnnLoss4()
@@ -485,3 +599,74 @@ class _PFRACoastal_Lib:
         sum_sigma = in_sigma.sum()
         out_val = (1/(bw**2))*sum_sigma
         return out_val
+      
+    # attachWSELtoBUILDING3()
+    # 	function to find the 3 nearest surge points to a building point and adopt 
+    # 	the mean average at each return period.  Replace -99999 (null) with NA before
+    #	running mean, and then replace NaN after running mean with NA.  This will 
+    #	compute averages without -99999 and insert NA where all input values are NULL
+    # in:
+    #	bldg_row = a row from a DataFrame of buildings dataset (from buildings GeoDataFrame with dropped geometry column)
+    #   bldg_coord = numpy array of coordinates of the building (from buldings GeodataFrame.geometry.get_coordinates())
+    #	surge_shp = GeoDataFrame of surge point dataset (inc geometry)
+    #	in_attr_map = appropriate attribute map for SWEL or SWERR
+    # out:
+    #	mean surge values for all return periods for nearest surge points
+    # called by:
+    #	main()
+    # calls:
+    #	get_NNx()
+    def attachWSELtoBUILDING3(self, bldg_row: pd.Series, bldg_coord: np.ndarray, surge_shp: gpd.GeoDataFrame,  in_attr_map: pd.DataFrame) -> pd.DataFrame:
+        # unpack surge table and coordinates
+        surge_tab = surge_shp.to_wkb().drop(columns=surge_shp.geometry.name)
+        surge_coords = surge_shp.geometry.get_coordinates().to_numpy()
+        bldg_coord_resize = np.resize(bldg_coord,(1,2))
+
+        # find 3NN surge points to the building
+        NN_res = self.get_NNx(surge_coords, bldg_coord_resize) 
+        sid_func = lambda x, other: other["SID"].iat[x]
+        NN_res["SID"] = NN_res["rowid"].apply(sid_func, args=(surge_tab,))
+
+        # record the 3NN surge IDs
+        row_prefix = pd.DataFrame.from_dict(data={"BID":[bldg_row.loc["BID"]],"DEMFT":[bldg_row.loc["DEMFT"]],"VALID":[0],"spt1":[NN_res.iat[0,2]],"spt2":[NN_res.iat[1,2]],"spt3":[NN_res.iat[2,2]]})
+
+        # get the surge point rows identified above
+        surge_res = surge_tab.iloc[surge_tab["SID"].isin(NN_res['SID'].to_list()).to_list(),:].copy()
+        
+        # swap -99999 for NA
+        surge_res.mask(surge_res.eq(in_attr_map.iat[1,in_attr_map.columns.get_loc("DEF")]), pd.NA, inplace=True)
+        
+        # make a copy and plug NAs with lowest value in the row
+        surge_resf = surge_res.copy()
+        
+        # swap surge.res with surge.resf to
+        # get average of 3 surge points at each stage frequency, swapping NaN with NA
+        # from the "fixed" results table
+        surge_mean = surge_resf.iloc[:,in_attr_map.query("DDC == 1").index.to_list()].mean(axis=0, skipna=True, numeric_only=True)
+        surge_mean.mask(surge_mean.isna(), pd.NA, inplace=True)
+        
+        # finally, use closest node to determine if nulls exist at building
+        #   determine closest node from NN.res
+        #if NAs exist in that node, transfer them to the same RP in surge.mean
+        sel = surge_res.iloc[surge_res.eq(NN_res["SID"].iat[0]).any(axis=1).to_list(),:].isna().any()
+        
+        if sel.any():
+            surge_mean.mask(sel, pd.NA, inplace=True)
+
+        # fix the hiccups in surge.mean by lowering the offender to match the average of the bounding values
+        surge_mean.index = list(range(surge_mean.size))
+        diff_series = surge_mean.iloc[surge_mean.notna().to_list()].diff()
+        if not diff_series.iloc[1:].ge(0).all():
+            s_index_list = surge_mean.iloc[surge_mean.notna().to_list()].sort_index(ascending=False).index.to_list()[1:]
+            for i in s_index_list:
+                if surge_mean.at[i] > surge_mean.at[i+1]:
+                    surge_mean.at[i] = surge_mean.at[i+1]
+        
+        # prep for merge and output
+        row_suffix = surge_mean.apply(round, args=(3,))
+        row_suffix.index = in_attr_map.query("DDC == 1")["OUT"].to_list()
+        row_suffix = pd.DataFrame(data=row_suffix).T
+        
+        # create output row and add to table
+        full_row = pd.concat([row_prefix,row_suffix], axis='columns')
+        return full_row

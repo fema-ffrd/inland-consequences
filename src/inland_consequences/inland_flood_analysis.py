@@ -1126,15 +1126,18 @@ class InlandFloodAnalysis:
 
     def _calculate_losses(self, connection: duckdb.DuckDBPyConnection) -> None:
         # Compute the damages from the valuation * the damage percents.
-        # damage_function_statistics with damage_percent_mean and damage_percent_std by building_id and return_period. 
+        # damage_function_statistics with damage_percent_mean and damage_percent_std by building_id and return_period.
+        # Also computes loss_min and loss_max from d_min and d_max respectively.
 
         sql_statement = '''
             CREATE OR REPLACE TABLE losses AS
             SELECT
                 b.ID,
                 d.return_period,
+                b.building_cost * d.d_min AS loss_min,
                 b.building_cost * d.damage_percent_mean AS loss_mean,
-                b.building_cost * d.damage_percent_std AS loss_std
+                b.building_cost * d.damage_percent_std AS loss_std,
+                b.building_cost * d.d_max AS loss_max
             FROM buildings b
             JOIN damage_function_statistics d ON b.ID = d.building_id
         '''
@@ -1142,7 +1145,7 @@ class InlandFloodAnalysis:
         connection.execute(sql_statement)
 
     def _calculate_aal(self, connection: duckdb.DuckDBPyConnection) -> None:
-        # Calculate AAL using trapezoidal rule
+        # Calculate AAL using trapezoidal rule, including min, mean, and max values
 
         sql_statement = '''
             CREATE OR REPLACE TABLE aal_losses AS
@@ -1153,8 +1156,10 @@ class InlandFloodAnalysis:
                 SELECT 
                     ID,
                     return_period,
+                    loss_min,
                     loss_mean,
                     loss_std,
+                    loss_max,
                     1.0 / return_period as prob
                 FROM losses
             ),
@@ -1166,12 +1171,16 @@ class InlandFloodAnalysis:
                 SELECT 
                     ID,
                     prob as p_start,
+                    loss_min as lmin_start,
                     loss_mean as l_start,
                     loss_std as s_start,
+                    loss_max as lmax_start,
                     -- Look ahead to the next probability point
                     LEAD(prob) OVER (PARTITION BY ID ORDER BY prob DESC) as p_end,
+                    LEAD(loss_min) OVER (PARTITION BY ID ORDER BY prob DESC) as lmin_end,
                     LEAD(loss_mean) OVER (PARTITION BY ID ORDER BY prob DESC) as l_end,
-                    LEAD(loss_std) OVER (PARTITION BY ID ORDER BY prob DESC) as s_end
+                    LEAD(loss_std) OVER (PARTITION BY ID ORDER BY prob DESC) as s_end,
+                    LEAD(loss_max) OVER (PARTITION BY ID ORDER BY prob DESC) as lmax_end
                 FROM probabilities
             ),
 
@@ -1182,11 +1191,17 @@ class InlandFloodAnalysis:
                     -- Trapezoid Area: Average Height * Width
                     -- Width = (Start Prob - End Prob)
                     
+                    -- Min AAL Contribution
+                    ( (lmin_start + lmin_end) / 2.0 ) * (p_start - p_end) as aal_contribution_min,
+                    
                     -- Mean AAL Contribution
                     ( (l_start + l_end) / 2.0 ) * (p_start - p_end) as aal_contribution_mean,
                     
                     -- Std Dev AAL Contribution (Assuming Perfect Correlation)
-                    ( (s_start + s_end) / 2.0 ) * (p_start - p_end) as aal_contribution_std
+                    ( (s_start + s_end) / 2.0 ) * (p_start - p_end) as aal_contribution_std,
+                    
+                    -- Max AAL Contribution
+                    ( (lmax_start + lmax_end) / 2.0 ) * (p_start - p_end) as aal_contribution_max
                 FROM segments
                 -- We filter out the last row (highest return period) because it has no "next" point to connect to
                 WHERE p_end IS NOT NULL
@@ -1195,8 +1210,10 @@ class InlandFloodAnalysis:
             -- 4. Sum Segments to get Total AAL
             SELECT 
                 ID,
+                SUM(aal_contribution_min) as aal_min,
                 SUM(aal_contribution_mean) as aal_mean,
-                SUM(aal_contribution_std) as aal_std
+                SUM(aal_contribution_std) as aal_std,
+                SUM(aal_contribution_max) as aal_max
             FROM segment_areas
             GROUP BY ID;
         '''
