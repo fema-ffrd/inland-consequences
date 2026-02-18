@@ -479,8 +479,9 @@ class _PFRACoastal_Lib:
     #	calls:
     #		NULL
     def calcKernelDensity(self, NNtab:pd.DataFrame, bw:int) -> float:
-        NNtab = NNtab.assign('radius':[bw for i in range(NNtab.shape[0])])
-        in_sigma = NNtab.apply(lambda x: ((3/scipy.constants.pi)*x[1]*(1-(x[2]/x[3])**2)**2), axis=1)
+        NNtab = NNtab.copy()
+        NNtab.loc[:,'radius'] = bw
+        in_sigma = NNtab.apply(lambda x: ((3/scipy.constants.pi)*x.iat[1]*(1-((x.iat[2]/x.iat[3])**2))**2), axis=1)
         sum_sigma = in_sigma.sum()
         out_val = (1/(bw**2))*sum_sigma
         return out_val
