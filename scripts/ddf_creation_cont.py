@@ -3,41 +3,44 @@ import pandas as pd
 import numpy as np
 
 
-def update_foundation_types(df):
-    """
-    Update the FLSBT codes (4-letter strings) to the NSI-style foundation codes (1-letter abbreviations).
-    This allows for separation of FLSBT naming conventions from the DDF lookup logic.
+# def update_foundation_types(df):
+#     """
+#     Update the FLSBT codes (4-letter strings) to the NSI-style foundation codes (1-letter abbreviations).
+#     This allows for separation of FLSBT naming conventions from the DDF lookup logic.
 
-    Parameters:
-    -----------
-    df : DataFrame with 'foundation_type' column containing FLSBT-style codes (e.g., 'PILE', 'SHAL', 'SLAB', 'BASE')
+#     NOTE: DEPRECATED IN FAVOR OF KEEPING OPEN-HAZUS (FEMA) STYLE FOUNDATION CODES. WILL UPDATE
+#     INCOMING INVENTORY DATA TO THIS APPROACH INSTEAD OF CONVERTING TO NSI CODES IN THE LOOKUP TABLES.
+
+#     Parameters:
+#     -----------
+#     df : DataFrame with 'foundation_type' column containing FLSBT-style codes (e.g., 'PILE', 'SHAL', 'SLAB', 'BASE')
     
-    Returns:
-    DataFrame with 'foundation_type' column updated to NSI-style codes
-    """
+#     Returns:
+#     DataFrame with 'foundation_type' column updated to NSI-style codes
+#     """
 
-    # dictionary to map NSI-style foundation types to FLSBT foundation types (note many-to-one mapping)
-    foundation_lookups = {
-        "C": "SHAL", # Crawl
-        "B": "BASE", # Basement
-        "S": "SLAB", # Slab
-        "P": "SHAL", # Pier
-        "F": "SLAB", # Fill
-        "W": "SHAL", # Solid Wall
-        "I": "PILE"  # Pile
-    }
+#     # dictionary to map NSI-style foundation types to FLSBT foundation types (note many-to-one mapping)
+#     foundation_lookups = {
+#         "C": "SHAL", # Crawl
+#         "B": "BASE", # Basement
+#         "S": "SLAB", # Slab
+#         "P": "SHAL", # Pier
+#         "F": "SLAB", # Fill
+#         "W": "SHAL", # Solid Wall
+#         "I": "PILE"  # Pile
+#     }
 
-    # Create a DataFrame for the foundation lookups
-    foundation_df = pd.DataFrame(list(foundation_lookups.items()), columns=['found_type', 'FLSBT_Foundation_Type'])
+#     # Create a DataFrame for the foundation lookups
+#     foundation_df = pd.DataFrame(list(foundation_lookups.items()), columns=['found_type', 'FLSBT_Foundation_Type'])
 
-    # join the foundation lookups to the original DataFrame to get the NSI-style foundation type
-    df_merge = pd.merge(df, foundation_df, left_on='foundation_type', right_on='FLSBT_Foundation_Type', how='left')
+#     # join the foundation lookups to the original DataFrame to get the NSI-style foundation type
+#     df_merge = pd.merge(df, foundation_df, left_on='foundation_type', right_on='FLSBT_Foundation_Type', how='left')
 
-    # overwrite the original column values with the new values from the lookup, then drop the extra columns
-    df_merge['foundation_type'] = df_merge['found_type']
-    df_merge = df_merge.drop(columns=['FLSBT_Foundation_Type', 'found_type'])
+#     # overwrite the original column values with the new values from the lookup, then drop the extra columns
+#     df_merge['foundation_type'] = df_merge['found_type']
+#     df_merge = df_merge.drop(columns=['FLSBT_Foundation_Type', 'found_type'])
 
-    return df_merge
+#     return df_merge
 
 
 def generate_flsbt_lookup_table():
@@ -295,10 +298,6 @@ def unpivot_foundation_flood_table_cont(filepath_or_df):
                 peril = col[1]       # Second header row value
                 damage_id = row[col]
 
-                # # Skip only if damage_id is blank or NaN (keep -9999)
-                # if pd.isna(damage_id) or damage_id == '':
-                #     continue
-
                 rows.append({
                     'FLSBT_Range': flsbt,
                     'Foundation_Type': foundation,
@@ -436,57 +435,6 @@ def unpivot_occupancy_flood_table_cont(filepath_or_df):
     
     return result_df
 
-##################################
-
-
-
-
-# def lookup_flsbt(df, lookup_table):
-#     """
-#     Perform direct lookup to find FLSBT_Range for each building.
-    
-#     Parameters:
-#     -----------
-#     df : DataFrame with columns S_GENERALBUILDINGTYPE, S_OCCTYPE, S_NUMSTORY, S_SQFT
-#     lookup_table : DataFrame returned by generate_flsbt_lookup_table()
-    
-#     Returns:
-#     --------
-#     DataFrame with added FLSBT_Range column
-#     """
-#     df = df.copy()
-    
-#     # Normalize inputs
-#     df['_construction'] = df['S_GENERALBUILDINGTYPE'].str.upper().str.strip()
-#     df['_occupancy'] = df['S_OCCTYPE'].str.upper().str.strip()
-#     df['_stories'] = pd.to_numeric(df['S_NUMSTORY'], errors='coerce')
-#     df['_sqft'] = pd.to_numeric(df.get('S_SQFT', 0), errors='coerce').fillna(0)
-    
-#     # Initialize result column
-#     df['FLSBT_Range'] = None
-    
-#     # For each row in the lookup table, find matching buildings
-#     for _, rule in lookup_table.iterrows():
-#         mask = (
-#             (df['_construction'] == rule['Construction_Type']) &
-#             (df['_occupancy'] == rule['Occupancy_Type']) &
-#             (df['_stories'] >= rule['Story_Min']) &
-#             (df['_stories'] <= rule['Story_Max'])
-#         )
-        
-#         # Apply SQFT filters if specified
-#         if pd.notna(rule['SQFT_Min']):
-#             mask &= (df['_sqft'] >= rule['SQFT_Min'])
-#         if pd.notna(rule['SQFT_Max']):
-#             mask &= (df['_sqft'] <= rule['SQFT_Max'])
-        
-#         df.loc[mask, 'FLSBT_Range'] = rule['FLSBT_Range']
-    
-#     # Clean up temporary columns
-#     df = df.drop(columns=['_construction', '_occupancy', '_stories', '_sqft'])
-    
-#     return df
-
 
 # Generate and display the lookup table
 def create_complete_lookup_table(foundation_flood_csv_path, occupancy_flood_csv_path):
@@ -582,20 +530,6 @@ def create_complete_lookup_table(foundation_flood_csv_path, occupancy_flood_csv_
 
             # Update the original updated_rows with these new values
             updated_rows.loc[mask_needs_replacement2, 'Damage_Function_ID'] = updated_rows2['Damage_Function_ID'].values
-        
-
-
-
-
-        # Merge with occupancy flood table on Occupancy_Type, Foundation_Type, Flood_Peril_Type
-        # Note: occupancy_flood may have Story_Min/Story_Max that we need to ignore for now
-        # updated_rows = rows_to_update.drop(columns=['Damage_Function_ID']).merge(
-        #     occupancy_flood[['Occupancy_Type', 'Foundation_Type', 'Flood_Peril_Type', 'Damage_Function_ID']].drop_duplicates(
-        #         subset=['Occupancy_Type', 'Foundation_Type', 'Flood_Peril_Type']
-        #     ),
-        #     on=['Occupancy_Type', 'Foundation_Type', 'Flood_Peril_Type'],
-        #     how='left'
-        # )
 
         # Set the index back and update the complete_table
         updated_rows = updated_rows.set_index('index')
@@ -628,8 +562,8 @@ def create_complete_lookup_table(foundation_flood_csv_path, occupancy_flood_csv_
     # cast all columns to lowercase
     complete_table.columns = [col.lower() for col in complete_table.columns]
 
-    # update foundation types to NSI-style codes
-    complete_table = update_foundation_types(complete_table)
+    # # update foundation types to NSI-style codes
+    # complete_table = update_foundation_types(complete_table)
     
     return complete_table
 
@@ -648,9 +582,6 @@ if __name__ == "__main__":
     )
 
     foundation_df.to_csv('outputs/unpivoted_foundation_flood_table_contents.csv', index=False)
-
-    # print("\nSample unpivoted foundation/flood table, CECB entries:")
-    # print(foundation_df[foundation_df['FLSBT_Range'].str.contains('CECB')])
 
     # Unpivot the occupancy-based table
     print("\n" + "="*60)
