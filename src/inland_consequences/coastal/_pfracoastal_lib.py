@@ -655,21 +655,21 @@ class _PFRACoastal_Lib:
     #	FBtab0 = a buildings loss table
     #   pvals = N probabilistoc events 0..1
     # out:
-    #	N x 5 dataframe
-    #	with a row for each pval
-    #	and columns for pval, return period, Low curve value, best estimate curve value, high curve value 
+    #	N x 5 dataframe with a row for each pval and columns for 
+    #   pval, return period, Low curve value, best estimate curve value,
+    #   high curve value 
     # called by:
     #	runMC_AALU_x4()
     # calls:
     #	NULL
     def buildSampledLoss2(self, FBtab0: pd.DataFrame, pvals: pd.DataFrame) -> pd.DataFrame:
         MC_prob = pvals.iloc[:,0].sort_values(ascending=False)
-        MC_rp = mc_prob.copy().apply(lambda x: 1/x)
+        MC_rp = MC_prob.copy().apply(lambda x: 1/x)
         FBrp = FBtab0["RP"].copy()
         
         # make sure there are at least two RPs between 1 & 10k
         if FBrp.iloc[FBrp.notna().to_list()].shape[0] < 2:
-            return pd.DataFrame(data={"MC_prob":[NA], "MC_rp":[NA], "MC_Lw":[0], "MC_Be":[0], "MC_Up":[0]})
+            return pd.DataFrame(data={"MC_prob":[pd.NA], "MC_rp":[pd.NA], "MC_Lw":[0], "MC_Be":[0], "MC_Up":[0]})
         
         # initialize final loss = raw loss
         FBpLw = FBtab0["Loss_Lw"]
@@ -678,7 +678,7 @@ class _PFRACoastal_Lib:
         
         # sample the loss curve
         if FBtab0["RP"].count() > 1:
-            FBrp_log10 = numpy.log10(FBrp.to_numpy().flatten())
+            FBrp_log10 = np.log10(FBrp.to_numpy().flatten())
             MCrp_log10 = np.log10(MC_rp.to_numpy())
             
             MC_Lw = np.interp(x=MCrp_log10, xp=FBrp_log10, fp=FBpLw.to_numpy(), left=pd.NA, right=pd.NA)
