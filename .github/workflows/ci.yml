@@ -37,7 +37,7 @@ jobs:
       - name: Checkout code with LFS
         uses: actions/checkout@v4
         with:
-          lsf:true
+          lsf:"true"
 
       - name: Run tests
         run: |
