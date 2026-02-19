@@ -726,3 +726,129 @@ class _PFRACoastal_Lib:
         out_tab = pd.DataFrame(data={"MC_prob":MC_prob, "MC_rp":MC_rp, "MC_Lw":MC_Lw, "MC_Be":MC_Be, "MC_Up":MC_Up})
         out_tab.mask(out_tab.isna(), 0, inplace=True)
         return out_tab
+    
+    #####################
+    # runMC_AALU_x4()
+    #	Given a building , losses will be determined at flood depths in range of 
+    #   -4 to +16, by 0.1 increments.  Loss uncertainty is estimated.
+    #	This loss curve is then sampled N times
+    #	and the AAL is calculated
+    # in:
+    #	in_tab = building DataFrame from PREP_SPDF
+    #	pvals = Nx1 DataFrame with N probabilities, 0..1
+    #	in_building = specific building BID to be evaluated
+    #   inputs = object of 'Inputs' class
+    # out:
+    #  	1x4 dataframe with columns for 
+    #		BID = building ID
+    #		BAAL = best estimate building AAL
+    #		BAALmin = minimum building AAL
+    #		BAALmax = maximum building AAL
+    # called by:
+    #	main()
+    # calls:
+    # 	buildBldgFloodDepthTable6()
+    #	adjust_Loss_DEDLIM1()
+    #	buildSampledLoss2()
+    # 	Calc_Nrp_AnnLoss4()
+    def runMC_AALU_x4(self, in_tab: pd.DataFrame, pvals: pd.DataFrame, in_building: int, inputs) -> pd.DataFrame:
+        this_bldg_attr = in_tab.query(f"BID = {in_building}")
+        
+        # Build the loss table by building flood depth
+        FBtab0 = self.buildBldgFloodDepthTable6()
+        
+        #check for truncated output
+        if not np.any(FBtab0.columns.isin(["rLOSSLw"])):
+            newFields = pd.Index(inputs.guts_attr_map["OUT"].to_list()).difference(FBtab0.columns)
+            for F in newFields:
+                FBtab0[F] = pd.NA
+            FBtab0.columns = inputs.guts_attr_map["OUT"].to_list()
+            FBtab0["DDFfam"] = this_bldg_attr.iloc[0, this_bldg_attr.columns.get_loc("DDF1")]
+            FBtab0["BVAL"] = this_bldg_attr.iloc[0, this_bldg_attr.columns.get_loc("BLDG_VAL")]
+            FBtab0["rLOSSLw"] = 0
+            FBtab0["rLOSSBE"] = 0
+            FBtab0["rLOSSUp"] = 0
+        
+        #####
+        # make any adjustments to loss before annualizing
+        FBtab0["Loss_Lw"] = FBtab0["rLOSSLw"]
+        FBtab0["Loss_BE"] = FBtab0["rLOSSBE"]
+        FBtab0["Loss_Up"] = FBtab0["rLOSSUp"]
+        
+        # adjust losses so that if DEM > (SWEL + 1sd), i.e. probability of ground being wet < 0.158655, 
+        # then no damages, losses can occur
+        # removes possibility of basements filling when ground is dry
+        if inputs.use_eWet:
+            sel = FBtab0.query("WET < 0.158655")
+            if not sel.empty:
+                FBtab0.loc[sel.index.to_list(), "Loss_Lw"] = 0
+                FBtab0.loc[sel.index.to_list(), "Loss_BE"] = 0
+                FBtab0.loc[sel.index.to_list(), "Loss_Up"] = 0
+        
+        # Adjust for Insurance delim and limit
+        if inputs.use_insurance:
+            # loss, deductible, limit
+            ded = this_bldg_attr["BLDG_DED"]
+            lim = this_bldg_attr["BLDG_LIM"]
+            FBtab0["Loss_Lw"] = self.adjust_Loss_DEDLIM1(FBtab0["Loss_Lw"], ded, lim)
+            FBtab0["Loss_BE"] = self.adjust_Loss_DEDLIM1(FBtab0["Loss_BE"], ded, lim)
+            FBtab0["Loss_Up"] = self.adjust_Loss_DEDLIM1(FBtab0["Loss_Up"], ded, lim)
+        
+        # cutoff10
+        if inputs.use_cutoff10:
+            sel = FBtab0.query("RP < 10")
+            FBtab0.loc[sel.index.to_list(), "Loss_Lw"] = 0
+            FBtab0.loc[sel.index.to_list(), "Loss_BE"] = 0
+            FBtab0.loc[sel.index.to_list(), "Loss_Up"] = 0
+        # end adjustments
+        #####
+        
+        # # write the table
+        if inputs.use_outCSV:
+            FBtab0.to_csv('') #PLACEHOLER
+        
+        # sample the loss curve probabilisticly
+        MCLossTab = self.buildSampledLoss2(FBtab0, pvals)
+        
+        # edit 12/18/2024, need to check if 16ft flood depth represents an event
+        #	that is higher freq than the lowest freq pval;
+        # 	If so, then at least 1 pval is incorrectly being assigned 0 damages,
+        #		and needs to be assigned the max known damage, instead.
+        
+        # edit 12/18/2024, need to check if the low freq pvals are
+        #	w the range of probabilities in FBtab0, i.e. the 16ft event in FBtab0
+        #	has a probability that is lower than the least probable pval.
+        #	If the 16ft prob is > than some simulated events, those simulated events will be 
+        #	assigned a damage value of 0, which is incorrect.  Instead we want to assign the max
+        #	known damage to those simulated events.
+        
+        in_bldg_flag = 0
+        # get the flood table last entry
+        lastFBtab = FBtab0.tail(1)
+        if FBtab0.notna().any().any() and pd.notna(lastFBtab.loc[:,"PVAL"]).all():
+            # check if sampled loss tab has frequencies lower than the last entry
+            #	if last entry is NA (normal) then nothing selected
+            sel = MCLossTab.query(f"MC_prob < {lastFBtab.loc[:,'PVAL']}").index.to_list()
+            # if there is a selection, then replace all the affected sampled loss tab entries
+		    #	with max losses
+            if len(sel) > 0:
+                in_bldg_flag = 1
+                # Get the Max Damage set
+                max_dams = lastFBtab.loc[:,("Loss_Lw", "Loss_BE", "Loss_Up")]
+                # insert
+                MCLossTab.iloc[sel, MCLossTab.columns.get_indexer(("Loss_Lw", "Loss_BE", "Loss_Up"))] = max_dams
+        # end edit 12/18/2024
+        
+        # if there are <2 loss values, then a curve cant be constructed. Loss = 0
+        if MCLossTab.notna().query("MC_rp == True").shape[0] < 2:
+            out_df = pd.DataFrame(data={"BID":in_building, "BAAL":0, "BAALmin":0, "BAALmax":0, "FLAG_DF16":in_bldg_flag}, index=[0])
+        else:
+            out_df = pd.DataFrame(data={"BID":bid, 
+                                           "BAAL":round(self.Calc_Nrp_AnnLoss4(MCLossTab["MC_Be"], MCLossTab["MC_rp"]),0),
+                                           "BAALmin":round(self.Calc_Nrp_AnnLoss4(MCLossTab["MC_Lw"], MCLossTab["MC_rp"]),0),
+                                           "BAALmax":round(self.Calc_Nrp_AnnLoss4(MCLossTab["MC_Up"], MCLossTab["MC_rp"]),0), 
+                                           "FLAG_DF16":in_bldg_flag
+                                          },
+                                     index=[0]
+                                    )
+        return out_df
