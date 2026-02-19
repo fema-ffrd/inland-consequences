@@ -93,6 +93,4 @@ def postprocessing_results(inputs, buildSampledLoss2_output):
 
 def test_buildSampledLoss2(inputs, postprocessing_results):
     compare_df = gpd.read_file(path.join(inputs[3], "Test1_RESULTS.shp"), ignore_geometry=True)
-    print(postprocessing_results.eq(compare_df))
-    #postprocessing_results.to_csv('C:\\inland-consequences_costal_tool\\test_res3.csv')
     assert postprocessing_results.eq(compare_df).all().all()
