@@ -1,0 +1,153 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/milliman_schema.json",
+  "title": "Milliman Buildings Schema",
+  "version": "0.2.0",
+  "description": "Typical schema for Milliman building data (Uniform, Uncorrelated Market Basket)",
+    "default fields": {
+        "accntnum": {
+            "type": "number",
+            "description": "unique policy id (0 prefix=market basket, 1 prefix=uncorrelated book, no prefix=uniform book)",
+            "default target field": null,
+            "required": false,
+            "nullable": true
+        },
+        "location": {
+            "type": "string",
+            "description": "Location ID of building which serves as the unique identifier",
+            "default target field": "id",
+            "required": true,
+            "nullable": false
+        },
+        "BLDG_DED": {
+            "type": "number",
+            "description": "Building insurance deductible  ($USD)",
+            "default target field": null,
+            "required": false,
+            "nullable": true
+        },
+        "BLDG_LIMIT": {
+            "type": "number",
+            "description": "Building insurance limit ($USD)",
+            "default target field": null,
+            "required": false,
+            "nullable": true
+        },
+        "CNT_DED": {
+            "type": "number",
+            "description": "Contents insurance deductible ($USD)",
+            "default target field": null,
+            "required": false,
+            "nullable": true
+        },
+        "CNT_LIMIT": {
+            "type": "number",
+            "description": "Contents insurance limit ($USD)",
+            "default target field": null,
+            "required": false,
+            "nullable": true
+        },
+        "STATE": {
+            "type": "string",
+            "description": "Two-letter state abbreviation",
+            "default target field": null,
+            "required": false,
+            "nullable": true
+        },
+        "POSTCODE": {
+            "type": "string",
+            "description": "5-digit ZIP code",
+            "default target field": null,
+            "required": false,
+            "nullable": true
+        },
+        "COUNTRY": {
+            "type": "string",
+            "description": "Country code (e.g., US)",
+            "default target field": null,
+            "required": false,
+            "nullable": true
+        },
+        "LON": {
+            "type": "number",
+            "description": "Longitude in decimal degrees",
+            "default target field": null,
+            "required": true,
+            "nullable": false
+        },
+        "LAT": {
+            "type": "number",
+            "description": "Latitude in decimal degrees",
+            "default target field": null,
+            "required": true,
+            "nullable": false
+        },
+        "BLDG_VALUE": {
+            "type": "number",
+            "description": "Building replacement cost ($USD)",
+            "default target field": "building_cost",
+            "required": true,
+            "nullable": false
+        },
+        "CNT_VALUE": {
+            "type": "number",
+            "description": "Contents replacement cost ($USD)",
+            "default target field": "content_cost",
+            "required": true,
+            "nullable": false
+        },
+        "CONSTR_CODE": {
+            "type": "number",
+            "description": "Construction type code (1=wood; 2=masonry)",
+            "default target field": "general_building_type",
+            "enum": [1, 2],
+            "required": false,
+            "nullable": true
+        },
+        "NUM_STORIES": {
+            "type": "number",
+            "description": "Number of stories in the building",
+            "default target field": "number_stories",
+            "required": true,
+            "nullable": false
+        },
+        "YEAR_BUILT": {
+            "type": "number",
+            "description": "Year the building was constructed",
+            "default target field": null,
+            "required": false,
+            "nullable": true
+        },
+        "FoundationType": {
+            "type": "number",
+            "description": "Foundation type code (2=basement; 4=crawlspace; 6=pier; 7=fill or wall; 8=slab; 9=pile)",
+            "default target field": "foundation_type",
+            "enum": [2, 4, 6, 7, 8, 9],
+            "required": false,
+            "nullable": true
+        },
+        "BasementFinishType": {
+            "type": "number",
+            "description": "Basement finish type code (0=no basement; 1=unfinished basement; 2=finished basement)",
+            "default target field": null,
+            "enum": [0, 1, 2],
+            "required": false,
+            "nullable": true
+        },
+        "FIRST_FLOOR_ELEV": {
+            "type": "number",
+            "description": "First floor elevation above ground in",
+            "default target field": "first_floor_height",
+            "required": true,
+            "nullable": false
+        },
+        "BASE_FLOOD_ELEV": {
+            "type": "number",
+            "description": "Base flood elevation (BFE) in feet",
+            "default target field": null,
+            "required": false,
+            "nullable": true
+        }
+
+    }
+}

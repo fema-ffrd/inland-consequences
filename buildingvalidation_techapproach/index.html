@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Building Inventory Validation Flags Technical Approach - Inland Consequences</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Building Inventory Validation Flags Technical Approach";
+        var mkdocs_page_input_path = "buildingvalidation_techapproach.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Inland Consequences
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="..">Consequences Solution</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Methodlogy</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../inventory_methodology/">Inventory Methodology</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Building Inventory Validation Flags Technical Approach</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#occupancy-based-area-and-valuation-review">Occupancy-Based Area and Valuation Review</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#story-count-consistency-by-occupancy-type">Story Count Consistency by Occupancy Type</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#special-handling-for-res1-structures">Special Handling for RES1 Structures</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#foundation-type-and-flood-zone-consistency">Foundation Type and Flood Zone Consistency</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#outputs-and-use-of-validation-flags">Outputs and Use of Validation Flags</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hazardvalidation_techapproach/">Hazard Validation Flag Technical Approach</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../inland_methodology/">Inland Consquences Methodology</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../coastal_methodology/">Coastal Consequences Methodology</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Technical Implementation</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../building_inventories/">Building Inventories Technical Implementation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../ddf_tech_implementation/">Inland Consequences Depth-Damage Function Technical Implementation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../AAL_tech_implementation/">Average Annualized Loss (AAL) Technical Implementation</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Inland Consequences</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Methodlogy</li>
+      <li class="breadcrumb-item active">Building Inventory Validation Flags Technical Approach</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/fema-ffrd/inland-consequences/edit/master/docs/buildingvalidation_techapproach.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="building-inventory-validation-flags-technical-approach">Building Inventory Validation Flags Technical Approach<a class="headerlink" href="#building-inventory-validation-flags-technical-approach" title="Permanent link">&para;</a></h1>
+<p>The building Inventory validation flags are intended to identify structures with attributes that are often, but not always, associated with potential data issues. The validation logic is informed by review of the FFRD Duwamish study results and other recent analyses. The purpose of these flags is to guide user review rather than to automatically invalidate or correct inventory records. All flags are advisory in nature, and the approach is designed to preserve continuity of loss modeling so that results remain available even when a flag is present.</p>
+<h2 id="occupancy-based-area-and-valuation-review">Occupancy-Based Area and Valuation Review<a class="headerlink" href="#occupancy-based-area-and-valuation-review" title="Permanent link">&para;</a></h2>
+<p>One component of the validation evaluates building area and valuation consistency relative to the assigned occupancy type. Structures are compared against expected square footage ranges derived from the Hazus hzSqftFactors table. When a structure’s reported area exceeds five times the expected value for its occupancy type, the structure is flagged for review. This condition may indicate an incorrect occupancy assignment, an error in reported building area, or atypical building characteristics. When triggered, the user is notified that the structure has an unusually large area or valuation for the assigned occupancy type and that review of the occupancy type assignment or building area may be warranted. No automated corrections are applied as part of this check.</p>
+<h2 id="story-count-consistency-by-occupancy-type">Story Count Consistency by Occupancy Type<a class="headerlink" href="#story-count-consistency-by-occupancy-type" title="Permanent link">&para;</a></h2>
+<p>Another validation assesses consistency between the number of stories assigned to a structure and its occupancy type. Using guidance from the Hazus Inventory Technical Manual, structures are flagged when the reported number of stories is unusual for the assigned occupancy. Certain occupancy types are not typically associated with mid- or high-rise construction, particularly those exceeding three stories, while others are rarely associated with high-rise construction exceeding seven stories. When these thresholds are exceeded, the structure is flagged and the user is advised that the story count is unusual for the assigned occupancy type and should be reviewed. This validation is intended to prompt review of either the story count or the occupancy assignment, recognizing that legitimate exceptions may exist.</p>
+<h2 id="special-handling-for-res1-structures">Special Handling for RES1 Structures<a class="headerlink" href="#special-handling-for-res1-structures" title="Permanent link">&para;</a></h2>
+<p>Residential single-family structures (RES1) are handled as a special case within the story count validation. RES1 structures with more than three stories are flagged, as this configuration is uncommon within the Hazus framework. To ensure that loss estimates remain available, loss calculations assume a maximum of three stories for RES1 structures while retaining the original story count in the inventory for reporting and review purposes. The user-facing message communicates both the unusual nature of the attribute and the modeling assumption applied for loss estimation.</p>
+<h2 id="foundation-type-and-flood-zone-consistency">Foundation Type and Flood Zone Consistency<a class="headerlink" href="#foundation-type-and-flood-zone-consistency" title="Permanent link">&para;</a></h2>
+<p>Foundation type assignments are also evaluated for consistency with flood zone and location. Structures are flagged when the assigned foundation type is atypical for the mapped flood zone, such as basements located within V-zones. These conditions may indicate misclassification, legacy data artifacts, or localized exceptions and therefore warrant user review. At this stage, no automated changes are applied to foundation attributes; instead, the condition is surfaced through an advisory flag. This validation logic is designed to be extensible, with future enhancements anticipated to address additional scenarios such as post-FIRM basements within the Special Flood Hazard Area.</p>
+<h2 id="outputs-and-use-of-validation-flags">Outputs and Use of Validation Flags<a class="headerlink" href="#outputs-and-use-of-validation-flags" title="Permanent link">&para;</a></h2>
+<p>Each validation condition produces a discrete flag that is stored as a non-blocking indicator and accompanied by plain-language guidance for the user. Flags are intended to improve transparency and support informed review without interrupting downstream loss modeling workflows unless explicitly noted. Collectively, these validation checks provide a structured and extensible framework for improving inventory quality while maintaining analytical continuity.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../inventory_methodology/" class="btn btn-neutral float-left" title="Inventory Methodology"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../hazardvalidation_techapproach/" class="btn btn-neutral float-right" title="Hazard Validation Flag Technical Approach">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/fema-ffrd/inland-consequences" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../inventory_methodology/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../hazardvalidation_techapproach/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+      <script src="../javascripts/katex.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

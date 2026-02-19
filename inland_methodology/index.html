@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Inland Consquences Methodology - Inland Consequences</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Inland Consquences Methodology";
+        var mkdocs_page_input_path = "inland_methodology.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Inland Consequences
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="..">Consequences Solution</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Methodlogy</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../inventory_methodology/">Inventory Methodology</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../buildingvalidation_techapproach/">Building Inventory Validation Flags Technical Approach</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hazardvalidation_techapproach/">Hazard Validation Flag Technical Approach</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Inland Consquences Methodology</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#hazard-data-inputs">Hazard Data Inputs</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#flood-depth">Flood Depth</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#flood-depth-uncertainty">Flood Depth Uncertainty</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#flood-velocity">Flood Velocity</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#flood-duration">Flood Duration</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#file-types">File Types</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#depth-damage-function-ddf-assignment">Depth-Damage Function (DDF) Assignment</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#general-building-type">General Building Type</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#occupancy-type">Occupancy Type</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#square-footage">Square Footage</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#number-of-stories">Number of Stories</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#foundation-type">Foundation Type</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#hazard-peril">Hazard Peril</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#ddf-assignment">DDF Assignment</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#loss-calculations">Loss Calculations</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#determining-depth-in-structure">Determining Depth in Structure</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#applying-depth-damage-functions">Applying Depth-Damage Functions</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#average-annualized-loss-aal">Average Annualized Loss (AAL)</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#uncertainty">Uncertainty</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#results">Results</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../coastal_methodology/">Coastal Consequences Methodology</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Technical Implementation</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../building_inventories/">Building Inventories Technical Implementation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../ddf_tech_implementation/">Inland Consequences Depth-Damage Function Technical Implementation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../AAL_tech_implementation/">Average Annualized Loss (AAL) Technical Implementation</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Inland Consequences</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Methodlogy</li>
+      <li class="breadcrumb-item active">Inland Consquences Methodology</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/fema-ffrd/inland-consequences/edit/master/docs/inland_methodology.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="inland-consquences-methodology">Inland Consquences Methodology<a class="headerlink" href="#inland-consquences-methodology" title="Permanent link">&para;</a></h1>
+<hr />
+<h2 id="hazard-data-inputs">Hazard Data Inputs<a class="headerlink" href="#hazard-data-inputs" title="Permanent link">&para;</a></h2>
+<p>The inland consequence methodology relies on a set of core hazard layers that describe the depth (required), uncertainty (optional), velocity (optional), and duration (optional) of flooding at each location. These inputs collectively guide the selection of the appropriate depth-damage functions and determine the damage to the structure associated cost. While the methodology is designed for FEMA’s Future Flood Risk Data (FFRD) post-processed annual exceedance probably (AEP) flood depth rasters and their associated velocity, duration and uncertainty layers, it is designed to be flexible and can operate with any user-provided hazard data that meets the required formats. The sections below describe the role, requirements, and assumptions associated with each hazard input.</p>
+<h3 id="flood-depth">Flood Depth<a class="headerlink" href="#flood-depth" title="Permanent link">&para;</a></h3>
+<p>Flood depth rasters are the primary hazard input driving the inland consequence calculations and only required hazard input. The methodology is built to ingest FEMA’s post-processed AEP depth rasters for multiple return periods, but it is flexible enough to operate with any valid flood depth raster. Under normal use, the tool expects depth inputs for several AEPs, allowing annualized losses to be computed from a consistent hazard set. Users may modify the number of AEPs depending on the data available, however a minimum of three return periods is required to calculate average annualized loss. Depth values must be provided in units of feet.</p>
+<p>The tool can also run in single-event mode by ingesting a single depth raster representing a historical or design event; in this configuration, the tool produces an event-specific loss rather than an annualized estimate.</p>
+<p>At this time, the methodology does not ingest the full suite of FFRD Monte Carlo simulation rasters to compute annualized losses directly from the simulation ensemble; this capability is identified as a future enhancement.</p>
+<h3 id="flood-depth-uncertainty">Flood Depth Uncertainty<a class="headerlink" href="#flood-depth-uncertainty" title="Permanent link">&para;</a></h3>
+<p>Flood depth uncertainty rasters provide information on the variability of the predicted flood depth for each AEP. When supplied, these uncertainty layers allow the methodology to explore loss sensitivity and characterize uncertainty more explicitly within the loss calculation process. One uncertainty raster is expected per AEP return period, and the units mirror those of the depth rasters (feet). Although optional, these layers are recommended for users who want to evaluate the robustness of loss estimates or conduct probabilistic analyses. When uncertainty rasters are not provided, the methodology proceeds deterministically using the best-estimate depth values only.</p>
+<h3 id="flood-velocity">Flood Velocity<a class="headerlink" href="#flood-velocity" title="Permanent link">&para;</a></h3>
+<p>Velocity data support the classification of flood hazard peril and influence the selection of the appropriate depth-damage functions. When a velocity raster is provided, the methodology evaluates each structure’s exposure to high-velocity flow conditions. Velocities exceeding 5 feet per second are treated as high-velocity flooding and may result in the application of different or more severe DDFs. Values below this threshold are classified as low-velocity conditions. If a velocity raster is not supplied, the methodology defaults to assuming low-velocity flooding for all structures. More detail on how velocity interacts with DDF selection is provided in the <em>Hazard Peril section</em>.</p>
+<h3 id="flood-duration">Flood Duration<a class="headerlink" href="#flood-duration" title="Permanent link">&para;</a></h3>
+<p>Flood duration rasters are used to determine whether structures are exposed to long-duration inundation, which can significantly affect building performance and loss outcomes. Duration values must be provided in hours, with exposures greater than 72 hours classified as long-duration flooding. This classification may influence which depth-damage functions are applied. When no duration raster is provided, the methodology assumes short-duration flooding for all structures. As with velocity, duration-based peril classification is further discussed in the <em>Hazard Peril section</em>.</p>
+<h3 id="file-types">File Types<a class="headerlink" href="#file-types" title="Permanent link">&para;</a></h3>
+<p>Hazard data is compatible with existing file export formats such as GeoTIFFs and TIFFs, consistent with previous consequence solutions like the Hazus Flood Assessment Structure Tool (FAST) and early FFRD pilot outputs. However, because the final FFRD datasets and file formats are still being defined, additional support has also been implemented for cloud-optimized formats, including Zarr and Xarray-based readers.</p>
+<hr />
+<h2 id="depth-damage-function-ddf-assignment">Depth-Damage Function (DDF) Assignment<a class="headerlink" href="#depth-damage-function-ddf-assignment" title="Permanent link">&para;</a></h2>
+<p>The inland consequence methodology assigns depth-damage functions (DDFs) by integrating key building and hazard characteristics: general building type, occupancy type, square footage, number of stories, foundation type, and flood hazard peril type. These elements collectively determine how a structure is expected to perform under various flooding conditions and which DDF function should be applied to calculate percent damage at a given depth in structure. The methodology follows the principles and thresholds developed through the OpenHazus initiative and is designed to maintain alignment with FEMA’s broader approach to flood consequence modeling.</p>
+<h3 id="general-building-type">General Building Type<a class="headerlink" href="#general-building-type" title="Permanent link">&para;</a></h3>
+<p>The general building type describes a building’s construction type and the primary materials used in its construction and is a key factor in understanding how the building responds to flood events. Flood general building types include wood (W), masonry (M), concrete (C), steel (S), and manufactured housing (MH). If the flood general building type is unknown, wood is assumed by default.</p>
+<h3 id="occupancy-type">Occupancy Type<a class="headerlink" href="#occupancy-type" title="Permanent link">&para;</a></h3>
+<p>Occupancy type is a primary input used to select appropriate DDFs by grouping structures with similar use and vulnerability characteristics. The assigned occupancy type informs both the structure and contents damage relationships applied during flood loss estimation. The occupancy types used in this methodology are listed in Table 1. If the occupancy type is unknown, RES1 is assumed by default.</p>
+<p><strong>Table 1. Occupancy Types</strong></p>
+<table>
+<thead>
+<tr>
+<th>Occupancy Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RES1</td>
+<td>Single-family Dwelling</td>
+</tr>
+<tr>
+<td>RES2</td>
+<td>Mobile Home</td>
+</tr>
+<tr>
+<td>RES3A</td>
+<td>Multi-Family Dwelling - Duplex</td>
+</tr>
+<tr>
+<td>RES3B</td>
+<td>Multi-Family Dwelling - 3-4 Units</td>
+</tr>
+<tr>
+<td>RES3C</td>
+<td>Multi-Family Dwelling - 5-9 Units</td>
+</tr>
+<tr>
+<td>RES3D</td>
+<td>Multi-Family Dwelling - 10-19 Units</td>
+</tr>
+<tr>
+<td>RES3E</td>
+<td>Multi-Family Dwelling - 20-49 Units</td>
+</tr>
+<tr>
+<td>RES3F</td>
+<td>Multi-Family Dwelling - 50+ Units</td>
+</tr>
+<tr>
+<td>RES4</td>
+<td>Temporary Lodging</td>
+</tr>
+<tr>
+<td>RES5</td>
+<td>Institutional Dormitory</td>
+</tr>
+<tr>
+<td>RES6</td>
+<td>Nursing Home</td>
+</tr>
+<tr>
+<td>COM1</td>
+<td>Retail Trade</td>
+</tr>
+<tr>
+<td>COM2</td>
+<td>Wholesale Trade</td>
+</tr>
+<tr>
+<td>COM3</td>
+<td>Personal and Repair Services</td>
+</tr>
+<tr>
+<td>COM4</td>
+<td>Business / Professional / Technical Services</td>
+</tr>
+<tr>
+<td>COM5</td>
+<td>Depository Institutions (Banks)</td>
+</tr>
+<tr>
+<td>COM6</td>
+<td>Hospital</td>
+</tr>
+<tr>
+<td>COM7</td>
+<td>Medical Office / Clinic</td>
+</tr>
+<tr>
+<td>COM8</td>
+<td>Entertainment and Recreation</td>
+</tr>
+<tr>
+<td>COM9</td>
+<td>Theaters</td>
+</tr>
+<tr>
+<td>COM10</td>
+<td>Parking</td>
+</tr>
+<tr>
+<td>IND1</td>
+<td>Heavy Industrial</td>
+</tr>
+<tr>
+<td>IND2</td>
+<td>Light Industrial</td>
+</tr>
+<tr>
+<td>IND3</td>
+<td>Food, Drugs, and Chemicals</td>
+</tr>
+<tr>
+<td>IND4</td>
+<td>Metals and Minerals Processing</td>
+</tr>
+<tr>
+<td>IND5</td>
+<td>High Technology</td>
+</tr>
+<tr>
+<td>IND6</td>
+<td>Construction</td>
+</tr>
+<tr>
+<td>AGR1</td>
+<td>Agriculture</td>
+</tr>
+<tr>
+<td>REL1</td>
+<td>Church / Non-Profit</td>
+</tr>
+<tr>
+<td>GOV1</td>
+<td>General Services</td>
+</tr>
+<tr>
+<td>GOV2</td>
+<td>Emergency Response</td>
+</tr>
+<tr>
+<td>EDU1</td>
+<td>Schools and Libraries</td>
+</tr>
+<tr>
+<td>EDU2</td>
+<td>Colleges and Universities</td>
+</tr>
+</tbody>
+</table>
+<h4 id="square-footage">Square Footage<a class="headerlink" href="#square-footage" title="Permanent link">&para;</a></h4>
+<p>For selected occupancy types and general building type combinations, additional refinement of DDF selection is applied based on building area. For COM1, COM2, IND1-6 and AGR1 occupancies where the general building type is steel, structures with an area less than 4,000 square feet are treated as pre-engineered construction, while structures greater than 4,000 square feet are treated as engineered construction. This classification affects the DDFs applied to both structure and contents losses.</p>
+<h3 id="number-of-stories">Number of Stories<a class="headerlink" href="#number-of-stories" title="Permanent link">&para;</a></h3>
+<p>The inland consequences methodology uses the explicit number of stories attribute rather than generic low-, mid-, or high-rise categories. This approach allows the methodology to leverage depth-damage functions developed specifically for one-, two-, and three-story structures, which represent the majority of the building stock.</p>
+<p>For each combination of general building type, occupancy type, and square footage, an expected minimum and maximum number of stories is defined based on typical real-world construction practices. If an input number of stories exceeds the expected maximum for a given attribute combination, the structure is flagged as a potential anomaly and assigned the maximum allowable number of stories for that combination when selecting the most appropriate DDF. This flag may be used by analysts to identify and evaluate potential issues in the input dataset. Table 2 shows the expected number of stories for attribute combinations.</p>
+<p><strong>Table 2. Expected Number of Stories for Attribute Combination</strong></p>
+<table>
+<thead>
+<tr>
+<th>General Building Type</th>
+<th>Occupancy Type</th>
+<th>Square Footage</th>
+<th>Expected Number of Stories</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wood</td>
+<td>RES1, RES3A</td>
+<td>All</td>
+<td>1-4</td>
+</tr>
+<tr>
+<td>Wood</td>
+<td>RES3B-F, RES4-6</td>
+<td>All</td>
+<td>1-4</td>
+</tr>
+<tr>
+<td>Wood</td>
+<td>COM1, COM9</td>
+<td>All</td>
+<td>1-2</td>
+</tr>
+<tr>
+<td>Wood</td>
+<td>COM1, COM9</td>
+<td>All</td>
+<td>3-6</td>
+</tr>
+<tr>
+<td>Wood</td>
+<td>COM2-8, COM10, IND1-6, REL1, AGR1, GOV1-2, EDU1-2</td>
+<td>All</td>
+<td>1-6</td>
+</tr>
+<tr>
+<td>Masonry</td>
+<td>RES1, RES3A</td>
+<td>All</td>
+<td>1-7</td>
+</tr>
+<tr>
+<td>Masonry</td>
+<td>RES3B</td>
+<td>All</td>
+<td>1-7</td>
+</tr>
+<tr>
+<td>Masonry</td>
+<td>COM1, COM9</td>
+<td>All</td>
+<td>1-2</td>
+</tr>
+<tr>
+<td>Masonry</td>
+<td>IND1, AGR1</td>
+<td>All</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Masonry</td>
+<td>RES3C-F, RES4-6</td>
+<td>All</td>
+<td>1-30</td>
+</tr>
+<tr>
+<td>Masonry</td>
+<td>COM1, COM9</td>
+<td>All</td>
+<td>3-30</td>
+</tr>
+<tr>
+<td>Masonry</td>
+<td>IND1, AGR1</td>
+<td>All</td>
+<td>2-30</td>
+</tr>
+<tr>
+<td>Masonry</td>
+<td>COM2-8, COM10, IND2-6, REL1, GOV1-2, EDU1-2</td>
+<td>All</td>
+<td>1-30</td>
+</tr>
+<tr>
+<td>Concrete</td>
+<td>RES1, RES3A</td>
+<td>All</td>
+<td>1-40</td>
+</tr>
+<tr>
+<td>Concrete</td>
+<td>RES3B-F, RES4-6</td>
+<td>All</td>
+<td>1-40</td>
+</tr>
+<tr>
+<td>Concrete</td>
+<td>COM1-10, IND1-6, REL1, AGR1, GOV1-2, EDU1-2</td>
+<td>All</td>
+<td>1-40</td>
+</tr>
+<tr>
+<td>Steel</td>
+<td>COM1-2, IND1-6, AGR1</td>
+<td>\&lt;= 4,000 sf</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Steel</td>
+<td>RES1, RES3A-F, RES4-6</td>
+<td>All</td>
+<td>1-108</td>
+</tr>
+<tr>
+<td>Steel</td>
+<td>COM1-2, IND1-6, AGR1</td>
+<td>&gt; 4,000 sf</td>
+<td>1-108</td>
+</tr>
+<tr>
+<td>Steel</td>
+<td>COM3-10, REL1, GOV1-2, EDU1-2</td>
+<td>All</td>
+<td>1-108</td>
+</tr>
+<tr>
+<td>Manufactured Home</td>
+<td>RES2</td>
+<td>All</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>If the number of stories attribute is not provided, the methodology assumes a default of one story.</p>
+<h3 id="foundation-type">Foundation Type<a class="headerlink" href="#foundation-type" title="Permanent link">&para;</a></h3>
+<p>Foundation type is a key structural attribute that influences how buildings respond to flooding and, in cases where foundation information is missing, helps determine the default flood condition applied during loss calculation. The methodology classifies foundations into four categories: Basement, Shallow, Slab, and Pile. Each foundation type is associated with an expected default foundation height when height information is not available in the structure inventory, Table 1.</p>
+<p><strong>Table 3. Inland Foundation Types and Default Foundation Heights</strong></p>
+<table>
+<thead>
+<tr>
+<th>Foundation Type</th>
+<th>Default Foundation Height</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Basement</td>
+<td>2 ft</td>
+</tr>
+<tr>
+<td>Pile</td>
+<td>8 ft</td>
+</tr>
+<tr>
+<td>Shallow</td>
+<td>3 ft</td>
+</tr>
+<tr>
+<td>Slab</td>
+<td>1 ft</td>
+</tr>
+</tbody>
+</table>
+<p>Based on NSI 2025 pre-release materials, an adjustment was made to the default basement foundation heights from 4 ft to 2 ft for alignment.</p>
+<p>The consequence methodology is designed to natively support the NSI 2022 Public Version, NSI 2022 Private Version, and Milliman Market Basket datasets. For additional details on how foundation types are defined and derived within these inventories, refer to the <a href="../building_inventories/"><strong>Building Inventories Technical Implementation Documentation</strong></a>.</p>
+<h3 id="hazard-peril">Hazard Peril<a class="headerlink" href="#hazard-peril" title="Permanent link">&para;</a></h3>
+<p>Hazard peril describes the specific flood conditions a structure is exposed to and is a critical determinant of how damage progresses during an event. Different flood processes—such as long-duration inundation or high-velocity flow—impose distinct physical stresses on buildings, and selecting the correct peril ensures that the depth-damage function accurately reflects those conditions.</p>
+<p>For inland (riverine) flooding, the methodology classifies hazard peril based on duration and velocity. Long-duration flooding is defined as inundation lasting 72 hours or more, consistent with thresholds used in USACE’s GoConsequences model. When duration data are unavailable, flooding is treated as short duration. Flow velocity is then evaluated to distinguish between low- and high-velocity conditions. High-velocity flooding is defined as flow ≥ 5 ft/s; values below this threshold are considered low velocity. If velocity data are not available, the methodology defaults to low-velocity conditions.</p>
+<p>Each structure is assigned a single riverine flood peril based on the combination of duration and velocity characteristics. The riverine peril types used in this methodology are shown in Table 3.</p>
+<p><strong>Table 4. Riverine Flood Peril Descriptions</strong></p>
+<table>
+<thead>
+<tr>
+<th>Flood Peril</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RLS</td>
+<td>Riverine, Low Velocity, Short Duration</td>
+</tr>
+<tr>
+<td>RHS</td>
+<td>Riverine, High Velocity, Short Duration</td>
+</tr>
+<tr>
+<td>RLL</td>
+<td>Riverine, Low Velocity, Long Duration</td>
+</tr>
+<tr>
+<td>RHL</td>
+<td>Riverine, High Velocity, Long Duration</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ddf-assignment">DDF Assignment<a class="headerlink" href="#ddf-assignment" title="Permanent link">&para;</a></h3>
+<p>Based on general building type, occupancy type, square footage, number of stories, foundation type, and hazard peril, the methodology integrates these inputs to select the appropriate depth-damage function. This is performed through a dedicated DDF assignment module that applies a sequence of lookup tables consistent with OpenHazus conventions. The assigned DDF determines the percent damage at each depth and forms the basis for structure- and content-level loss calculations. For more details on the DDF assignment look up tables please refer to the <a href="../ddf_tech_implementation/"><strong>DDF Technical Implementation Documentation</strong></a>.</p>
+<p>This workflow is actively advancing under the OpenHazus innovation account and the Natural Hazard Risk Assessment Program, and the modular design ensures the system can incorporate future modifications, including new building classifications, updated peril logic, probabilistic DDF selection, or integration with enhanced hazard datasets. The result is a flexible, transparent, and extensible framework for assigning depth-damage functions within the inland consequence methodology.</p>
+<hr />
+<h2 id="loss-calculations">Loss Calculations<a class="headerlink" href="#loss-calculations" title="Permanent link">&para;</a></h2>
+<p>The inland consequence methodology calculates flood losses by combining structure-level attributes, hazard inputs, and depth-damage functions (DDFs) to estimate expected damages to buildings, contents, and inventory. The process begins by determining the flood depth at each structure and proceeds through percent-damage estimation, loss calculation, and annualization across all modeled return periods.</p>
+<h3 id="determining-depth-in-structure">Determining Depth in Structure<a class="headerlink" href="#determining-depth-in-structure" title="Permanent link">&para;</a></h3>
+<p>Loss calculations begin by spatially intersecting each structure with the flood depth raster to determine the depth at the structure location. Structures with 0 or negative depths at structure will not have losses calculated as these represent dry structures. The methodology then subtracts the foundation height from this value to compute the depth in structure, which represents the depth of water relative to the occupied or finished interior of the building. For some foundation negative depths in structure will result in losses, such as finished basement where you would see damage below the first-floor.</p>
+<h3 id="applying-depth-damage-functions">Applying Depth-Damage Functions<a class="headerlink" href="#applying-depth-damage-functions" title="Permanent link">&para;</a></h3>
+<p>Each building component (structure, contents, and inventory) has its own DDF ID and corresponding depth-damage curve. After we determine the water depth inside the structure, we use each DDF ID to look up the expected percent damage for that component. Depth-damage curves report damage at fixed depth intervals (for example, every 0.5 or 1 foot). To estimate damage at the exact water depth, the methodology interpolates between the curve’s points, producing a smooth, continuous estimate. The result is three separate percent-damage values—one each for structure, contents, and inventory—representing how much of each component is expected to be lost at that water depth.</p>
+<p>The monetary loss for each component (structure, content and inventory) is calculated by multiplying the percent damage by its corresponding valuation amount (structure valuation, content valuation and inventory valuation).</p>
+<p>This process is followed for each return period to produce estimated losses for each return period included in the hazard dataset. For single return periods events, results are provided after this loss calculation. For multiple return periods events, an average annualized loss is calculated.</p>
+<h3 id="average-annualized-loss-aal">Average Annualized Loss (AAL)<a class="headerlink" href="#average-annualized-loss-aal" title="Permanent link">&para;</a></h3>
+<p>After losses are computed across all available return periods, the inland consequence methodology derives the Average Annualized Loss (AAL), which represents the long-term expected loss per year. The AAL is calculated using a Riemann sum numerical integration approach, consistent with the methodology employed in FEMA’s Hazus Program. Table 5 illustrates this method, in which the inland consequence solution computes annual losses for eight probabilistic return periods (RPs). The annual probability of each event is calculated as 1/RP, and differential probabilities are obtained by subtracting adjacent annual occurrence probabilities based on descending order (e.g., 2,000 year – 1,000 year annual probability).</p>
+<p>The average loss for each interval is then calculated by averaging the annual losses associated with the corresponding return periods, as shown in the “average losses” column. The AAL is obtained by summing the products of each average loss and its associated differential probability, resulting in a single annualized estimate of expected flood-related losses.</p>
+<p>In this approach, each pair of return-period losses and their associated frequencies is treated as a point along a continuous loss-exceedance curve. As illustrated in Figure 1, by summing up the areas of rectangles or trapezoids formed between adjacent points, the Riemann sum integrates across the full range of flood frequencies to produce the annualized loss. Two options are available for the annualization of losses for the first high frequency return period where no losses occur. The first method is to average the 0 loss with the next highest loss, which is the common default method in Hazus and the second is to truncate the lowest range. The Table 5 example below illustrates the default (non-truncate) method for an industrial building in the Duwamish watershed that is impacted by 500 year and longer return period flooding and dry at 200 year and less. This is a IND5 structure with a building value of $12,156,928. In the truncate method, the 200 year contribution to AAL is reduced by $2,912 (nearly 40% of AAL). Both options are available, and the large difference can be mitigated by using a larger number of frequencies.</p>
+<p><strong>Table 5. Average Annualized Building Loss Estimations</strong></p>
+<table>
+<thead>
+<tr>
+<th>Return Period</th>
+<th>Annualized Probability</th>
+<th>Differential Probability</th>
+<th>Scenario Losses ($)</th>
+<th>Average Loss Formula</th>
+<th>Average Losses ($)</th>
+<th>Annualized Losses ($)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2000</td>
+<td>0.00050000</td>
+<td>0.00050000</td>
+<td>2,966,772</td>
+<td>L2000</td>
+<td>2,966,772</td>
+<td>1,483</td>
+</tr>
+<tr>
+<td>1000</td>
+<td>0.00100000</td>
+<td>0.00050000</td>
+<td>2,549,166</td>
+<td>(L2000 + L1000) / 2</td>
+<td>2,757,969</td>
+<td>1,379</td>
+</tr>
+<tr>
+<td>500</td>
+<td>0.00200000</td>
+<td>0.00100000</td>
+<td>1,941,000</td>
+<td>(L1000 + L500) / 2</td>
+<td>2,245,083</td>
+<td>2,245</td>
+</tr>
+<tr>
+<td>200</td>
+<td>0.00500000</td>
+<td>0.00300000</td>
+<td>0</td>
+<td>(L500 + L200) / 2</td>
+<td>970,500</td>
+<td>2,912</td>
+</tr>
+<tr>
+<td>100</td>
+<td>0.01000000</td>
+<td>0.00500000</td>
+<td>0</td>
+<td>(L200 + L100) / 2</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>50</td>
+<td>0.02000000</td>
+<td>0.01000000</td>
+<td>0</td>
+<td>(L100 + L50) / 2</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>20</td>
+<td>0.05000000</td>
+<td>0.03000000</td>
+<td>0</td>
+<td>(L50 + L20) / 2</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>10</td>
+<td>0.10000000</td>
+<td>0.05000000</td>
+<td>0</td>
+<td>(L20 + L10) / 2</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td><strong>8,018.95</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Figure 1 Illustration of Estimating Area of Loss Curve Based on Input Return periods Using Riemann Sums Method</strong></p>
+<p><img alt="Illustration of Estimating Area of Loss Curve Based on Input Return periods Using" src="../images/AAL.png" /></p>
+<p>A greater number and wider range of modeled return periods yield a more complete and representative loss curve. A minimum of three return periods is required to compute AAL, though including additional frequencies improves accuracy. Contractor research indicates that using approximately 22 return periods offers an effective balance, capturing the loss curve with high fidelity while minimizing computational demands. However, decisions for FFRD pertaining to the recommended number of return periods are pending.</p>
+<p><strong>Figure 2 PTS Contractor Research on the Recommendation for Identifying 22 return periods to represent the full Annual Exceedance Probability Curve</strong></p>
+<p><img alt="PTS Contractor Research on the Recommendation for Identifying 22 return periods to represent the full Annual Exceedance Probability Curve" src="../images/AEP_Research.png" /></p>
+<hr />
+<h2 id="uncertainty">Uncertainty<a class="headerlink" href="#uncertainty" title="Permanent link">&para;</a></h2>
+<p>Three major sources of uncertainty are considered:</p>
+<ol>
+<li>Hazard</li>
+<li>Building data and attribution</li>
+<li>Depth-Damage Functions (DDFs)</li>
+</ol>
+<p>Initially, the tool will provide uncertainty based on hazard and placeholders for methods to incorporate uncertainty based on building data and DDFs, as well as a combined uncertainty across all sources.</p>
+<p>FFRD input provides hazard-related uncertainty; however, an ongoing OpenHazus Innovations task is intended to refine and develop recommendations for building data, DDF and combined uncertainties.</p>
+<p>FFRD uncertainty represents the standard deviation of the hazard for a given frequency across 50 realizations for each of the return periods available. The deviation is provided in feet related to the mean flood depth and feet per second relative to the mean velocity. When these uncertainty grids are available, losses will include the minimum, mean and maximum based on mean and standard deviation. Cases where large uncertainties for long return periods result in minimum losses lower than more frequent return periods at the structure level will be flagged (e.g. 1,000 year &gt; 2,000 year).</p>
+<p>Several OpenHazus tasks are scheduled for completion in March 2026 to evaluate and provide recommendations for uncertainty-related processes, including:</p>
+<ul>
+<li>Uncertainties including internal inconsistencies in % loss for each stage depth based on examples from DDF’s outlined in the uncertainty white paper and from DDFs with available uncertainties (e.g. IWR, NAACs, and FEMA claims data studies).</li>
+<li>Outline the process flow for evaluating the DDF uncertainty impacts on losses. Capture assumptions and carry uncertainty through to outputs, including median losses, ranges, and probabilities.</li>
+<li>Outline how other building foundation types and height attributes are incorporated into the OpenHazus uncertainty process, including processes that consider uncertainties in occupancy, square footage, number of stories, basement/finished and value.</li>
+<li>Setup a global sensitivity analysis experimental design for total losses. Consider certain known parameters like water depth, velocity, building occupancy, foundation type, FFE, and DDF uncertainty.</li>
+<li>Complete global sensitivity analysis for pilot FFRD data.</li>
+</ul>
+<h2 id="results">Results<a class="headerlink" href="#results" title="Permanent link">&para;</a></h2>
+<p>Results are provided at the structure level using a Python notebook interface. The notebook supports:</p>
+<ul>
+<li>
+<p>A final summary table of AAL building and content losses, providing mean, minimum, and maximum values when uncertainty is available.</p>
+</li>
+<li>
+<p>A final summary table of actuarially adjusted AAL building, content, and inventory losses that accounts for limits and deductibles and provides mean, minimum, and maximum values when uncertainty is available.</p>
+</li>
+<li>
+<p>A comprehensive results table that allows users to select outputs in a variety of user-defined formats (e.g., <code>.csv</code>, file geodatabase, parquet). This table includes all return period and event-level building, content, and inventory losses based on mean values and available uncertainties; mean and standard deviation of flood depths at the structure and in-structure based on foundation height; damage function IDs and percent damage for structure, content, and inventory along with the corresponding depth in structure; and inventory attributes such as building and content value, occupancy, foundation type and height, number of stories, building and footprint area, and general building type.</p>
+</li>
+<li>
+<p>Summary options that enable aggregation of total losses by occupancy, building type, and foundation type, as well as by geographic areas such as state, county, tract, census block, HUC, and jurisdiction.</p>
+</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../hazardvalidation_techapproach/" class="btn btn-neutral float-left" title="Hazard Validation Flag Technical Approach"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../coastal_methodology/" class="btn btn-neutral float-right" title="Coastal Consequences Methodology">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/fema-ffrd/inland-consequences" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../hazardvalidation_techapproach/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../coastal_methodology/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+      <script src="../javascripts/katex.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

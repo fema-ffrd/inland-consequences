@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Inland Consequences Depth-Damage Function Technical Implementation - Inland Consequences</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Inland Consequences Depth-Damage Function Technical Implementation";
+        var mkdocs_page_input_path = "ddf_tech_implementation.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Inland Consequences
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="..">Consequences Solution</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Methodlogy</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../inventory_methodology/">Inventory Methodology</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../buildingvalidation_techapproach/">Building Inventory Validation Flags Technical Approach</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hazardvalidation_techapproach/">Hazard Validation Flag Technical Approach</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../inland_methodology/">Inland Consquences Methodology</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../coastal_methodology/">Coastal Consequences Methodology</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Technical Implementation</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../building_inventories/">Building Inventories Technical Implementation</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Inland Consequences Depth-Damage Function Technical Implementation</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#vectorized-depth-damage-function-ddf-matching">Vectorized Depth-Damage Function (DDF) Matching</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../AAL_tech_implementation/">Average Annualized Loss (AAL) Technical Implementation</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Inland Consequences</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Technical Implementation</li>
+      <li class="breadcrumb-item active">Inland Consequences Depth-Damage Function Technical Implementation</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/fema-ffrd/inland-consequences/edit/master/docs/ddf_tech_implementation.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="inland-consequences-depth-damage-function-technical-implementation">Inland Consequences Depth-Damage Function Technical Implementation<a class="headerlink" href="#inland-consequences-depth-damage-function-technical-implementation" title="Permanent link">&para;</a></h1>
+<p>This outlines the technical implementation of the depth-damage function for the inland consequences aspects of the Consequences Solution. This approach may be expanded to coastal depth-damage functions in a future enhancement.</p>
+<h2 id="vectorized-depth-damage-function-ddf-matching">Vectorized Depth-Damage Function (DDF) Matching<a class="headerlink" href="#vectorized-depth-damage-function-ddf-matching" title="Permanent link">&para;</a></h2>
+<p>This component is responsible for assigning a single Depth-Damage Function (DDF) to each building by comparing the building’s characteristics to a pre-generated lookup table of damage-function rules. The goal is to make the assignment process fast, consistent, and transparent while supporting large building inventories.</p>
+<p>Rather than processing buildings one at a time, the implementation uses a vectorized approach, meaning that all buildings are evaluated simultaneously using table joins and grouped logic. This avoids slow per-building loops and ensures that the same rules are applied uniformly across the dataset.</p>
+<p>The function takes two inputs: a buildings table and a flattened lookup table. The buildings table contains one row per structure and includes attributes that influence flood damage, such as construction type, occupancy, foundation type, number of stories, square footage, and flood peril type. The lookup table contains the rules that map combinations of those attributes to specific damage-function identifiers, along with valid ranges for stories and square footage.</p>
+<p><strong>Table 1. Building Table Required Fields</strong></p>
+<table>
+<thead>
+<tr>
+<th>Column_Name</th>
+<th>Description</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S_GENERALBUILDINGTYPE</td>
+<td>Construction / material class</td>
+<td>Examples: W (wood), C (concrete), S (steel)</td>
+</tr>
+<tr>
+<td>S_OCCTYPE</td>
+<td>Occupancy type</td>
+<td>Examples: RES1, COM1</td>
+</tr>
+<tr>
+<td>S_NUMSTORY</td>
+<td>Number of stories</td>
+<td>Used for story range matching</td>
+</tr>
+<tr>
+<td>S_SQFT</td>
+<td>Building square footage</td>
+<td>Optional; defaults to 0 if missing</td>
+</tr>
+<tr>
+<td>Foundation_Type</td>
+<td>Foundation type</td>
+<td>Examples: SLAB, BASE, CRAWL</td>
+</tr>
+<tr>
+<td>Flood_Peril_Type</td>
+<td>Flood peril classification</td>
+<td>Used to distinguish flood types (e.g., riverine vs coastal)</td>
+</tr>
+</tbody>
+</table>
+<p>Before matching begins, the building attributes are normalized. Text fields are converted to uppercase and trimmed to avoid mismatches caused by formatting differences, and numeric fields such as story count and square footage are converted to numbers. This normalization step ensures that equivalent values are treated consistently during matching.</p>
+<p><strong>Table 2. Depth-Damage Function Lookup Table Fields</strong></p>
+<table>
+<thead>
+<tr>
+<th>Column_Name</th>
+<th>Description</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Construction_Type</td>
+<td>Construction type or general building type</td>
+<td>Must match building construction type</td>
+</tr>
+<tr>
+<td>Occupancy_Type</td>
+<td>Occupancy type</td>
+<td>Must match building occupancy</td>
+</tr>
+<tr>
+<td>Foundation_Type</td>
+<td>Foundation type</td>
+<td>Must match building foundation</td>
+</tr>
+<tr>
+<td>Flood_Peril_Type</td>
+<td>Flood peril classification</td>
+<td>Must match building flood peril</td>
+</tr>
+<tr>
+<td>Story_Min</td>
+<td>Minimum supported story count</td>
+<td>Inclusive</td>
+</tr>
+<tr>
+<td>Story_Max</td>
+<td>Maximum supported story count</td>
+<td>Inclusive</td>
+</tr>
+<tr>
+<td>SQFT_Min</td>
+<td>Minimum supported square footage</td>
+<td>Blank or null means no lower bound</td>
+</tr>
+<tr>
+<td>SQFT_Max</td>
+<td>Maximum supported square footage</td>
+<td>Blank or null means no upper bound</td>
+</tr>
+<tr>
+<td>FLSBT_Range</td>
+<td>Descriptive story range label</td>
+<td>Used for diagnostics and reporting</td>
+</tr>
+<tr>
+<td>Damage_Function_ID</td>
+<td>Depth-damage function identifier</td>
+<td>Used to retrieve the DDF curve</td>
+</tr>
+</tbody>
+</table>
+<p>The matching process begins by identifying candidate lookup rows for each building. This is done by requiring an exact match on a small set of core attributes: construction type, occupancy type, foundation type, and flood peril type. These attributes define the basic damage context for a building and act as the primary filter.</p>
+<p>If no lookup rows match on these core attributes, the building is marked as having no applicable damage function. If one or more candidate rows exist, the process continues to more detailed checks on the number of stories.</p>
+<p>The function evaluates whether the building’s number of stories falls within the valid range specified by each lookup row. A building must have a story count that lies between the lookup row’s minimum and maximum values to remain a valid match. If none of the candidates meet this condition, the building is flagged as being outside the supported story range.</p>
+<p>For candidates that pass the story check, the function then evaluates square footage constraints. Some lookup rows specify minimum or maximum square-footage limits, while others do not. When no limits are provided, the range is treated as unbounded. If square-footage limits are present, the building’s size must fall within those bounds. Buildings that pass the story check but fail all square-footage checks are flagged accordingly.</p>
+<p><strong>Table 3. Match Status Decriptions</strong></p>
+<table>
+<thead>
+<tr>
+<th>Match_Status</th>
+<th>Meaning</th>
+<th>What it indicates</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No_Match</td>
+<td>No lookup row matched the required key attributes</td>
+<td>The building’s construction, occupancy, foundation, or flood peril type is not represented in the lookup table</td>
+</tr>
+<tr>
+<td>Story_Out_Of_Range</td>
+<td>Lookup candidates existed, but none covered the building’s story count</td>
+<td>The building type is recognized, but its number of stories falls outside all supported story ranges</td>
+</tr>
+<tr>
+<td>SQFT_Out_Of_Range</td>
+<td>Lookup candidates matched the building type and story range, but not square footage</td>
+<td>The building size falls outside the square-footage limits defined in the lookup rules</td>
+</tr>
+<tr>
+<td>Matched</td>
+<td>At least one lookup row passed all matching checks</td>
+<td>A valid depth-damage function was assigned to the building</td>
+</tr>
+</tbody>
+</table>
+<p>For candidates, that exceed the range for the number of stories or square-footage, they are assigned the highest allowed values for their attribute combination.</p>
+<p>The selected lookup row provides the building’s assigned Damage Function ID, which corresponds to a secondary lookup table containing the percentage damage at each stage depth. The function returns the original buildings table with additional columns appended. These columns include the selected damage-function identifier, the matched story range, and the match status. Buildings that could not be matched retain null values for the damage-function fields, along with a status that explains why no assignment was made.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../building_inventories/" class="btn btn-neutral float-left" title="Building Inventories Technical Implementation"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../AAL_tech_implementation/" class="btn btn-neutral float-right" title="Average Annualized Loss (AAL) Technical Implementation">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/fema-ffrd/inland-consequences" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../building_inventories/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../AAL_tech_implementation/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+      <script src="../javascripts/katex.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
