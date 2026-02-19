@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          lfs:true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -33,11 +35,6 @@ jobs:
       - name: Check build
         run: |
           mkdocs build
-
-      - name: Checkout code with LFS
-        uses: actions/checkout@v4
-        with:
-          lsf:"true"
 
       - name: Run tests
         run: |
