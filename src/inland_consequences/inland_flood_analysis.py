@@ -822,20 +822,10 @@ class InlandFloodAnalysis:
                         AND b.occupancy_type != c.occupancy_type THEN 0
                     
                     -- Foundation Type Matching (conditionally enabled):
-                    -- Buildings use short codes (I,B,S,P,W,C,F) from NSI/Milliman schemas
-                    -- Curves use descriptive names (PILE,BASE,SLAB,SHAL) from HAZUS
-                    -- This mapping translates building codes to curve names for comparison
-                    WHEN {use_foundation} AND b.foundation_type IS NOT NULL AND c.foundation_type IS NOT NULL AND 
-                        CASE 
-                            WHEN b.foundation_type = 'I' THEN 'PILE'  -- Infilled wall -> Pile
-                            WHEN b.foundation_type = 'B' THEN 'BASE'  -- Basement -> Basement
-                            WHEN b.foundation_type = 'S' THEN 'SLAB'  -- Slab on grade -> Slab
-                            WHEN b.foundation_type = 'P' THEN 'PILE'  -- Pier/Post/Pile -> Pile
-                            WHEN b.foundation_type = 'W' THEN 'BASE'  -- Wall with opening -> Basement
-                            WHEN b.foundation_type = 'C' THEN 'SHAL'  -- Crawlspace -> Shallow
-                            WHEN b.foundation_type = 'F' THEN 'SHAL'  -- Fill -> Shallow
-                            ELSE NULL
-                        END != c.foundation_type THEN 0
+                    -- Direct comparison of NSI-style foundation codes (I,B,S,P,W,C,F)
+                    -- Both buildings and lookup tables now use the same single-letter codes
+                    WHEN {use_foundation} AND b.foundation_type IS NOT NULL AND c.foundation_type IS NOT NULL
+                        AND b.foundation_type != c.foundation_type THEN 0
                     
                     -- Story Count Matching (conditionally enabled):
                     -- Check if building story count falls within curve's min/max range

@@ -1,6 +1,46 @@
 import os
 import pandas as pd
 
+# def update_foundation_types(df):
+#     """
+#     Update the FLSBT codes (4-letter strings) to the NSI-style foundation codes (1-letter abbreviations).
+#     This allows for separation of FLSBT naming conventions from the DDF lookup logic.
+
+#     NOTE: DEPRECATED IN FAVOR OF KEEPING OPEN-HAZUS (FEMA) STYLE FOUNDATION CODES. WILL UPDATE
+#     INCOMING INVENTORY DATA TO THIS APPROACH INSTEAD OF CONVERTING TO NSI CODES IN THE LOOKUP TABLES.
+
+#     Parameters:
+#     -----------
+#     df : DataFrame with 'foundation_type' column containing FLSBT-style codes (e.g., 'PILE', 'SHAL', 'SLAB', 'BASE')
+    
+#     Returns:
+#     DataFrame with 'foundation_type' column updated to NSI-style codes
+#     """
+
+#     # dictionary to map NSI-style foundation types to FLSBT foundation types (note many-to-one mapping)
+#     foundation_lookups = {
+#         "C": "SHAL", # Crawl
+#         "B": "BASE", # Basement
+#         "S": "SLAB", # Slab
+#         "P": "SHAL", # Pier
+#         "F": "SLAB", # Fill
+#         "W": "SHAL", # Solid Wall
+#         "I": "PILE"  # Pile
+#     }
+
+#     # Create a DataFrame for the foundation lookups
+#     foundation_df = pd.DataFrame(list(foundation_lookups.items()), columns=['found_type', 'FLSBT_Foundation_Type'])
+
+#     # join the foundation lookups to the original DataFrame to get the NSI-style foundation type
+#     df_merge = pd.merge(df, foundation_df, left_on='foundation_type', right_on='FLSBT_Foundation_Type', how='left')
+
+#     # overwrite the original column values with the new values from the lookup, then drop the extra columns
+#     df_merge['foundation_type'] = df_merge['found_type']
+#     df_merge = df_merge.drop(columns=['FLSBT_Foundation_Type', 'found_type'])
+
+#     return df_merge
+
+
 def unpivot_foundation_flood_table_inv(filepath_or_df):
     """
     Unpivot the foundation type and flood peril type table (for inventory).
@@ -75,6 +115,9 @@ def unpivot_foundation_flood_table_inv(filepath_or_df):
 
     # cast all columns to lowercase
     result_df.columns = [col.lower() for col in result_df.columns]
+
+    # # update foundation types to NSI-style codes
+    # result_df = update_foundation_types(result_df)
     
     return result_df
 
