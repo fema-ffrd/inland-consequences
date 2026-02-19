@@ -577,6 +577,29 @@ class _PFRACoastal_Lib:
     # ####################
     
     ####################
+    # calcKernelDensity()
+    # 	function to calculate the weighted kernel density 
+    #	Inputs:
+    #		NNtab = Pandas dataframe of nearby points within distance=bandwidth
+    #			BID = point ID
+    #			AAL = building AAL = the weight
+    #			Dist = distance (feet) of building to cell centroid
+    #		bw = bandwidth
+    #	Outputs:
+    #		weighted 2D kernel density calculation
+    # 	https://desktop.arcgis.com/en/arcmap/latest/tools/spatial-analyst-toolbox/how-kernel-density-works.htm
+    #	called by:
+    #		main()
+    #	calls:
+    #		NULL
+    def calcKernelDensity(self, NNtab:pd.DataFrame, bw:int) -> float:
+        NNtab = NNtab.copy()
+        NNtab.loc[:,'radius'] = bw
+        in_sigma = NNtab.apply(lambda x: ((3/scipy.constants.pi)*x.iat[1]*(1-((x.iat[2]/x.iat[3])**2))**2), axis=1)
+        sum_sigma = in_sigma.sum()
+        out_val = (1/(bw**2))*sum_sigma
+        return out_val
+      
     # attachWSELtoBUILDING3()
     # 	function to find the 3 nearest surge points to a building point and adopt 
     # 	the mean average at each return period.  Replace -99999 (null) with NA before
