@@ -577,6 +577,29 @@ class _PFRACoastal_Lib:
     # ####################
     
     ####################
+    # calcKernelDensity()
+    # 	function to calculate the weighted kernel density 
+    #	Inputs:
+    #		NNtab = Pandas dataframe of nearby points within distance=bandwidth
+    #			BID = point ID
+    #			AAL = building AAL = the weight
+    #			Dist = distance (feet) of building to cell centroid
+    #		bw = bandwidth
+    #	Outputs:
+    #		weighted 2D kernel density calculation
+    # 	https://desktop.arcgis.com/en/arcmap/latest/tools/spatial-analyst-toolbox/how-kernel-density-works.htm
+    #	called by:
+    #		main()
+    #	calls:
+    #		NULL
+    def calcKernelDensity(self, NNtab:pd.DataFrame, bw:int) -> float:
+        NNtab = NNtab.copy()
+        NNtab.loc[:,'radius'] = bw
+        in_sigma = NNtab.apply(lambda x: ((3/scipy.constants.pi)*x.iat[1]*(1-((x.iat[2]/x.iat[3])**2))**2), axis=1)
+        sum_sigma = in_sigma.sum()
+        out_val = (1/(bw**2))*sum_sigma
+        return out_val
+      
     # attachWSELtoBUILDING3()
     # 	function to find the 3 nearest surge points to a building point and adopt 
     # 	the mean average at each return period.  Replace -99999 (null) with NA before
@@ -711,3 +734,59 @@ class _PFRACoastal_Lib:
         
         
         
+    
+    ####################
+    # buildSampledLoss2()
+    # 	
+    # in:
+    #	FBtab0 = a buildings loss table
+    #   pvals = N probabilistoc events 0..1
+    # out:
+    #	N x 5 dataframe with a row for each pval and columns for 
+    #   pval, return period, Low curve value, best estimate curve value,
+    #   high curve value 
+    # called by:
+    #	runMC_AALU_x4()
+    # calls:
+    #	NULL
+    def buildSampledLoss2(self, FBtab0: pd.DataFrame, pvals: pd.DataFrame) -> pd.DataFrame:
+        MC_prob = pvals.iloc[:,0].sort_values(ascending=False)
+        MC_rp = MC_prob.copy().apply(lambda x: 1/x)
+        FBrp = FBtab0["RP"].copy()
+        
+        # make sure there are at least two RPs between 1 & 10k
+        if FBrp.count() < 2:
+            return pd.DataFrame(data={"MC_prob":[pd.NA], "MC_rp":[pd.NA], "MC_Lw":[0], "MC_Be":[0], "MC_Up":[0]})
+        
+        # initialize final loss = raw loss
+        FBpLw = FBtab0["Loss_Lw"]
+        FBpBe = FBtab0["Loss_BE"]
+        FBpUp = FBtab0["Loss_Up"]
+        
+        # sample the loss curve
+        if FBpBe.count() > 1:
+            FBrp_log10 = np.log10(FBrp.to_numpy().flatten())
+            FBrp_log10 = FBrp_log10[~np.isnan(FBrp_log10)]
+            
+            MCrp_log10 = np.log10(MC_rp.to_numpy())
+            MCrp_log10 = MCrp_log10[~np.isnan(MCrp_log10)]
+
+            MC_Lw = np.interp(x=MCrp_log10, xp=FBrp_log10, fp=FBpLw.to_numpy()[~np.isnan(FBpLw.to_numpy())], left=-999, right=-999)
+            MC_Be = np.interp(x=MCrp_log10, xp=FBrp_log10, fp=FBpBe.to_numpy()[~np.isnan(FBpBe.to_numpy())], left=-999, right=-999)
+            MC_Up = np.interp(x=MCrp_log10, xp=FBrp_log10, fp=FBpUp.to_numpy()[~np.isnan(FBpUp.to_numpy())], left=-999, right=-999)
+
+            MC_Lw[MC_Lw==-999] = np.nan
+            MC_Be[MC_Be==-999] = np.nan
+            MC_Up[MC_Up==-999] = np.nan
+        else:
+            sel = FBtab0["RP"].notna().to_list()
+            MC_prob = FBtab0["PVAL"].iloc[sel]
+            MC_rp = FBtab0["RP"].iloc[sel]
+            MC_Lw = FBpLw.iloc[sel]
+            MC_Be = FBpBe.iloc[sel]
+            MC_Up = FBpUp.iloc[sel]
+
+        # create output table
+        out_tab = pd.DataFrame(data={"MC_prob":MC_prob, "MC_rp":MC_rp, "MC_Lw":MC_Lw, "MC_Be":MC_Be, "MC_Up":MC_Up})
+        out_tab.mask(out_tab.isna(), 0, inplace=True)
+        return out_tab
