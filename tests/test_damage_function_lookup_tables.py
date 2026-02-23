@@ -24,7 +24,7 @@ def sample_structures():
             'occupancy_type': 'RES4',
             'num_stories': 2,
             'sqft': None,
-            'foundation_type': 'BASE',
+            'foundation_type': 'BASE',  # 4-letter code
             'flood_peril_type': 'RLL',
             'validated_building_damage_function_id': 669,
             'validated_contents_damage_function_id': 400,
@@ -36,7 +36,7 @@ def sample_structures():
             'occupancy_type': 'IND5',
             'num_stories': 2,
             'sqft': None,
-            'foundation_type': 'BASE',
+            'foundation_type': 'BASE',  # 4-letter code
             'flood_peril_type': 'RLL',
             'validated_building_damage_function_id': 213,
             'validated_contents_damage_function_id': 884,
@@ -48,7 +48,7 @@ def sample_structures():
             'occupancy_type': 'IND5',
             'num_stories': 2,
             'sqft': None,
-            'foundation_type': 'SLAB',
+            'foundation_type': 'SLAB',  # 4-letter code
             'flood_peril_type': 'CMV',
             'validated_building_damage_function_id': 214,
             'validated_contents_damage_function_id': 883,
@@ -60,7 +60,7 @@ def sample_structures():
             'occupancy_type': 'EDU2',
             'num_stories': 4,
             'sqft': None,
-            'foundation_type': 'PILE',
+            'foundation_type': 'PILE',  # 4-letter code
             'flood_peril_type': 'RLL',
             'validated_building_damage_function_id': 213,
             'validated_contents_damage_function_id': 888,
@@ -72,7 +72,7 @@ def sample_structures():
             'occupancy_type': 'EDU2',
             'num_stories': 5,
             'sqft': None,
-            'foundation_type': 'PILE',
+            'foundation_type': 'PILE',  # 4-letter code
             'flood_peril_type': 'RLL',
             'validated_building_damage_function_id': 218,
             'validated_contents_damage_function_id': 888,
@@ -84,7 +84,7 @@ def sample_structures():
             'occupancy_type': 'IND5',
             'num_stories': 8,
             'sqft': None,
-            'foundation_type': 'SLAB',
+            'foundation_type': 'SLAB',  # 4-letter code
             'flood_peril_type': 'RHS',
             'validated_building_damage_function_id': 218,
             'validated_contents_damage_function_id': 883,
@@ -96,7 +96,7 @@ def sample_structures():
             'occupancy_type': 'RES3C',
             'num_stories': 1,
             'sqft': None,
-            'foundation_type': 'PILE',
+            'foundation_type': 'PILE',  # 4-letter code
             'flood_peril_type': 'RLL',
             'validated_building_damage_function_id': 630,
             'validated_contents_damage_function_id': 421,
@@ -108,7 +108,7 @@ def sample_structures():
             'occupancy_type': 'RES3C',
             'num_stories': 2,
             'sqft': None,
-            'foundation_type': 'PILE',
+            'foundation_type': 'PILE',  # 4-letter code
             'flood_peril_type': 'RLL',
             'validated_building_damage_function_id': 634,
             'validated_contents_damage_function_id': 422,
@@ -120,7 +120,7 @@ def sample_structures():
             'occupancy_type': 'RES3C',
             'num_stories': 25,
             'sqft': None,
-            'foundation_type': 'PILE',
+            'foundation_type': 'PILE',  # 4-letter code
             'flood_peril_type': 'RLL',
             'validated_building_damage_function_id': 218,
             'validated_contents_damage_function_id': 406,
@@ -132,7 +132,7 @@ def sample_structures():
             'occupancy_type': 'EDU1',
             'num_stories': 3,
             'sqft': None,
-            'foundation_type': 'SHAL',
+            'foundation_type': 'SHAL',  # 4-letter code
             'flood_peril_type': 'CHW',
             'validated_building_damage_function_id': 214,
             'validated_contents_damage_function_id': 887,
@@ -144,7 +144,7 @@ def sample_structures():
             'occupancy_type': 'EDU1',
             'num_stories': 10,
             'sqft': None,
-            'foundation_type': 'SHAL',
+            'foundation_type': 'SHAL',  # 4-letter code
             'flood_peril_type': 'CHW',
             'validated_building_damage_function_id': 219,
             'validated_contents_damage_function_id': 887,
@@ -156,7 +156,7 @@ def sample_structures():
             'occupancy_type': 'RES3C',
             'num_stories': 1,
             'sqft': None,
-            'foundation_type': 'PILE',
+            'foundation_type': 'PILE',  # 4-letter code
             'flood_peril_type': 'RLS',
             'validated_building_damage_function_id': 597,
             'validated_contents_damage_function_id': 421,
@@ -168,7 +168,7 @@ def sample_structures():
             'occupancy_type': 'RES3D',
             'num_stories': 4,
             'sqft': None,
-            'foundation_type': 'PILE',
+            'foundation_type': 'PILE',  # 4-letter code
             'flood_peril_type': 'RLS',
             'validated_building_damage_function_id': 601,
             'validated_contents_damage_function_id': 422,
@@ -180,7 +180,7 @@ def sample_structures():
             'occupancy_type': 'RES3D',
             'num_stories': 30,
             'sqft': None,
-            'foundation_type': 'PILE',
+            'foundation_type': 'PILE',  # 4-letter code
             'flood_peril_type': 'RLS',
             'validated_building_damage_function_id': 218,
             'validated_contents_damage_function_id': 406,
@@ -192,7 +192,7 @@ def sample_structures():
             'occupancy_type': 'RES2',
             'num_stories': 1,
             'sqft': None,
-            'foundation_type': 'SLAB',
+            'foundation_type': 'SLAB',  # 4-letter code
             'flood_peril_type': 'RHS',
             'validated_building_damage_function_id': 699,
             'validated_contents_damage_function_id': 446,
@@ -204,7 +204,7 @@ def sample_structures():
             'occupancy_type': 'RES2',
             'num_stories': 1,
             'sqft': None,
-            'foundation_type': 'SLAB',
+            'foundation_type': 'SLAB',  # 4-letter code
             'flood_peril_type': 'CHW',
             'validated_building_damage_function_id': 680,
             'validated_contents_damage_function_id': 427,
