@@ -892,29 +892,151 @@ class InlandFloodAnalysis:
         connection.execute("DROP TABLE IF EXISTS structure_damage_functions")
         connection.execute(structure_query)
 
-        # Content Damage Functions
+        # Content Damage Functions - matches on construction, occupancy, stories, sqft, foundation, and flood peril
         content_query = '''
-            CREATE TABLE content_damage_functions AS    
-            SELECT b.ID AS building_id, x.damage_function_id
+        CREATE TABLE content_damage_functions AS
+        WITH 
+        -- STEP 1: Generate all potential building-to-curve matches for contents
+        curve_matches AS (
+            SELECT 
+                b.ID,
+                c.damage_function_id,
+                
+                -- Content matching includes all structure attributes plus flood peril type
+                CASE 
+                    -- Occupancy Type Matching
+                    WHEN {use_occupancy} AND b.occupancy_type IS NOT NULL AND c.occupancy_type IS NOT NULL
+                        AND b.occupancy_type != c.occupancy_type THEN 0
+                    
+                    -- Foundation Type Matching (NSI-style codes)
+                    WHEN {use_foundation} AND b.foundation_type IS NOT NULL AND c.foundation_type IS NOT NULL
+                        AND b.foundation_type != c.foundation_type THEN 0
+                    
+                    -- Story Count Matching
+                    WHEN {use_stories} AND b.number_stories IS NOT NULL AND c.story_min IS NOT NULL AND c.story_max IS NOT NULL 
+                        AND NOT (b.number_stories BETWEEN c.story_min AND c.story_max) THEN 0
+                    
+                    -- Construction Type Matching
+                    WHEN {use_construction} AND b.general_building_type IS NOT NULL 
+                        AND b.general_building_type != c.construction_type THEN 0
+                    
+                    -- Flood Peril Type Matching (new for contents)
+                    WHEN b.flood_peril_type IS NOT NULL AND c.flood_peril_type IS NOT NULL
+                        AND b.flood_peril_type != c.flood_peril_type THEN 0
+                    
+                    -- SQFT Matching (if specified in lookup table)
+                    WHEN b.area IS NOT NULL AND c.sqft_min IS NOT NULL AND b.area < c.sqft_min THEN 0
+                    WHEN b.area IS NOT NULL AND c.sqft_max IS NOT NULL AND b.area > c.sqft_max THEN 0
+                    
+                    ELSE 1
+                END AS is_match
             FROM buildings b
-            JOIN xref_contents x
-                ON b.occupancy_type = x.occupancy_type
-                --AND b.BldgType = x.bldg_type
-                --AND b.DesignLevel = x.design_level
-        '''
+            CROSS JOIN xref_contents c
+        ),
+        
+        -- STEP 2: Filter to only valid matches
+        filtered_matches AS (
+            SELECT ID, damage_function_id
+            FROM curve_matches
+            WHERE is_match = 1
+        ),
+        
+        -- STEP 3: Calculate match frequencies for weight assignment
+        curve_frequencies AS (
+            SELECT 
+                ID, damage_function_id,
+                COUNT(*) OVER (PARTITION BY ID) AS total_matches,
+                COUNT(*) OVER (PARTITION BY ID, damage_function_id) AS curve_count
+            FROM filtered_matches
+        ),
+        
+        -- STEP 4: Calculate probability weights and deduplicate
+        unique_scenarios AS (
+            SELECT DISTINCT
+                ID, damage_function_id,
+                CAST(curve_count AS DOUBLE) / NULLIF(total_matches, 0) AS weight
+            FROM curve_frequencies
+        )
+        
+        -- STEP 5: Final output
+        SELECT 
+            ID AS building_id,
+            damage_function_id,
+            weight
+        FROM unique_scenarios;
+        '''.format(
+            use_occupancy=use_occupancy,
+            use_foundation=use_foundation,
+            use_stories=use_stories,
+            use_construction=use_construction
+        )
         connection.execute("DROP TABLE IF EXISTS content_damage_functions")
         connection.execute(content_query)
 
-        # Inventory Damage Functions
+        # Inventory Damage Functions - simpler matching on occupancy, foundation, and flood peril only
         inventory_query = '''
-            CREATE TABLE inventory_damage_functions AS
-            SELECT b.ID AS building_id, x.damage_function_id
+        CREATE TABLE inventory_damage_functions AS
+        WITH 
+        -- STEP 1: Generate all potential building-to-curve matches for inventory
+        curve_matches AS (
+            SELECT 
+                b.ID,
+                c.damage_function_id,
+                
+                -- Inventory matching is simpler: occupancy, foundation, flood peril
+                CASE 
+                    -- Occupancy Type Matching
+                    WHEN {use_occupancy} AND b.occupancy_type IS NOT NULL AND c.occupancy_type IS NOT NULL
+                        AND b.occupancy_type != c.occupancy_type THEN 0
+                    
+                    -- Foundation Type Matching (NSI-style codes)
+                    WHEN {use_foundation} AND b.foundation_type IS NOT NULL AND c.foundation_type IS NOT NULL
+                        AND b.foundation_type != c.foundation_type THEN 0
+                    
+                    -- Flood Peril Type Matching
+                    WHEN b.flood_peril_type IS NOT NULL AND c.flood_peril_type IS NOT NULL
+                        AND b.flood_peril_type != c.flood_peril_type THEN 0
+                    
+                    ELSE 1
+                END AS is_match
             FROM buildings b
-            JOIN xref_inventory x
-                ON b.occupancy_type = x.occupancy_type
-                --AND b.BldgType = x.bldg_type
-                --AND b.DesignLevel = x.design_level
-        '''
+            CROSS JOIN xref_inventory c
+        ),
+        
+        -- STEP 2: Filter to only valid matches
+        filtered_matches AS (
+            SELECT ID, damage_function_id
+            FROM curve_matches
+            WHERE is_match = 1
+        ),
+        
+        -- STEP 3: Calculate match frequencies for weight assignment
+        curve_frequencies AS (
+            SELECT 
+                ID, damage_function_id,
+                COUNT(*) OVER (PARTITION BY ID) AS total_matches,
+                COUNT(*) OVER (PARTITION BY ID, damage_function_id) AS curve_count
+            FROM filtered_matches
+        ),
+        
+        -- STEP 4: Calculate probability weights and deduplicate
+        unique_scenarios AS (
+            SELECT DISTINCT
+                ID, damage_function_id,
+                CAST(curve_count AS DOUBLE) / NULLIF(total_matches, 0) AS weight
+            FROM curve_frequencies
+        )
+        
+        -- STEP 5: Final output
+        SELECT 
+            ID AS building_id,
+            damage_function_id,
+            weight
+        FROM unique_scenarios;
+        '''.format(
+            use_occupancy=use_occupancy,
+            use_foundation=use_foundation
+        )
         connection.execute("DROP TABLE IF EXISTS inventory_damage_functions")
         connection.execute(inventory_query)          
 
