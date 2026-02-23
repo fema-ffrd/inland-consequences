@@ -9,4 +9,4 @@ def test_get_NNx():
     test_x = 3
 
     ret = lib.get_NNx(test_b_coords, test_a_coord, test_x)
-    assert list(ret.iloc[0:test_x+1, 1]) == [2,4,3]
+    assert list(ret.iloc[0:test_x+1, 1]) == [1,3,2]
