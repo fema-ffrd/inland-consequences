@@ -177,28 +177,28 @@ def test_nsi_occupancy_preprocessing(nsi_sample_gdf):
 
 
 def test_nsi_foundation_type_preprocessing(nsi_sample_gdf):
-    """Test that found_type is renamed to foundation_type."""
+    """Test that found_type is mapped to 4-letter foundation codes."""
     nb = NsiBuildings(nsi_sample_gdf)
     
-    # Foundation types should be accessible via foundation_type property
+    # Foundation types should be mapped to 4-letter HAZUS codes
     found_types = nb.foundation_type
-    assert found_types.iloc[0] == "S"  # Slab
-    assert found_types.iloc[1] == "C"  # Crawl
-    assert found_types.iloc[2] == "I"  # Pile
+    assert found_types.iloc[0] == "SLAB"  # S -> SLAB
+    assert found_types.iloc[1] == "SHAL"  # C -> SHAL (Crawl)
+    assert found_types.iloc[2] == "PILE"  # I -> PILE
     
     # Original found_type column should be dropped after preprocessing
     assert "found_type" not in nb.gdf.columns
 
 
 def test_nsi_foundation_type_string(nsi_sample_gdf_with_string_foundation):
-    """Test that string foundation types (found_type) are handled correctly."""
+    """Test that string foundation types (found_type) are mapped to 4-letter codes."""
     nb = NsiBuildings(nsi_sample_gdf_with_string_foundation)
     
-    # Foundation types should remain as-is when already strings
+    # Foundation types should be mapped to 4-letter HAZUS codes
     found_types = nb.foundation_type
-    assert found_types.iloc[0] == "S"
-    assert found_types.iloc[1] == "C"
-    assert found_types.iloc[2] == "I"
+    assert found_types.iloc[0] == "SLAB"  # S -> SLAB
+    assert found_types.iloc[1] == "SHAL"  # C -> SHAL
+    assert found_types.iloc[2] == "PILE"  # I -> PILE
 
 
 def test_nsi_field_mapping_visible(nsi_sample_gdf):
@@ -245,12 +245,12 @@ def test_nsi_impute_missing_optional_fields(nsi_sample_gdf_missing_optional):
     assert occ_types.iloc[1] == "RES1"  # Was already RES1
     assert occ_types.iloc[2] == "RES1"  # Was None, should be imputed
     
-    # Check that foundation_type was imputed with default "S" (Slab)
+    # Check that foundation_type was imputed with default "SLAB"
     found_types = nb.foundation_type
     assert not found_types.isna().any()
-    assert found_types.iloc[0] == "S"  # From found_type="S"
-    assert found_types.iloc[1] == "S"  # Was None, should be imputed
-    assert found_types.iloc[2] == "I"  # From found_type="I"
+    assert found_types.iloc[0] == "SLAB"  # From found_type="S" -> SLAB
+    assert found_types.iloc[1] == "SLAB"  # Was None, should be imputed
+    assert found_types.iloc[2] == "PILE"  # From found_type="I" -> PILE
 
 
 def test_nsi_missing_required_field(nsi_sample_gdf_missing_required):

@@ -606,8 +606,8 @@ class InlandFloodAnalysis:
                     'Foundation type assignment may need review; check for anomalies (e.g., basements in V-zone)', 
                     'WARNING'
                 FROM buildings
-                WHERE (zone_type = 'V' AND foundation_type IN ('Basement', 'BASEMENT'))
-                   OR (zone_type = 'AE' AND foundation_type IN ('Basement', 'BASEMENT'));
+                WHERE (zone_type = 'V' AND foundation_type IN ('Basement', 'BASEMENT', 'BASE'))
+                   OR (zone_type = 'AE' AND foundation_type IN ('Basement', 'BASEMENT', 'BASE'));
             '''
 
             connection.sql(sql)
@@ -772,7 +772,7 @@ class InlandFloodAnalysis:
         Matching Logic:
         - All attributes are optional (NULL = wildcard, matches any value):
           * occupancy_type: building use type (e.g., RES1, COM1)
-          * foundation_type: building foundation (e.g., basement, slab, pile)
+          * foundation_type: building foundation using 4-letter codes (BASE=basement, SLAB=slab, PILE=pile, SHAL=shallow)
           * number_stories: building height in stories
           * general_building_type: construction material (e.g., wood, masonry, concrete)
         
@@ -822,8 +822,8 @@ class InlandFloodAnalysis:
                         AND b.occupancy_type != c.occupancy_type THEN 0
                     
                     -- Foundation Type Matching (conditionally enabled):
-                    -- Direct comparison of NSI-style foundation codes (I,B,S,P,W,C,F)
-                    -- Both buildings and lookup tables now use the same single-letter codes
+                    -- Direct comparison of 4-letter HAZUS foundation codes (BASE, PILE, SHAL, SLAB)
+                    -- Buildings are preprocessed to 4-letter codes matching lookup tables
                     WHEN {use_foundation} AND b.foundation_type IS NOT NULL AND c.foundation_type IS NOT NULL
                         AND b.foundation_type != c.foundation_type THEN 0
                     
@@ -908,7 +908,7 @@ class InlandFloodAnalysis:
                     WHEN {use_occupancy} AND b.occupancy_type IS NOT NULL AND c.occupancy_type IS NOT NULL
                         AND b.occupancy_type != c.occupancy_type THEN 0
                     
-                    -- Foundation Type Matching (NSI-style codes)
+                    -- Foundation Type Matching (4-letter HAZUS codes: BASE, PILE, SHAL, SLAB)
                     WHEN {use_foundation} AND b.foundation_type IS NOT NULL AND c.foundation_type IS NOT NULL
                         AND b.foundation_type != c.foundation_type THEN 0
                     
@@ -989,7 +989,7 @@ class InlandFloodAnalysis:
                     WHEN {use_occupancy} AND b.occupancy_type IS NOT NULL AND c.occupancy_type IS NOT NULL
                         AND b.occupancy_type != c.occupancy_type THEN 0
                     
-                    -- Foundation Type Matching (NSI-style codes)
+                    -- Foundation Type Matching (4-letter HAZUS codes: BASE, PILE, SHAL, SLAB)
                     WHEN {use_foundation} AND b.foundation_type IS NOT NULL AND c.foundation_type IS NOT NULL
                         AND b.foundation_type != c.foundation_type THEN 0
                     
