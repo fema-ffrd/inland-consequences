@@ -76,6 +76,7 @@ class InlandFloodAnalysis:
         if not isinstance(raster_collection, RasterCollection):
             raise TypeError("raster_collection must be a RasterCollection instance")
         self.conn = None  # type: duckdb.DuckDBPyConnection | None
+        self.db_path = None  # type: str | None
         self.raster_collection = raster_collection
         self.buildings = buildings
         self.vulnerability: AbstractVulnerabilityFunction = vulnerability
@@ -121,6 +122,7 @@ class InlandFloodAnalysis:
             raise RuntimeError("DataProcessor context manager is not re-entrant.")
             
         db_id = self._get_db_identifier()
+        self.db_path = db_id  # Store path for later reference
         self.conn = duckdb.connect(database=db_id)
         return self
         
