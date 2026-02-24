@@ -67,12 +67,12 @@ class MillimanBuildings(Buildings):
         # This will match the approach used in the NSI buildings preprocessing
         if "FoundationType" in gdf.columns and "foundation_type" not in gdf.columns:
             foundation_type_map = {
-                2: "B",  # Basement
-                4: "C",  # Crawlspace
-                6: "P",  # Pier
-                7: "W",  # Fill or wall (Wall)
-                8: "S",  # Slab
-                9: "I",  # Pile
+                2: "BASE",  # Basement
+                4: "SHAL",  # Crawlspace
+                6: "SHAL",  # Pier
+                7: "SLAB",  # Fill or wall (Wall)
+                8: "SLAB",  # Slab
+                9: "PILE",  # Pile
             }
             
             # Using pandas categories can be more memory efficient for large datasets
@@ -194,7 +194,7 @@ class MillimanBuildings(Buildings):
         # Impute optional fields that exist in schema but may have missing values
         # foundation_type and general_building_type are created during preprocessing
         if "foundation_type" in gdf.columns:
-            gdf["foundation_type"] = gdf["foundation_type"].fillna("S")  # Default to Slab
+            gdf["foundation_type"] = gdf["foundation_type"].fillna("SLAB")  # Default to Slab (4-letter code)
         
         if "general_building_type" in gdf.columns:
             gdf["general_building_type"] = gdf["general_building_type"].fillna("W")  # Default to Wood

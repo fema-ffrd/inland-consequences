@@ -67,6 +67,31 @@ def milliman_buildings():
     )
     return MillimanBuildings(gdf)
 
+@pytest.fixture(scope="module")
+def nsi_commercial_buildings():
+    """Provides NSI buildings with commercial, industrial, and agricultural occupancy types for inventory testing."""
+    
+    # Mock Data with COM, IND, AGR occupancy types (which have inventory damage functions)
+    data = {
+        'target_fid': [4, 5, 6],
+        'occtype': ['COM1', 'IND1', 'AGR1'],  # Commercial, Industrial, Agricultural
+        'bldgtype': ['C', 'S', 'M'],  # Concrete, Steel, Masonry
+        'found_ht': [3.0, 4.0, 2.0],
+        'found_type': ['S', 'C', 'B'],  # Slab, Crawl, Basement (string codes)
+        'num_story': [2, 1, 1],
+        'sqft': [5000, 10000, 3000],
+        'val_struct': [500000.0, 800000.0, 200000.0],
+        'val_cont': [200000.0, 300000.0, 50000.0],
+        'geometry': ['POINT (3 3)', 'POINT (4 4)', 'POINT (5 5)'],
+    }
+
+    gdf = gpd.GeoDataFrame(
+        pd.DataFrame(data),
+        geometry=gpd.GeoSeries.from_wkt(data['geometry']),
+        crs="EPSG:4326"
+    )
+    return NsiBuildings(gdf)
+
 @pytest.fixture(scope="module", params=["nsi", "milliman"])
 def mock_buildings(request, nsi_buildings, milliman_buildings):
     """Parametrized fixture that provides both NSI and Milliman building types."""
@@ -74,6 +99,12 @@ def mock_buildings(request, nsi_buildings, milliman_buildings):
         return nsi_buildings
     elif request.param == "milliman":
         return milliman_buildings
+
+@pytest.fixture(scope="module", params=["nsi"])
+def mock_buildings_with_inventory(request, nsi_commercial_buildings):
+    """Parametrized fixture that provides building types with inventory (COM, IND, AGR)."""
+    if request.param == "nsi":
+        return nsi_commercial_buildings
 
 @pytest.fixture(scope="module")
 def mock_raster_collection():
@@ -179,6 +210,41 @@ def flood_analysis_results(mock_raster_collection, mock_buildings, mock_vulnerab
     # 5. Cleanup (runs after all tests in the module are complete)
     # The __exit__ method in the DataProcessor handles the conn.close()
 
+@pytest.fixture(scope="module") # Run once for all tests in this file
+def flood_analysis_results_inventory(mock_raster_collection, mock_buildings_with_inventory, mock_vulnerability, tmp_path_factory):
+    """
+    Flood analysis fixture specifically for testing inventory damage functions.
+    Uses buildings with COM, IND, AGR occupancy types.
+    """
+    from unittest.mock import patch
+    
+    # Create a temporary directory for this module's tests
+    tmp_path = tmp_path_factory.mktemp("flood_analysis_inventory")
+    
+    # 1. Patch the identifier to use file-based DB
+    with patch(
+        "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier", 
+        return_value=str(tmp_path / "test_gather_damage_functions_inventory.duckdb")
+    ):
+        # 2. Instantiate and use the context manager
+        analysis = InlandFloodAnalysis(
+            raster_collection=mock_raster_collection,
+            buildings=mock_buildings_with_inventory,
+            vulnerability=mock_vulnerability,
+            calculate_aal=True
+        )
+        
+        # 3. Enter the context manager to open the connection and setup tables
+        with analysis:
+            # **This is where the expensive data-creating call happens ONCE**
+            analysis.calculate_losses()
+            
+            # 4. Yield the connected instance for the tests to use
+            yield analysis
+        
+    # 5. Cleanup (runs after all tests in the module are complete)
+    # The __exit__ method in the DataProcessor handles the conn.close()
+
 @pytest.mark.manual
 def test_manual_calculate_losses(mock_raster_collection, mock_buildings, mock_vulnerability):
     # To run this test manually, execute the statement in the command line
@@ -249,4 +315,88 @@ def test_gather_damage_functions_preserves_ffh(flood_analysis_results):
     for _, row in ffh_check.iterrows():
         assert row['first_floor_height'] == row['original_ffh']
 
+# --- Content Damage Functions Tests ---
 
+def test_content_damage_functions_table_exists(flood_analysis_results):
+    """Test that content_damage_functions table is created with data."""
+    conn = flood_analysis_results.conn
+    
+    result = conn.execute("SELECT COUNT(*) FROM content_damage_functions").fetchone()
+    assert result[0] > 0
+
+def test_content_damage_functions_schema(flood_analysis_results):
+    """Test that content_damage_functions table has expected columns."""
+    conn = flood_analysis_results.conn
+    
+    columns = conn.execute("DESCRIBE content_damage_functions").fetchdf()
+    expected_columns = {'building_id', 'damage_function_id', 'weight'}
+    actual_columns = set(columns['column_name'].tolist())
+    assert expected_columns.issubset(actual_columns)
+
+def test_all_buildings_have_content_damage_functions(flood_analysis_results):
+    """Test that all buildings from buildings table are paired with content damage functions."""
+    conn = flood_analysis_results.conn
+    
+    unpaired = conn.execute("""
+        SELECT b.ID 
+        FROM buildings b
+        LEFT JOIN content_damage_functions cdf ON b.ID = cdf.building_id
+        WHERE cdf.building_id IS NULL
+    """).fetchdf()
+    
+    assert len(unpaired) == 0
+
+def test_content_damage_functions_weights_sum_to_one(flood_analysis_results):
+    """Test that weights sum to 1.0 per building for content damage functions."""
+    conn = flood_analysis_results.conn
+    
+    weight_sums = conn.execute("""
+        SELECT building_id, SUM(weight) as total_weight
+        FROM content_damage_functions
+        GROUP BY building_id
+    """).fetchdf()
+    for _, row in weight_sums.iterrows():
+        assert abs(row['total_weight'] - 1.0) < 0.01
+
+# --- Inventory Damage Functions Tests ---
+
+def test_inventory_damage_functions_table_exists(flood_analysis_results_inventory):
+    """Test that inventory_damage_functions table is created with data."""
+    conn = flood_analysis_results_inventory.conn
+    
+    result = conn.execute("SELECT COUNT(*) FROM inventory_damage_functions").fetchone()
+    assert result[0] > 0
+
+def test_inventory_damage_functions_schema(flood_analysis_results_inventory):
+    """Test that inventory_damage_functions table has expected columns."""
+    conn = flood_analysis_results_inventory.conn
+    
+    columns = conn.execute("DESCRIBE inventory_damage_functions").fetchdf()
+    expected_columns = {'building_id', 'damage_function_id', 'weight'}
+    actual_columns = set(columns['column_name'].tolist())
+    assert expected_columns.issubset(actual_columns)
+
+def test_all_buildings_have_inventory_damage_functions(flood_analysis_results_inventory):
+    """Test that all buildings from buildings table are paired with inventory damage functions."""
+    conn = flood_analysis_results_inventory.conn
+    
+    unpaired = conn.execute("""
+        SELECT b.ID 
+        FROM buildings b
+        LEFT JOIN inventory_damage_functions idf ON b.ID = idf.building_id
+        WHERE idf.building_id IS NULL
+    """).fetchdf()
+    
+    assert len(unpaired) == 0
+
+def test_inventory_damage_functions_weights_sum_to_one(flood_analysis_results_inventory):
+    """Test that weights sum to 1.0 per building for inventory damage functions."""
+    conn = flood_analysis_results_inventory.conn
+    
+    weight_sums = conn.execute("""
+        SELECT building_id, SUM(weight) as total_weight
+        FROM inventory_damage_functions
+        GROUP BY building_id
+    """).fetchdf()
+    for _, row in weight_sums.iterrows():
+        assert abs(row['total_weight'] - 1.0) < 0.01

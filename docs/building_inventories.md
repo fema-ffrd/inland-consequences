@@ -54,7 +54,7 @@ The following schema defines all target fields used by the Consequence Modeling 
 | **id**                    | String        | Unique identifier for the building                      | Inland, Coastal | id, building_id, bldg_id, fd_id                                  |
 | **occupancy_type**        | String        | HAZUS occupancy classification (e.g., RES1, COM1, IND2) | Inland, Coastal | occupancy_type, occtype, occupancy, occ_type, building_type      |
 | **first_floor_height**    | Numeric       | First floor height above ground elevation (feet)        | Inland, Coastal | first_floor_height, found_ht, first_floor_ht, ffh, floor_height  |
-| **foundation_type**       | String        | Foundation type code (I, P, W, B, C, F, S)              | Inland, Coastal | foundation_type, fndtype, found_type, fnd_type                   |
+| **foundation_type**       | String        | Foundation type code (BASE, PILE, SHAL, SLAB)           | Inland, Coastal | foundation_type, fndtype, found_type, fnd_type                   |
 | **number_stories**        | Numeric       | Number of stories (floors) in the building              | Inland, Coastal | number_stories, num_story, numstories, stories, num_floors       |
 | **area**                  | Numeric       | Building floor area (square feet)                       | Inland, Coastal | area, sqft, building_area, floor_area                            |
 | **building_cost**         | Numeric       | Building structural replacement cost (USD)              | Inland, Coastal | buildingcostusd, building_cost, val_struct, cost, building_value |

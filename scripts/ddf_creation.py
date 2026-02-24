@@ -204,83 +204,6 @@ def lookup_flsbt(df, lookup_table):
     return df
 
 
-# Generate and display the lookup table
-def create_complete_lookup_table(foundation_flood_csv_path):
-    """
-    Create a completely flattened lookup table that combines:
-    1. FLSBT assignment rules (Construction + Occupancy + Stories + SQFT → FLSBT)
-    2. Foundation/Flood damage functions (FLSBT + Foundation + Flood Peril → Damage ID)
-    
-    Parameters:
-    -----------
-    foundation_flood_csv_path : str
-        Path to the CSV file containing foundation/flood peril damage functions
-    
-    Returns:
-    --------
-    DataFrame with columns:
-        - Construction_Type
-        - Occupancy_Type
-        - Story_Min
-        - Story_Max
-        - SQFT_Min
-        - SQFT_Max
-        - FLSBT_Range
-        - Foundation_Type
-        - Flood_Peril_Type
-        - Damage_Function_ID
-    """
-    
-    # Generate FLSBT lookup table
-    print("Generating FLSBT lookup table...")
-    flsbt_lookup = generate_flsbt_lookup_table()
-    
-    # Load and unpivot foundation/flood table
-    print(f"Loading foundation/flood table from {foundation_flood_csv_path}...")
-    foundation_flood = unpivot_foundation_flood_table(foundation_flood_csv_path)
-    
-    # Join the two tables on FLSBT_Range
-    print("Merging tables...")
-    complete_table = flsbt_lookup.merge(
-        foundation_flood,
-        on='FLSBT_Range',
-        how='left'
-    )
-    
-    # Sort for readability
-    complete_table = complete_table.sort_values([
-        'Construction_Type', 
-        'Occupancy_Type', 
-        'Story_Min',
-        'Foundation_Type',
-        'Flood_Peril_Type'
-    ])
-    complete_table = complete_table.reset_index(drop=True)
-    
-    print(f"\nComplete! Generated {len(complete_table)} total lookup rules")
-    print(f"  - {len(flsbt_lookup)} unique FLSBT ranges")
-    print(f"  - {len(foundation_flood['Foundation_Type'].unique())} foundation types")
-    print(f"  - {len(foundation_flood['Flood_Peril_Type'].unique())} flood peril types")
-
-    # cast all columns to lowercase
-    complete_table.columns = [col.lower() for col in complete_table.columns]
-    
-    return complete_table
-
-
-if __name__ == "__main__":
-    # Generate just the FLSBT lookup table
-    lookup_table = generate_flsbt_lookup_table()
-    
-    print(f"Generated {len(lookup_table)} FLSBT lookup rules")
-    print("\nSample FLSBT rules:")
-    print(lookup_table.head(10))
-    
-    # Save FLSBT lookup
-    lookup_table.to_csv('outputs/flsbt_lookup_table.csv', index=False)
-    print("\nSaved FLSBT rules to flsbt_lookup_table.csv")
-
-
 def unpivot_foundation_flood_table(filepath_or_df):
     """
     Unpivot the foundation type and flood peril type table.
@@ -349,43 +272,138 @@ def unpivot_foundation_flood_table(filepath_or_df):
     
     return result_df
 
+# def update_foundation_types(df):
+#     """
+#     Update the FLSBT codes (4-letter strings) to the NSI-style foundation codes (1-letter abbreviations).
+#     This allows for separation of FLSBT naming conventions from the DDF lookup logic.
+
+#     NOTE: DEPRECATED IN FAVOR OF KEEPING OPEN-HAZUS (FEMA) STYLE FOUNDATION CODES. WILL UPDATE
+#     INCOMING INVENTORY DATA TO THIS APPROACH INSTEAD OF CONVERTING TO NSI CODES IN THE LOOKUP TABLES.
+
+#     Parameters:
+#     -----------
+#     df : DataFrame with 'Foundation_Type' column containing FLSBT-style codes (e.g., 'PILE', 'SHAL', 'SLAB', 'BASE')
+    
+#     Returns:
+#     DataFrame with 'Foundation_Type' column updated to NSI-style codes
+#     """
+
+#     # dictionary to map NSI-style foundation types to FLSBT foundation types (note many-to-one mapping)
+#     foundation_lookups = {
+#         "C": "SHAL", # Crawl
+#         "B": "BASE", # Basement
+#         "S": "SLAB", # Slab
+#         "P": "SHAL", # Pier
+#         "F": "SLAB", # Fill
+#         "W": "SHAL", # Solid Wall? Milliman 
+#         "I": "PILE"  # Pile
+#     }
+
+#     # Create a DataFrame for the foundation lookups
+#     foundation_df = pd.DataFrame(list(foundation_lookups.items()), columns=['found_type', 'FLSBT_Foundation_Type'])
+
+#     # join the foundation lookups to the original DataFrame to get the NSI-style foundation type
+#     df_merge = pd.merge(df, foundation_df, left_on='foundation_type', right_on='FLSBT_Foundation_Type', how='left')
+
+#     # overwrite the original column values with the new values from the lookup, then drop the extra columns
+#     df_merge['foundation_type'] = df_merge['found_type']
+#     df_merge = df_merge.drop(columns=['FLSBT_Foundation_Type', 'found_type'])
+
+#     return df_merge
+
+
+# Generate and display the lookup table
+def create_complete_lookup_table(foundation_flood_csv_path):
+    """
+    Create a completely flattened lookup table that combines:
+    1. FLSBT assignment rules (Construction + Occupancy + Stories + SQFT → FLSBT)
+    2. Foundation/Flood damage functions (FLSBT + Foundation + Flood Peril → Damage ID)
+    
+    Parameters:
+    -----------
+    foundation_flood_csv_path : str
+        Path to the CSV file containing foundation/flood peril damage functions
+    
+    Returns:
+    --------
+    DataFrame with columns:
+        - Construction_Type
+        - Occupancy_Type
+        - Story_Min
+        - Story_Max
+        - SQFT_Min
+        - SQFT_Max
+        - FLSBT_Range
+        - Foundation_Type
+        - Flood_Peril_Type
+        - Damage_Function_ID
+    """
+    
+    # Generate FLSBT lookup table
+    print("Generating FLSBT lookup table...")
+    flsbt_lookup = generate_flsbt_lookup_table()
+    
+    # Load and unpivot foundation/flood table
+    print(f"Loading foundation/flood table from {foundation_flood_csv_path}...")
+    foundation_flood = unpivot_foundation_flood_table(foundation_flood_csv_path)
+    
+    # Join the two tables on FLSBT_Range
+    print("Merging tables...")
+    complete_table = flsbt_lookup.merge(
+        foundation_flood,
+        on='FLSBT_Range',
+        how='left'
+    )
+    
+    # Sort for readability
+    complete_table = complete_table.sort_values([
+        'Construction_Type', 
+        'Occupancy_Type', 
+        'Story_Min',
+        'Foundation_Type',
+        'Flood_Peril_Type'
+    ])
+    complete_table = complete_table.reset_index(drop=True)
+
+    # cast all columns to lowercase
+    complete_table.columns = [col.lower() for col in complete_table.columns]
+
+    # # update foundation types to NSI-style codes
+    # complete_table = update_foundation_types(complete_table)
+
+    print(f"\nComplete! Generated {len(complete_table)} total lookup rules")
+    print(f"  - {len(flsbt_lookup)} unique FLSBT ranges")
+    print(f"  - {len(complete_table['foundation_type'].unique())} foundation types")
+    print(f"  - {len(complete_table['flood_peril_type'].unique())} flood peril types")
+    
+    return complete_table
+
+
+
+
 
 if __name__ == "__main__":
+    # Ensure output directory exists
+    os.makedirs('outputs', exist_ok=True)
+    
+    # Generate and save FLSBT lookup table
     lookup_table = generate_flsbt_lookup_table()
     
-    print(f"Generated {len(lookup_table)} lookup rules")
-    print("\nSample rows:")
+    print(f"Generated {len(lookup_table)} FLSBT lookup rules")
+    print("\nSample FLSBT rules:")
     print(lookup_table.head(20))
     
-    # Example usage
+    lookup_table.to_csv('outputs/flsbt_lookup_table.csv', index=False)
+    print("\nSaved FLSBT rules to outputs/flsbt_lookup_table.csv")
+    
+    # Generate and save complete flattened lookup table
     print("\n" + "="*60)
-    print("EXAMPLE USAGE - COMPLETE FLATTENED TABLE:")
+    print("GENERATING COMPLETE FLATTENED TABLE:")
     print("="*60)
     
-    print("\n1. To generate complete flattened lookup table:")
-    print("   complete_table = create_complete_lookup_table('foundation_flood_table.csv')")
-    print("   complete_table.to_csv('complete_lookup_table.csv', index=False)")
-    
-    print("\n2. The output table will have columns:")
-    print("   - Construction_Type (W, M, C, S)")
-    print("   - Occupancy_Type (RES1, COM1, etc.)")
-    print("   - Story_Min, Story_Max")
-    print("   - SQFT_Min, SQFT_Max")
-    print("   - FLSBT_Range")
-    print("   - Foundation_Type (PILE, SHAL, SLAB, BASE)")
-    print("   - Flood_Peril_Type (RLS, RHS, RLL, etc.)")
-    print("   - Damage_Function_ID")
-    
-    print("\n3. To lookup damage functions for buildings:")
-    print("   # Your buildings need: S_GENERALBUILDINGTYPE, S_OCCTYPE, S_NUMSTORY,")
-    print("   #                      S_SQFT, Foundation_Type, Flood_Peril_Type")
-    print("   result = lookup_flsbt(buildings_df, lookup_table)")
-    print("   # Then merge with complete_table to get Damage_Function_ID")
-    
-    # Uncomment to test with actual file:
     complete_table = create_complete_lookup_table('data/foundation_flood_table.csv')
     print("\nSample from complete table:")
     print(complete_table.head(20))
-    # Ensure output directory exists
-    os.makedirs('outputs', exist_ok=True)
+    
     complete_table.to_csv('outputs/df_lookup_structures.csv', index=False)
+    print("\nSaved complete lookup table to outputs/df_lookup_structures.csv")

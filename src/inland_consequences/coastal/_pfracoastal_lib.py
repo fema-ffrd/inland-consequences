@@ -670,6 +670,70 @@ class _PFRACoastal_Lib:
         # create output row and add to table
         full_row = pd.concat([row_prefix,row_suffix], axis='columns')
         return full_row
+
+
+    ####################
+    # simulateDamageError6()
+    #	function to simulate error on damage curve from 
+    # In:
+    #	intab = n(BFD) x 8 dataframe with columns for 
+    #		Building flood depth
+    #		Building flood depth error
+    #		prob of wave height less than 1 ft
+    #		prob of wave height between 1 and 3 feet
+    #		prob of wave height greater or equal to 3 feet
+    #		damage from DDF2
+    #		damage from DDF3
+    #		damage from DDF4
+    # Out:
+    #	 n(BFD) x 3 dataframe with columns for 
+    #		min damage 
+    #		best estimate damage
+    #		max damage
+    # called by:
+    #	buildBldgFloodDepthTable6()
+    # calls:
+    #	NULL
+    def simulateDamageError6(self, intab:pd.DataFrame) -> pd.DataFrame:
+        
+        BFDBound = pd.DataFrame({"LL": intab.iloc[:,0] - intab.iloc[:,1],"LU": intab.iloc[:,0] + intab.iloc[:,1]})
+        Damage = (intab.iloc[:,2]*intab.iloc[:,5]) + (intab.iloc[:,3]*intab.iloc[:,6]) + (intab.iloc[:,4]*intab.iloc[:,7])
+        
+        # If there are more than 1 null value
+        if int(intab.iloc[:,1].isna().sum()) > 1:
+            
+            y = Damage.values
+            min_damage = np.nanmin(Damage)
+
+            # lower bound:
+            x_LL = intab.iloc[:,0].values
+            xp_LL = BFDBound["LL"].values
+            DamLL = np.interp(xp_LL,x_LL,y,left=np.nan,right=np.nan)
+            DAMLL = pd.DataFrame({'LL':BFDBound.iloc[:,0],'Damage_LL':DamLL})
+            mask_LL = DAMLL["LL"].notna() & DAMLL["Damage_LL"].isna()
+            DAMLL.loc[mask_LL, "Damage_LL"] = min_damage
+            
+            # upper bound:
+            x_LU = intab.iloc[:,1].values
+            xp_LU = BFDBound["LU"].values
+            DamLU = np.interp(xp_LU,x_LU,y,left=np.nan,right=np.nan)
+            DAMLU = pd.DataFrame({'LU':BFDBound.iloc[:,0],'Damage_LU':DamLU})
+            mask_LU = DAMLU["LU"].notna() & DAMLU["Damage_LU"].isna()
+            DAMLU.loc[mask_LU, "Damage_LU"] = min_damage
+                        
+        else:
+            # Select rows where they are not null
+            sel = intab.iloc[:,1].notna()
+            DAMLL = pd.DataFrame({'BFDBound':BFDBound.iloc[:,1],'Damage':Damage})
+            DAMLL.iloc[sel,1] = 0
+ 
+            DAMLU = pd.DataFrame({'BFDBound':BFDBound.iloc[:,1],'Damage':Damage})
+        
+        return pd.DataFrame({'DL':DAMLL.iloc[:,1],'DB':Damage,'DU':DAMLU.iloc[:,1]})
+        
+        
+        
+        
     
     ####################
     # buildSampledLoss2()
