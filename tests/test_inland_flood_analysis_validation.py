@@ -86,6 +86,64 @@ def buildings_hazard_anomalies():
 # --- Test Scenario 3: Normal Buildings (No Anomalies) ---
 
 @pytest.fixture(scope="module")
+def buildings_res1_over_max_stories():
+    """
+    Buildings where RES1 has a story count far above the maximum available
+    in the damage function lookup tables (max=4 for Wood/RES1).
+
+    This fixture is designed to trigger STORIES_ABOVE_MAX clamping so that
+    a damage function is still assigned despite the extreme story count.
+    """
+    data = {
+        'target_fid': [1, 2],
+        'occtype': ['RES1', 'RES1'],
+        'bldgtype': ['W', 'W'],
+        'found_ht': [2.5, 2.0],
+        'found_type': ['S', 'S'],
+        'num_story': [10, 1],  # RES1 with 10 stories exceeds max of 4 for Wood/RES1
+        'sqft': [1800, 1475],
+        'val_struct': [200000.0, 150000.0],
+        'val_cont': [100000.0, 75000.0],
+        'geometry': ['POINT (30 30)', 'POINT (31 31)'],
+    }
+
+    gdf = gpd.GeoDataFrame(
+        pd.DataFrame(data),
+        geometry=gpd.GeoSeries.from_wkt(data['geometry']),
+        crs="EPSG:4326"
+    )
+    return NsiBuildings(gdf)
+
+
+@pytest.fixture(scope="module")
+def buildings_unsupported_occupancy():
+    """
+    Buildings where one has an occupancy type ('SCHOOL') that does not exist
+    in the damage function cross-reference lookup tables at all.  This should
+    trigger an OCCUPANCY_NOT_IN_XREF validation log entry.
+    """
+    data = {
+        'target_fid': [1, 2],
+        'occtype': ['RES1', 'SCHOOL'],
+        'bldgtype': ['W', 'W'],
+        'found_ht': [2.5, 2.0],
+        'found_type': ['S', 'S'],
+        'num_story': [1, 1],
+        'sqft': [1800, 2000],
+        'val_struct': [200000.0, 300000.0],
+        'val_cont': [100000.0, 150000.0],
+        'geometry': ['POINT (40 40)', 'POINT (41 41)'],
+    }
+
+    gdf = gpd.GeoDataFrame(
+        pd.DataFrame(data),
+        geometry=gpd.GeoSeries.from_wkt(data['geometry']),
+        crs="EPSG:4326"
+    )
+    return NsiBuildings(gdf)
+
+
+@pytest.fixture(scope="module")
 def buildings_normal():
     """
     Normal buildings with typical characteristics and reasonable hazard data.
@@ -451,6 +509,85 @@ def test_building_no_anomalies(
             assert len(validation_records) == 0, "Normal buildings should not trigger area/story anomalies"
 
 
+def test_res1_stories_above_max_assigns_damage_function(
+    buildings_res1_over_max_stories, raster_collection_normal, mock_vulnerability, tmp_path
+):
+    """
+    Test that a RES1 building with a story count above the damage function lookup
+    table maximum (10 stories for Wood/RES1 where max=4) is still assigned a
+    damage function via story clamping, and that the STORIES_ABOVE_MAX validation
+    log entry is created.
+
+    Story-clamping is critical: buildings with out-of-range story counts must not
+    be silently dropped from the analysis.  The clamping fallback in
+    _gather_missing_functions should:
+      1. Clamp the effective story count to the nearest available curve range bound.
+      2. Log a STORIES_ABOVE_MAX validation warning that references the actual count.
+      3. Assign exactly one damage function to every such building.
+
+    The xref_structures table is deduplicated to one row per unique attribute
+    combination so that each building resolves to exactly one damage function.
+    The real CSV has multiple flood-peril-type variants per combination; this
+    controlled setup removes that ambiguity so the assertion can be tight.
+    """
+    with patch(
+        "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
+        return_value=str(tmp_path / "test_stories_above_max.duckdb")
+    ):
+        analysis = InlandFloodAnalysis(
+            raster_collection=raster_collection_normal,
+            buildings=buildings_res1_over_max_stories,
+            vulnerability=mock_vulnerability,
+            calculate_aal=True
+        )
+
+        with analysis:
+            analysis.calculate_losses()
+
+            # STORIES_ABOVE_MAX validation entry must be present for the 10-story RES1
+            story_clamp_records = analysis.conn.sql("""
+                SELECT building_id, rule, message, severity
+                FROM validation_log
+                WHERE rule = 'STORIES_ABOVE_MAX'
+            """).fetchall()
+
+            assert len(story_clamp_records) > 0, (
+                "RES1 with 10 stories should generate a STORIES_ABOVE_MAX validation entry"
+            )
+
+            for bid, rule, msg, severity in story_clamp_records:
+                assert severity == 'WARNING', "STORIES_ABOVE_MAX should be WARNING severity"
+                assert '10' in msg, f"Message should reference the actual story count: {msg}"
+
+            # Despite the over-max story count, every building must still have a damage function
+            unmatched = analysis.conn.sql("""
+                SELECT b.ID
+                FROM buildings b
+                LEFT JOIN structure_damage_functions sdf ON b.ID = sdf.building_id
+                WHERE sdf.building_id IS NULL
+            """).fetchall()
+
+            assert len(unmatched) == 0, (
+                "All buildings, including those with story counts above the maximum, "
+                "should have at least one damage function assigned via clamping"
+            )
+
+            # Each building must resolve to exactly one damage function.
+            # With flood_peril_type matching, each building's assigned peril type
+            # (derived from velocity/duration) narrows it to exactly one DDF row.
+            multi_ddf = analysis.conn.sql("""
+                SELECT building_id, COUNT(*) AS num_funcs
+                FROM structure_damage_functions
+                GROUP BY building_id
+                HAVING COUNT(*) > 1
+            """).fetchall()
+
+            assert len(multi_ddf) == 0, (
+                f"Each building should resolve to exactly one damage function, "
+                f"but found buildings with multiple: {multi_ddf}"
+            )
+
+
 # --- Test Suite 2: Hazard Validation Rules ---
 
 def test_hazard_unusual_depths_and_velocities(
@@ -652,6 +789,64 @@ def test_loss_normal_data(
             # With low damage ratios (10%), should have no or minimal loss warnings
             # The exact number depends on the interaction of hazard data and damage ratios
             assert loss_records[0] <= 12, "Normal data should not trigger excessive loss warnings"
+
+
+def test_unsupported_occupancy_type_not_in_xref(
+    buildings_unsupported_occupancy, raster_collection_normal, mock_vulnerability, tmp_path
+):
+    """
+    Test that a building with an occupancy type that doesn't exist anywhere in the
+    damage function cross-reference lookup tables generates an OCCUPANCY_NOT_IN_XREF
+    validation log entry.
+
+    'SCHOOL' is not a recognised HAZUS occupancy type and has no corresponding rows
+    in df_lookup_structures.csv, so it should be flagged.  The valid 'RES1' building
+    in the same fixture must NOT be flagged.
+    """
+    with patch(
+        "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
+        return_value=str(tmp_path / "test_unsupported_occupancy.duckdb")
+    ):
+        analysis = InlandFloodAnalysis(
+            raster_collection=raster_collection_normal,
+            buildings=buildings_unsupported_occupancy,
+            vulnerability=mock_vulnerability,
+            calculate_aal=False
+        )
+
+        with analysis:
+            analysis.calculate_losses()
+
+            xref_records = analysis.conn.sql("""
+                SELECT building_id, rule, message, severity
+                FROM validation_log
+                WHERE rule = 'OCCUPANCY_NOT_IN_XREF'
+            """).fetchall()
+
+            assert len(xref_records) == 1, (
+                "Exactly one building (SCHOOL) should trigger OCCUPANCY_NOT_IN_XREF; "
+                f"got {len(xref_records)}"
+            )
+
+            bid, rule, msg, severity = xref_records[0]
+            assert severity == 'WARNING', "OCCUPANCY_NOT_IN_XREF should be WARNING severity"
+            assert 'SCHOOL' in msg, f"Message should reference the unsupported occupancy type: {msg}"
+            assert 'cross-reference' in msg.lower() or 'lookup' in msg.lower(), (
+                f"Message should mention the cross-reference lookup: {msg}"
+            )
+
+            # The valid RES1 building must not be flagged
+            res1_xref_records = analysis.conn.sql("""
+                SELECT COUNT(*)
+                FROM validation_log vl
+                JOIN buildings b ON b.id = vl.building_id
+                WHERE vl.rule = 'OCCUPANCY_NOT_IN_XREF'
+                  AND b.occupancy_type = 'RES1'
+            """).fetchone()
+
+            assert res1_xref_records[0] == 0, (
+                "RES1 is a valid occupancy type and must not trigger OCCUPANCY_NOT_IN_XREF"
+            )
 
 
 # --- Comprehensive Validation Log Test ---

@@ -325,7 +325,7 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         depth_min = DEPTHS[100][0] - STD_DEV  # 2.0 - 1.0 = 1.0
         expected_d_min = _expected_damage(depth_min)  # 1.0 * 5 = 5.0 (percentage points)
-        expected = BUILDING_COST_1 * expected_d_min  # 100_000 * 5.0 = 500_000
+        expected = BUILDING_COST_1 * expected_d_min / 100.0  # 100_000 * 5.0 = 500_000
         row = conn.execute(
             "SELECT loss_min FROM losses WHERE ID = 1 AND return_period = 100"
         ).fetchone()
@@ -336,7 +336,7 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         depth_min = DEPTHS[500][1] - STD_DEV  # 5.0 - 1.0 = 4.0
         expected_d_min = _expected_damage(depth_min)  # 4.0 * 5 = 20.0 (percentage points)
-        expected = BUILDING_COST_2 * expected_d_min  # 200_000 * 20.0 = 4_000_000
+        expected = BUILDING_COST_2 * expected_d_min / 100.0  # 200_000 * 20.0 = 4_000_000
         row = conn.execute(
             "SELECT loss_min FROM losses WHERE ID = 2 AND return_period = 500"
         ).fetchone()
@@ -349,7 +349,7 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         depth_max = DEPTHS[100][0] + STD_DEV  # 2.0 + 1.0 = 3.0
         expected_d_max = _expected_damage(depth_max)  # 3.0 * 5 = 15.0
-        expected = BUILDING_COST_1 * expected_d_max  # 100_000 * 15.0 = 1_500_000
+        expected = BUILDING_COST_1 * expected_d_max / 100.0 # 100_000 * 15.0 = 1_500_000
         row = conn.execute(
             "SELECT loss_max FROM losses WHERE ID = 1 AND return_period = 100"
         ).fetchone()
@@ -360,7 +360,7 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         depth_max = DEPTHS[500][1] + STD_DEV  # 5.0 + 1.0 = 6.0
         expected_d_max = _expected_damage(depth_max)  # 6.0 * 5 = 30.0
-        expected = BUILDING_COST_2 * expected_d_max  # 200_000 * 30.0 = 6_000_000
+        expected = BUILDING_COST_2 * expected_d_max / 100.0  # 200_000 * 30.0 = 6_000_000
         row = conn.execute(
             "SELECT loss_max FROM losses WHERE ID = 2 AND return_period = 500"
         ).fetchone()
@@ -372,7 +372,7 @@ class TestLossesMinMeanMax:
     def test_loss_mean_building1_rp100(self, pipeline_results):
         conn = pipeline_results.conn
         stats = _expected_damage_stats(DEPTHS[100][0], STD_DEV)
-        expected = BUILDING_COST_1 * stats["damage_percent_mean"]
+        expected = BUILDING_COST_1 * stats["damage_percent_mean"] / 100.0
         row = conn.execute(
             "SELECT loss_mean FROM losses WHERE ID = 1 AND return_period = 100"
         ).fetchone()
@@ -382,7 +382,7 @@ class TestLossesMinMeanMax:
     def test_loss_mean_building2_rp500(self, pipeline_results):
         conn = pipeline_results.conn
         stats = _expected_damage_stats(DEPTHS[500][1], STD_DEV)
-        expected = BUILDING_COST_2 * stats["damage_percent_mean"]
+        expected = BUILDING_COST_2 * stats["damage_percent_mean"] / 100.0
         row = conn.execute(
             "SELECT loss_mean FROM losses WHERE ID = 2 AND return_period = 500"
         ).fetchone()
@@ -394,7 +394,7 @@ class TestLossesMinMeanMax:
     def test_loss_std_building1_rp100(self, pipeline_results):
         conn = pipeline_results.conn
         stats = _expected_damage_stats(DEPTHS[100][0], STD_DEV)
-        expected = BUILDING_COST_1 * stats["damage_percent_std"]
+        expected = BUILDING_COST_1 * stats["damage_percent_std"] / 100.0
         row = conn.execute(
             "SELECT loss_std FROM losses WHERE ID = 1 AND return_period = 100"
         ).fetchone()
@@ -413,8 +413,8 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         stats_100 = _expected_damage_stats(DEPTHS[100][0], STD_DEV)
         stats_500 = _expected_damage_stats(DEPTHS[500][0], STD_DEV)
-        loss_min_100 = BUILDING_COST_1 * stats_100["d_min"]
-        loss_min_500 = BUILDING_COST_1 * stats_500["d_min"]
+        loss_min_100 = BUILDING_COST_1 * stats_100["d_min"] / 100.0
+        loss_min_500 = BUILDING_COST_1 * stats_500["d_min"] / 100.0
         expected = _expected_aal(loss_min_100, loss_min_500)
         row = conn.execute(
             "SELECT aal_min FROM aal_losses WHERE ID = 1"
@@ -426,8 +426,8 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         stats_100 = _expected_damage_stats(DEPTHS[100][0], STD_DEV)
         stats_500 = _expected_damage_stats(DEPTHS[500][0], STD_DEV)
-        loss_mean_100 = BUILDING_COST_1 * stats_100["damage_percent_mean"]
-        loss_mean_500 = BUILDING_COST_1 * stats_500["damage_percent_mean"]
+        loss_mean_100 = BUILDING_COST_1 * stats_100["damage_percent_mean"] / 100.0
+        loss_mean_500 = BUILDING_COST_1 * stats_500["damage_percent_mean"] / 100.0
         expected = _expected_aal(loss_mean_100, loss_mean_500)
         row = conn.execute(
             "SELECT aal_mean FROM aal_losses WHERE ID = 1"
@@ -439,8 +439,8 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         stats_100 = _expected_damage_stats(DEPTHS[100][0], STD_DEV)
         stats_500 = _expected_damage_stats(DEPTHS[500][0], STD_DEV)
-        loss_max_100 = BUILDING_COST_1 * stats_100["d_max"]
-        loss_max_500 = BUILDING_COST_1 * stats_500["d_max"]
+        loss_max_100 = BUILDING_COST_1 * stats_100["d_max"] / 100.0
+        loss_max_500 = BUILDING_COST_1 * stats_500["d_max"] / 100.0
         expected = _expected_aal(loss_max_100, loss_max_500)
         row = conn.execute(
             "SELECT aal_max FROM aal_losses WHERE ID = 1"
@@ -452,8 +452,8 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         stats_100 = _expected_damage_stats(DEPTHS[100][1], STD_DEV)
         stats_500 = _expected_damage_stats(DEPTHS[500][1], STD_DEV)
-        loss_min_100 = BUILDING_COST_2 * stats_100["d_min"]
-        loss_min_500 = BUILDING_COST_2 * stats_500["d_min"]
+        loss_min_100 = BUILDING_COST_2 * stats_100["d_min"] / 100.0
+        loss_min_500 = BUILDING_COST_2 * stats_500["d_min"] / 100.0
         expected = _expected_aal(loss_min_100, loss_min_500)
         row = conn.execute(
             "SELECT aal_min FROM aal_losses WHERE ID = 2"
@@ -465,8 +465,8 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         stats_100 = _expected_damage_stats(DEPTHS[100][1], STD_DEV)
         stats_500 = _expected_damage_stats(DEPTHS[500][1], STD_DEV)
-        loss_mean_100 = BUILDING_COST_2 * stats_100["damage_percent_mean"]
-        loss_mean_500 = BUILDING_COST_2 * stats_500["damage_percent_mean"]
+        loss_mean_100 = BUILDING_COST_2 * stats_100["damage_percent_mean"] / 100.0
+        loss_mean_500 = BUILDING_COST_2 * stats_500["damage_percent_mean"] / 100.0
         expected = _expected_aal(loss_mean_100, loss_mean_500)
         row = conn.execute(
             "SELECT aal_mean FROM aal_losses WHERE ID = 2"
@@ -478,8 +478,8 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         stats_100 = _expected_damage_stats(DEPTHS[100][1], STD_DEV)
         stats_500 = _expected_damage_stats(DEPTHS[500][1], STD_DEV)
-        loss_max_100 = BUILDING_COST_2 * stats_100["d_max"]
-        loss_max_500 = BUILDING_COST_2 * stats_500["d_max"]
+        loss_max_100 = BUILDING_COST_2 * stats_100["d_max"] / 100.0
+        loss_max_500 = BUILDING_COST_2 * stats_500["d_max"] / 100.0
         expected = _expected_aal(loss_max_100, loss_max_500)
         row = conn.execute(
             "SELECT aal_max FROM aal_losses WHERE ID = 2"
@@ -497,6 +497,40 @@ class TestLossesMinMeanMax:
             bld_id, aal_min, aal_mean, aal_max = row
             assert aal_min <= aal_mean, f"Building {bld_id}: aal_min > aal_mean"
             assert aal_mean <= aal_max, f"Building {bld_id}: aal_mean > aal_max"
+
+    def test_each_building_has_exactly_one_damage_function(self, pipeline_results):
+        """Every building should have exactly one damage function assigned.
+
+        With the injected xref_structures containing a single matching entry
+        (W + RES1 + story_min=1 + story_max=3 + SLAB), each building should
+        produce exactly one row in structure_damage_functions with weight=1.0.
+        This guards against duplicate assignments that would distort loss calculations.
+        """
+        conn = pipeline_results.conn
+
+        building_ids = conn.execute(
+            "SELECT ID FROM buildings ORDER BY ID"
+        ).fetchdf()
+
+        counts = conn.execute("""
+            SELECT building_id, COUNT(*) as func_count
+            FROM structure_damage_functions
+            GROUP BY building_id
+            ORDER BY building_id
+        """).fetchdf()
+
+        # Every building must appear in structure_damage_functions
+        assert len(counts) == len(building_ids), (
+            f"Expected {len(building_ids)} buildings in structure_damage_functions, "
+            f"got {len(counts)}"
+        )
+
+        # Each building must have exactly one damage function row
+        for _, row in counts.iterrows():
+            assert row['func_count'] == 1, (
+                f"Building {int(row['building_id'])} has {int(row['func_count'])} damage "
+                f"function(s) assigned; expected exactly 1"
+            )
 
 
 # ===================================================================

@@ -35,14 +35,16 @@ class InlandFloodAnalysis:
         - Default (wildcard_fields=None or []): Match on all available attributes
           * occupancy_type (if not NULL)
           * foundation_type (if not NULL)
-          * number_stories (if not NULL)
+          * number_stories (if not NULL, matched against story_min/story_max range)
+          * area (if not NULL, matched against sqft_min/sqft_max range; NULL bounds = open-ended)
           * general_building_type (if not NULL)
         
         - Selective wildcarding: Specify fields to ignore even when values present
           * wildcard_fields=['general_building_type'] - ignore construction material
           * wildcard_fields=['foundation_type', 'number_stories'] - match on occupancy + construction
           * wildcard_fields=['occupancy_type'] - match all curves regardless of occupancy type
-          * wildcard_fields=['occupancy_type', 'foundation_type', 'number_stories', 'general_building_type'] - 
+          * wildcard_fields=['area'] - ignore sqft range, match on all other attributes
+          * wildcard_fields=['occupancy_type', 'foundation_type', 'number_stories', 'area', 'general_building_type'] - 
             match ALL curves (no attribute filtering)
         
         Example:
@@ -326,6 +328,9 @@ class InlandFloodAnalysis:
             # Gather damage functions from vulnerability function
             self._gather_damage_functions(conn)
 
+            # Gather damage functions for attributes outside
+            self._gather_missing_functions(conn)
+
             # Compute the mean and std. deviation of the damage functions
             self._compute_damage_function_statistics(conn)
 
@@ -564,6 +569,17 @@ class InlandFloodAnalysis:
                 FROM buildings 
                 WHERE occupancy_type IS NULL OR occupancy_type = '';
 
+                -- Occupancy type not present in damage function cross-reference lookup at all
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT id, 'buildings', 'building_validation', 'OCCUPANCY_NOT_IN_XREF',
+                    'Occupancy type ' || occupancy_type || ' is not present in the damage function cross-reference lookup; no damage function will be assigned',
+                    'WARNING'
+                FROM buildings
+                WHERE occupancy_type IS NOT NULL AND occupancy_type != ''
+                  AND occupancy_type NOT IN (
+                      SELECT DISTINCT occupancy_type FROM xref_structures WHERE occupancy_type IS NOT NULL
+                  );
+
                 -- Check for unusual area/valuation: > 5x the Hazus hzSqFtFactors table
                 INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
                 SELECT b.id, 'buildings', 'building_validation', 'UNUSUAL_AREA_OR_VALUATION', 
@@ -752,6 +768,22 @@ class InlandFloodAnalysis:
                 FROM aal_losses a
                 JOIN buildings b ON a.ID = b.id
                 WHERE (a.aal_mean / NULLIF(b.building_cost, 0)) > 0.1;
+
+                -- Check for non-monotonic losses (loss decreases as return period increases)
+                -- This indicates non-monotonic hazard depth data which distorts AAL estimates
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT DISTINCT
+                    l_short.ID,
+                    'losses',
+                    'results_validation',
+                    'NON_MONOTONIC_LOSSES',
+                    'Mean loss decreases from return period ' || l_short.return_period || ' to ' || l_long.return_period || '; non-monotonic hazard depths may distort AAL estimates',
+                    'WARNING'
+                FROM losses l_short
+                JOIN losses l_long ON l_short.ID = l_long.ID
+                WHERE l_short.return_period < l_long.return_period
+                  AND l_short.loss_mean > l_long.loss_mean
+                  AND l_short.loss_mean > 0;
             '''
 
             connection.sql(sql)
@@ -796,7 +828,9 @@ class InlandFloodAnalysis:
         use_occupancy = 'occupancy_type' not in self.wildcard_fields
         use_foundation = 'foundation_type' not in self.wildcard_fields
         use_stories = 'number_stories' not in self.wildcard_fields
+        use_sqft = 'area' not in self.wildcard_fields
         use_construction = 'general_building_type' not in self.wildcard_fields
+        use_flood_peril_type = 'flood_peril_type' not in self.wildcard_fields
 
         structure_query = '''
         CREATE TABLE structure_damage_functions AS
@@ -833,11 +867,27 @@ class InlandFloodAnalysis:
                     WHEN {use_stories} AND b.number_stories IS NOT NULL AND c.story_min IS NOT NULL AND c.story_max IS NOT NULL 
                         AND NOT (b.number_stories BETWEEN c.story_min AND c.story_max) THEN 0
                     
+                    -- Sqft (Area) Matching (conditionally enabled):
+                    -- Check whether the building's area falls within the curve's sqft range.
+                    -- A NULL sqft_min means no lower bound; a NULL sqft_max means no upper bound.
+                    -- Both NULL → curve applies to any area (wildcard).
+                    WHEN {use_sqft} AND b.area IS NOT NULL
+                        AND NOT (
+                            (c.sqft_min IS NULL OR b.area >= c.sqft_min)
+                            AND (c.sqft_max IS NULL OR b.area <= c.sqft_max)
+                        ) THEN 0
+                    
                     -- Construction Type Matching (conditionally enabled):
                     -- Direct comparison of construction material codes (W=Wood, M=Masonry, C=Concrete, S=Steel, MH=Manufactured Housing)
                     -- Preprocessed from numeric codes in Milliman data, direct field in NSI data
                     WHEN {use_construction} AND b.general_building_type IS NOT NULL 
                         AND b.general_building_type != c.construction_type THEN 0
+                    
+                    -- Flood Peril Type Matching (conditionally enabled):
+                    -- Direct comparison of flood peril type codes (RLS, RLL, RHS, RHL, CHW, CMV, CST)
+                    -- Assigned to each building by _assign_flood_peril_type based on velocity/duration
+                    WHEN {use_flood_peril_type} AND b.flood_peril_type IS NOT NULL AND c.flood_peril_type IS NOT NULL
+                        AND b.flood_peril_type != c.flood_peril_type THEN 0
                     
                     -- If none of the mismatch conditions triggered, it's a valid match
                     ELSE 1
@@ -887,7 +937,9 @@ class InlandFloodAnalysis:
             use_occupancy=use_occupancy,
             use_foundation=use_foundation,
             use_stories=use_stories,
-            use_construction=use_construction
+            use_sqft=use_sqft,
+            use_construction=use_construction,
+            use_flood_peril_type=use_flood_peril_type
         )
         connection.execute("DROP TABLE IF EXISTS structure_damage_functions")
         connection.execute(structure_query)
@@ -1039,6 +1091,238 @@ class InlandFloodAnalysis:
         )
         connection.execute("DROP TABLE IF EXISTS inventory_damage_functions")
         connection.execute(inventory_query)          
+
+    def _gather_missing_functions(self, connection: duckdb.DuckDBPyConnection) -> None:
+        """Add damage functions for buildings not matched by _gather_damage_functions.
+
+        Buildings may be unmatched when their ranged attributes (number_stories, area)
+        fall outside the min/max bounds defined in xref_structures. This method clamps
+        those values to the nearest available bound:
+        - Values that are NULL or below the minimum range: use the minimum bound curve
+        - Values above the maximum range: use the maximum bound curve
+
+        Matched records are inserted into structure_damage_functions with appropriate
+        probability weights. Validation log entries are recorded for each building
+        with a clamped attribute.
+        """
+
+        use_occupancy = 'occupancy_type' not in self.wildcard_fields
+        use_foundation = 'foundation_type' not in self.wildcard_fields
+        use_stories = 'number_stories' not in self.wildcard_fields
+        use_sqft = 'area' not in self.wildcard_fields
+        use_construction = 'general_building_type' not in self.wildcard_fields
+        use_flood_peril_type = 'flood_peril_type' not in self.wildcard_fields
+
+        # Build a temp table with clamped matches and clamp reasons so we can
+        # insert into both structure_damage_functions and validation_log.
+        create_sql = '''
+        CREATE OR REPLACE TEMP TABLE _clamped_matches AS
+        WITH
+        -- Identify buildings with no existing damage function match
+        missing_buildings AS (
+            SELECT b.*
+            FROM buildings b
+            LEFT JOIN structure_damage_functions sdf ON b.id = sdf.building_id
+            WHERE sdf.building_id IS NULL
+        ),
+
+        -- Match missing buildings on non-range attributes only (same attribute
+        -- logic as _gather_damage_functions but without story/sqft range checks)
+        non_range_candidates AS (
+            SELECT
+                b.id,
+                b.number_stories,
+                b.area,
+                b.first_floor_height,
+                c.damage_function_id,
+                c.story_min,
+                c.story_max,
+                c.sqft_min,
+                c.sqft_max
+            FROM missing_buildings b
+            CROSS JOIN xref_structures c
+            WHERE (
+                CASE
+                    WHEN {use_occupancy} AND b.occupancy_type IS NOT NULL AND c.occupancy_type IS NOT NULL
+                        AND b.occupancy_type != c.occupancy_type THEN 0
+
+                    WHEN {use_foundation} AND b.foundation_type IS NOT NULL AND c.foundation_type IS NOT NULL AND
+                        CASE
+                            WHEN b.foundation_type = 'I' THEN 'PILE'
+                            WHEN b.foundation_type = 'B' THEN 'BASE'
+                            WHEN b.foundation_type = 'S' THEN 'SLAB'
+                            WHEN b.foundation_type = 'P' THEN 'PILE'
+                            WHEN b.foundation_type = 'W' THEN 'BASE'
+                            WHEN b.foundation_type = 'C' THEN 'SHAL'
+                            WHEN b.foundation_type = 'F' THEN 'SHAL'
+                            ELSE NULL
+                        END != c.foundation_type THEN 0
+
+                    WHEN {use_construction} AND b.general_building_type IS NOT NULL
+                        AND b.general_building_type != c.construction_type THEN 0
+
+                    WHEN {use_flood_peril_type} AND b.flood_peril_type IS NOT NULL AND c.flood_peril_type IS NOT NULL
+                        AND b.flood_peril_type != c.flood_peril_type THEN 0
+
+                    ELSE 1
+                END = 1
+            )
+        ),
+
+        -- Compute global range bounds across all matching curves per building
+        with_bounds AS (
+            SELECT
+                nrc.*,
+                MIN(CASE WHEN story_min IS NOT NULL THEN story_min END) OVER (PARTITION BY id) AS global_story_min,
+                MAX(CASE WHEN story_max IS NOT NULL THEN story_max END) OVER (PARTITION BY id) AS global_story_max,
+                MIN(CASE WHEN sqft_min IS NOT NULL THEN sqft_min END) OVER (PARTITION BY id) AS global_sqft_min,
+                MAX(CASE WHEN sqft_max IS NOT NULL THEN sqft_max END) OVER (PARTITION BY id) AS global_sqft_max
+            FROM non_range_candidates nrc
+        ),
+
+        -- Calculate effective (clamped) values and clamp reasons
+        with_effective AS (
+            SELECT
+                wb.*,
+                -- Effective stories: clamp to [global_story_min, global_story_max]
+                CASE
+                    WHEN NOT {use_stories} THEN number_stories
+                    WHEN global_story_min IS NULL THEN number_stories
+                    WHEN number_stories IS NULL OR number_stories < global_story_min THEN global_story_min
+                    WHEN number_stories > global_story_max THEN global_story_max
+                    ELSE number_stories
+                END AS effective_stories,
+                -- Effective sqft: clamp to [global_sqft_min, global_sqft_max]
+                CASE
+                    WHEN NOT {use_sqft} THEN area
+                    WHEN global_sqft_min IS NULL THEN area
+                    WHEN area IS NULL OR area < global_sqft_min THEN global_sqft_min
+                    WHEN area > global_sqft_max THEN global_sqft_max
+                    ELSE area
+                END AS effective_sqft,
+                -- Story clamp reason
+                CASE
+                    WHEN NOT {use_stories} THEN NULL
+                    WHEN global_story_min IS NULL THEN NULL
+                    WHEN number_stories IS NULL THEN 'STORIES_NULL_CLAMPED_TO_MIN'
+                    WHEN number_stories < global_story_min THEN 'STORIES_BELOW_MIN'
+                    WHEN number_stories > global_story_max THEN 'STORIES_ABOVE_MAX'
+                    ELSE NULL
+                END AS story_clamp,
+                -- Sqft clamp reason
+                CASE
+                    WHEN NOT {use_sqft} THEN NULL
+                    WHEN global_sqft_min IS NULL THEN NULL
+                    WHEN area IS NULL THEN 'SQFT_NULL_CLAMPED_TO_MIN'
+                    WHEN area < global_sqft_min THEN 'SQFT_BELOW_MIN'
+                    WHEN area > global_sqft_max THEN 'SQFT_ABOVE_MAX'
+                    ELSE NULL
+                END AS sqft_clamp
+            FROM with_bounds wb
+        ),
+
+        -- Filter using effective (clamped) range values
+        range_matched AS (
+            SELECT *
+            FROM with_effective
+            WHERE
+                (NOT {use_stories} OR story_min IS NULL OR story_max IS NULL
+                 OR effective_stories BETWEEN story_min AND story_max)
+                AND (NOT {use_sqft}
+                     OR (sqft_min IS NULL OR effective_sqft >= sqft_min)
+                        AND (sqft_max IS NULL OR effective_sqft <= sqft_max))
+        ),
+
+        -- Calculate match frequencies for weight assignment
+        frequencies AS (
+            SELECT
+                id, damage_function_id, first_floor_height,
+                0 AS ffh_sig,
+                number_stories, area,
+                global_story_min, global_story_max,
+                global_sqft_min, global_sqft_max,
+                story_clamp, sqft_clamp,
+                COUNT(*) OVER (PARTITION BY id) AS total_matches,
+                COUNT(*) OVER (PARTITION BY id, damage_function_id) AS curve_count
+            FROM range_matched
+        )
+
+        SELECT DISTINCT
+            id AS building_id,
+            damage_function_id,
+            first_floor_height,
+            ffh_sig,
+            CAST(curve_count AS DOUBLE) / NULLIF(total_matches, 0) AS weight,
+            number_stories, area,
+            global_story_min, global_story_max,
+            global_sqft_min, global_sqft_max,
+            story_clamp, sqft_clamp
+        FROM frequencies;
+        '''.format(
+            use_occupancy=use_occupancy,
+            use_foundation=use_foundation,
+            use_stories=use_stories,
+            use_sqft=use_sqft,
+            use_construction=use_construction,
+            use_flood_peril_type=use_flood_peril_type
+        )
+
+        connection.execute(create_sql)
+
+        # Insert clamped matches into structure_damage_functions
+        connection.execute('''
+            INSERT INTO structure_damage_functions
+                (building_id, damage_function_id, first_floor_height, ffh_sig, weight)
+            SELECT building_id, damage_function_id, first_floor_height, ffh_sig, weight
+            FROM _clamped_matches
+        ''')
+
+        # Log validation entries for story clamping
+        connection.execute('''
+            INSERT INTO validation_log
+                (building_id, table_name, source, rule, message, severity)
+            SELECT DISTINCT
+                building_id,
+                'structure_damage_functions',
+                'gather_missing_functions',
+                story_clamp,
+                CASE story_clamp
+                    WHEN 'STORIES_NULL_CLAMPED_TO_MIN'
+                        THEN 'Building has no story count; damage function matched using minimum story range (' || global_story_min || ')'
+                    WHEN 'STORIES_BELOW_MIN'
+                        THEN 'Building story count (' || number_stories || ') below available curve range; clamped to minimum (' || global_story_min || ')'
+                    WHEN 'STORIES_ABOVE_MAX'
+                        THEN 'Building story count (' || number_stories || ') above available curve range; clamped to maximum (' || global_story_max || ')'
+                END,
+                'WARNING'
+            FROM _clamped_matches
+            WHERE story_clamp IS NOT NULL
+        ''')
+
+        # Log validation entries for sqft clamping
+        connection.execute('''
+            INSERT INTO validation_log
+                (building_id, table_name, source, rule, message, severity)
+            SELECT DISTINCT
+                building_id,
+                'structure_damage_functions',
+                'gather_missing_functions',
+                sqft_clamp,
+                CASE sqft_clamp
+                    WHEN 'SQFT_NULL_CLAMPED_TO_MIN'
+                        THEN 'Building has no area; damage function matched using minimum sqft range (' || global_sqft_min || ')'
+                    WHEN 'SQFT_BELOW_MIN'
+                        THEN 'Building area (' || CAST(ROUND(area, 0) AS INTEGER) || ') below available curve sqft range; clamped to minimum (' || global_sqft_min || ')'
+                    WHEN 'SQFT_ABOVE_MAX'
+                        THEN 'Building area (' || CAST(ROUND(area, 0) AS INTEGER) || ') above available curve sqft range; clamped to maximum (' || global_sqft_max || ')'
+                END,
+                'WARNING'
+            FROM _clamped_matches
+            WHERE sqft_clamp IS NOT NULL
+        ''')
+
+        # Cleanup
+        connection.execute("DROP TABLE IF EXISTS _clamped_matches")
 
     def _compute_damage_function_statistics(self, connection: duckdb.DuckDBPyConnection) -> None:
         # Compute the mean and std. deviation of the damage functions.
@@ -1246,10 +1530,10 @@ class InlandFloodAnalysis:
             SELECT
                 b.ID,
                 d.return_period,
-                b.building_cost * d.d_min AS loss_min,
-                b.building_cost * d.damage_percent_mean AS loss_mean,
-                b.building_cost * d.damage_percent_std AS loss_std,
-                b.building_cost * d.d_max AS loss_max
+                ROUND(b.building_cost * (d.d_min / 100.0), 2) AS loss_min,
+                ROUND(b.building_cost * (d.damage_percent_mean / 100.0), 2) AS loss_mean,
+                ROUND(b.building_cost * (d.damage_percent_std / 100.0), 2) AS loss_std,
+                ROUND(b.building_cost * (d.d_max / 100.0), 2) AS loss_max
             FROM buildings b
             JOIN damage_function_statistics d ON b.ID = d.building_id
         '''

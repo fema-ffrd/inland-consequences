@@ -19,7 +19,7 @@ def mock_buildings():
     """Provides a real NsiBuildings object with a small, fixed GeoDataFrame."""
     data = {
         'target_fid': [1, 2, 3],
-        'occtype': ['RES1', 'RES2', 'RES3'],
+        'occtype': ['RES1', 'RES2', 'RES3A'],
         'bldgtype': ['W', 'MH', 'M'],  # Wood, Manufactured Housing, Masonry
         'found_ht': [2.5, 3.0, 2.0],
         'found_type': ['S', 'C', 'I'],  # Slab, Crawl, Pile
@@ -104,23 +104,22 @@ def mock_vulnerability():
     mock.calculate_vulnerability.side_effect = mock_calculate_vulnerability
     return mock
 
-# Identifier for testing
-IN_MEMORY_DB_NAME = ':memory:integration_test_db'
-
 @pytest.fixture(scope="module") # Run once for all tests in this file
-def flood_analysis_results(mock_raster_collection, mock_buildings, mock_vulnerability):
+def flood_analysis_results(tmp_path_factory, mock_raster_collection, mock_buildings, mock_vulnerability):
     """
-    1. Patches the DB identifier to use a shared named in-memory DB.
+    1. Uses a temp directory for the DB file via tmp_path_factory.
     2. Instantiates the InlandFloodAnalysis.
     3. Runs the expensive 'calculate_losses' method once to populate the DB.
     4. Yields the connected analysis for assertions.
     """
     from unittest.mock import patch
     
-    # 1. Patch the identifier (HACK)
+    db_path = str(tmp_path_factory.mktemp("flood_analysis") / "test_analysis.duckdb")
+
+    # 1. Patch the identifier to use a temp file DB
     with patch(
         "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier", 
-        return_value=IN_MEMORY_DB_NAME
+        return_value=db_path
     ):
         # 2. Instantiate and use the context manager
         analysis = InlandFloodAnalysis(
@@ -172,5 +171,38 @@ def test_calculate_losses_duckdb(flood_analysis_results):
     assert conn is not None
     
 
-    # Now we can test the losses
+def test_all_buildings_have_damage_function(flood_analysis_results):
+    """Test that every building has at least one entry in structure_damage_functions."""
+    conn = flood_analysis_results.conn
+
+    unmatched = conn.execute("""
+        SELECT b.id
+        FROM buildings b
+        LEFT JOIN structure_damage_functions sdf ON b.id = sdf.building_id
+        WHERE sdf.building_id IS NULL
+    """).fetchall()
+
+    assert unmatched == [], (
+        f"Buildings with no damage function assigned: {unmatched}"
+    )
+
+
+def test_structure_damage_functions_one_per_building(flood_analysis_results):
+    """Test that each building_id has exactly one record in structure_damage_functions.
+
+    With flood_peril_type matching enabled, each building is assigned a single
+    peril type (derived from velocity/duration) which resolves to exactly one DDF.
+    """
+    conn = flood_analysis_results.conn
+
+    duplicates = conn.execute("""
+        SELECT building_id, COUNT(*) AS cnt
+        FROM structure_damage_functions
+        GROUP BY building_id
+        HAVING cnt > 1
+    """).fetchall()
+
+    assert duplicates == [], (
+        f"Found building_ids with multiple structure_damage_functions records: {duplicates}"
+    )
     
