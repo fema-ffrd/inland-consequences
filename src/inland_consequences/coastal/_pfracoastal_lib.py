@@ -752,10 +752,10 @@ class _PFRACoastal_Lib:
     #	buildSampledLoss2()
     # 	Calc_Nrp_AnnLoss4()
     def runMC_AALU_x4(self, in_tab: pd.DataFrame, pvals: pd.DataFrame, in_building: int, inputs) -> pd.DataFrame:
-        this_bldg_attr = in_tab.query(f"BID = {in_building}")
+        this_bldg_attr = in_tab.query(f"BID = {in_building}").copy()
         
         # Build the loss table by building flood depth
-        FBtab0 = self.buildBldgFloodDepthTable6()
+        FBtab0 = self.buildBldgFloodDepthTable6(this_bldg_attr, inputs.use_waves)
         
         #check for truncated output
         if not np.any(FBtab0.columns.isin(["rLOSSLw"])):
@@ -843,7 +843,7 @@ class _PFRACoastal_Lib:
         if MCLossTab.notna().query("MC_rp == True").shape[0] < 2:
             out_df = pd.DataFrame(data={"BID":in_building, "BAAL":0, "BAALmin":0, "BAALmax":0, "FLAG_DF16":in_bldg_flag}, index=[0])
         else:
-            out_df = pd.DataFrame(data={"BID":bid, 
+            out_df = pd.DataFrame(data={"BID":in_building, 
                                            "BAAL":round(self.Calc_Nrp_AnnLoss4(MCLossTab["MC_Be"], MCLossTab["MC_rp"]),0),
                                            "BAALmin":round(self.Calc_Nrp_AnnLoss4(MCLossTab["MC_Lw"], MCLossTab["MC_rp"]),0),
                                            "BAALmax":round(self.Calc_Nrp_AnnLoss4(MCLossTab["MC_Up"], MCLossTab["MC_rp"]),0), 
