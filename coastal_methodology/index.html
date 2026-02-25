@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Coastal Consequences Methodology - Inland Consequences</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Coastal Consequences Methodology";
+        var mkdocs_page_input_path = "coastal_methodology.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Inland Consequences
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="..">Consequences Solution</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Methodlogy</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../inventory_methodology/">Inventory Methodology</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../buildingvalidation_techapproach/">Building Inventory Validation Flags Technical Approach</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hazardvalidation_techapproach/">Hazard Validation Flag Technical Approach</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../inland_methodology/">Inland Consquences Methodology</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Coastal Consequences Methodology</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#hazard-data-inputs">Hazard Data Inputs</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#stillwater-elevation-nodal-data-swel">Stillwater Elevation Nodal Data (SWEL)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#swel-uncertainty-nodal-data">SWEL Uncertainty Nodal Data</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#controlling-wave-height-hc-nodal-data">Controlling Wave Height (Hc) Nodal Data</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#wave-height-uncertainty-he-nodal-data">Wave Height Uncertainty (He) Nodal Data</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#depth-damage-function-assignment">Depth-Damage Function Assignment</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#loss-calculations">Loss Calculations</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#determining-depth-at-structure">Determining Depth at Structure</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#determining-depth-in-structure-building-flood-depth">Determining Depth in Structure (Building Flood Depth)</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#total-water-level-uncertainty">Total Water Level Uncertainty</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#flood-depth-uncertainty-at-the-structure">Flood Depth Uncertainty at the Structure</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#applying-the-depth-damage-function">Applying the Depth-Damage Function</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#generating-probabilistic-events-and-storm-elevations">Generating Probabilistic Events and Storm Elevations</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#calculating-average-annualized-loss">Calculating Average Annualized Loss</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#results">Results</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#results-shapefile">Results Shapefile</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#wse-shapefile">WSE Shapefile</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#wav-shapefile">WAV Shapefile</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#prep-shapefile">PREP Shapefile</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#heatmap">Heatmap</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#run-logfile">Run Logfile</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#building-csvs">Building .csvs</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Technical Implementation</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../building_inventories/">Building Inventories Technical Implementation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../ddf_tech_implementation/">Inland Consequences Depth-Damage Function Technical Implementation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../AAL_tech_implementation/">Average Annualized Loss (AAL) Technical Implementation</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Inland Consequences</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Methodlogy</li>
+      <li class="breadcrumb-item active">Coastal Consequences Methodology</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/fema-ffrd/inland-consequences/edit/master/docs/coastal_methodology.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="coastal-consequences-methodology">Coastal Consequences Methodology<a class="headerlink" href="#coastal-consequences-methodology" title="Permanent link">&para;</a></h1>
+<h2 id="hazard-data-inputs">Hazard Data Inputs<a class="headerlink" href="#hazard-data-inputs" title="Permanent link">&para;</a></h2>
+<p>The coastal consequence methodology relies on a set of core hazard inputs that collectively describe the coastal flooding conditions relevant to damage and loss estimation at each structure. These inputs include water surface levels, wave heights, and associated uncertainty. While designed to ingest probabilistic coastal hazard datasets such as those from the North Atlantic Coast Comprehensive Study (NACCS) and similar probabilistic storm surge/wave products, the methodology is flexible and can operate with any valid hazard data provided in the required formats. The sections below describe the role, requirements, and assumptions associated with each hazard input.</p>
+<h3 id="stillwater-elevation-nodal-data-swel">Stillwater Elevation Nodal Data (SWEL)<a class="headerlink" href="#stillwater-elevation-nodal-data-swel" title="Permanent link">&para;</a></h3>
+<p>Stillwater elevation represents the baseline coastal water level associated with storm surge and tide, excluding direct wave effects. SWEL is a required hazard input and forms the foundation for flood depth and total water level calculations.</p>
+<p>Hazard datasets are expected as point (nodal) estimates of SWEL at multiple annual-chance exceedance levels (e.g., 1-year through 10,000-year). For each structure, SWEL values are transferred from nearby hazard nodes using a spatial nearest-neighbor averaging approach, which computes a weighted mean of the nearest SWEL values for each frequency. SWEL must be provided in consistent vertical units (feet above a common datum) and aligned with structure elevation data.</p>
+<h3 id="swel-uncertainty-nodal-data">SWEL Uncertainty Nodal Data<a class="headerlink" href="#swel-uncertainty-nodal-data" title="Permanent link">&para;</a></h3>
+<p>SWEL uncertainty quantifies the confidence bounds around the best-estimate water level. Probabilistic coastal hazard products typically include an upper confidence limit (e.g., 84th percentile) in addition to the best estimate. The difference between the upper confidence limit and the best estimate is used to approximate a one-standard-deviation uncertainty for SWEL at each frequency.</p>
+<p>When uncertainty data are supplied, the methodology propagates this variability into flood depth and total water level uncertainty, which influences damage and loss estimates. If uncertainty is not provided, the model assumes zero uncertainty (deterministic best estimate) for SWEL.</p>
+<h3 id="controlling-wave-height-hc-nodal-data">Controlling Wave Height (Hc) Nodal Data<a class="headerlink" href="#controlling-wave-height-hc-nodal-data" title="Permanent link">&para;</a></h3>
+<p>Wave effects play a critical role in coastal damage processes by contributing to runup, impact forces, and overall structural stress. Controlling wave height (Hc) is the wave metric used in damage estimation and must be supplied for each annual-chance frequency. If input data are provided as significant wave height (Hs), a user must use a conversion factor (e.g., 1.6 × Hs) to approximate controlling wave height as a preprocessing step, prior to ingestion into the Consequences Solution.</p>
+<p>Similar to SWEL, wave height values are spatially transferred to structures using a nearest-neighbor averaging scheme. Controlling wave height inputs is essential for differentiating wave exposure regimes in the damage function assignment.</p>
+<h3 id="wave-height-uncertainty-he-nodal-data">Wave Height Uncertainty (He) Nodal Data<a class="headerlink" href="#wave-height-uncertainty-he-nodal-data" title="Permanent link">&para;</a></h3>
+<p>Wave height uncertainty quantifies variability in the estimated wave conditions and is typically derived from confidence limit datasets accompanying the best-estimate wave heights. As with SWEL uncertainty, the difference between the upper confidence limit and the best estimate for wave height is used to approximate a one-standard-deviation uncertainty term.</p>
+<p>This uncertainty is propagated in coastal damage calculations by probabilistically blending depth-damage functions from multiple wave regimes based on the likelihood of different wave height intervals at a given event. For example, if wave height uncertainty indicates a 40% chance of falling within the range of V-Zone damage functions (&gt; 3 feet) and 60% chance of A-Zone (&gt;1 to 3 feet), the DDFs are weighted accordingly.</p>
+<h2 id="depth-damage-function-assignment">Depth-Damage Function Assignment<a class="headerlink" href="#depth-damage-function-assignment" title="Permanent link">&para;</a></h2>
+<p>Structural damage is estimated using coastal-specific depth-damage functions (DDFs) that relate flood depth above the first floor to percent damage. Damage is evaluated over a continuous range of building flood depths (BFDs) from -4 to +16 feet relative to the first-floor elevation (depth in-structure), consistent with the domain of the underlying DDFs.</p>
+<p>For each building, a family of four depth damage functions are chosen based on the building foundation type, number of stories, and basement finish type. Each of the four damage functions represents a different environmental scenario:</p>
+<ul>
+<li><strong>DF1: freshwater inundation</strong></li>
+</ul>
+<p>Although DF1, representing freshwater inundation, is defined for each family of building type, it is not used by this tool to calculate building damage and loss.</p>
+<ul>
+<li>
+<p><strong>DF2: saltwater inundation with waves less than 1 feet</strong></p>
+</li>
+<li>
+<p><strong>DF3: saltwater inundation with waves less than or equal to 1 foot and less than 3 feet</strong></p>
+</li>
+<li>
+<p><strong>DF4: saltwater inundation with waves greater than or equal to 3 feet</strong></p>
+</li>
+</ul>
+<p>The Coastal Consequences Methodology uses a probabilistic blending approach to combine the three wave-specific damage curves (DF2, DF3, DF4) into a single composite damage curve for each structure. At each building flood depth (BFD), the probability of realizing wave conditions in each wave category is computed using a normal cumulative distribution function (CDF), where the mean is equal to the controlling wave height (Hc) and the standard deviation is equal to the wave height uncertainty (He):</p>
+<ul>
+<li><strong>Probability of waves &lt; 1 ft</strong> = CDF evaluated at 1 ft</li>
+<li><strong>Probability of waves ≥ 3 ft</strong> = 1 − CDF evaluated at 3 ft</li>
+<li><strong>Probability of waves ≥ 1 ft and &lt; 3 ft</strong> = remainder probability</li>
+</ul>
+<p>These probabilities are used as weights to combine the three wave-dependent damage curves at each flood depth. The resulting composite damage value is calculated as:</p>
+<div class="arithmatex">\[
+D =
+\left(D_{3p} \cdot P_{3p}\right) +
+\left(D_{1\text{-}3} \cdot P_{1\text{-}3}\right) +
+\left(D_{\mathrm{lt1}} \cdot P_{\mathrm{lt1}}\right)
+\]</div>
+<p><strong>Where:</strong></p>
+<ul>
+<li><span class="arithmatex">\(D\)</span> = composite percent damage at a given building flood depth</li>
+<li><span class="arithmatex">\(D_{3p}\)</span> = percent damage from the <span class="arithmatex">\(\ge 3\)</span> ft wave depth–damage function</li>
+<li><span class="arithmatex">\(D_{1\text{-}3}\)</span> = percent damage from the 1–3 ft wave depth–damage function</li>
+<li><span class="arithmatex">\(D_{\mathrm{lt1}}\)</span> = percent damage from the <span class="arithmatex">\(&lt;1\)</span> ft wave depth–damage function</li>
+<li><span class="arithmatex">\(P_{3p}\)</span> = probability of <span class="arithmatex">\(\ge 3\)</span> ft wave conditions</li>
+<li><span class="arithmatex">\(P_{1\text{-}3}\)</span> = probability of 1–3 ft wave conditions</li>
+<li><span class="arithmatex">\(P_{\mathrm{lt1}}\)</span> = probability of <span class="arithmatex">\(&lt;1\)</span> ft wave conditions</li>
+</ul>
+<p>This process produces a single, depth-dependent damage curve that reflects both flood depth and uncertainty in wave conditions.</p>
+<p><em>Figure 1. Example of a building wave height probabilities (Top) and resultant combined damage function (Bottom).</em></p>
+<p><img alt="Figure 1. Example of building wave height probabilities (Top) and resultant combined damage function (Bottom)." src="../images/CoastalDDFMethod_WaveHeightProb.png" /></p>
+<h2 id="loss-calculations">Loss Calculations<a class="headerlink" href="#loss-calculations" title="Permanent link">&para;</a></h2>
+<p>The coastal consequence methodology calculates building losses by combining hazard inputs, depth-damage functions, and probabilistic event sampling. It translates hazard conditions (stillwater elevation and wave height) into building flood depths, applies the composite DDFs to estimate damage, and integrates across event probabilities to produce annualized loss estimates. The subsections below describe each step.</p>
+<h3 id="determining-depth-at-structure">Determining Depth at Structure<a class="headerlink" href="#determining-depth-at-structure" title="Permanent link">&para;</a></h3>
+<p>Determining flood depth at a structure involves transferring coastal hazard information to each building and converting those hazard conditions into depth relative to the building’s first floor. The primary coastal hazard inputs are stillwater elevation (SWEL) and controlling wave height, which are provided at discrete hazard node locations across a range of annual-chance frequencies.</p>
+<p>To associate these hazard values with individual structures, a nearest-neighbor spatial approach is applied, as illustrated in Figure 2. For each building, the three nearest SWEL nodes are identified, and their values are averaged to assign a mean stillwater elevation at each frequency. An identical process is applied independently to controlling wave height nodes, resulting in a mean wave height value for each structure at each frequency. Uncertainty values for both SWEL and wave height are derived from corresponding confidence-limit datasets and are carried forward for use in damage and loss calculations. Note that user interviews indicated a desire to modify this method by weighting the proximity of the nearest neighbor. Future updates may modify the existing approach where the 3 nearest values all have equal weight.</p>
+<p><em>Figure 2. Map of Example Building and Node locations.</em></p>
+<p><img alt="Figure 2. Map of Example Building and Node locations." src="../images/Building3NodeApproach.png" /></p>
+<h3 id="determining-depth-in-structure-building-flood-depth">Determining Depth in Structure (Building Flood Depth)<a class="headerlink" href="#determining-depth-in-structure-building-flood-depth" title="Permanent link">&para;</a></h3>
+<p>For each structure and annual-chance frequency, the assigned stillwater elevation and wave contribution are combined to derive the Total Water Level (TWL) at the structure. TWL represents the water surface elevation required to produce a given level of inundation and serves as the linkage between coastal hazard inputs and building-level flood depth. The building flood depth (BFD) is then calculated as the difference between the total water level and the structure’s first-floor elevation (FFE). BFD represents the depth of water relative to the first floor (depth in-structure) and is the independent variable used in the application of depth-damage functions.</p>
+<p>The assigned TWL values across annual-chance frequencies define a building-specific flood frequency curve, which relates water level to annual exceedance probability. For each value of building flood depth, the TWL required to produce that depth is identified using the structure’s first-floor elevation, and the corresponding event probability—or recurrence interval—is extracted from the flood frequency curve. At this stage, the associated hazard attributes, including stillwater elevation, wave height, and their respective uncertainty terms, are transferred to the flood-depth-based calculation table. This process establishes a consistent relationship between flood depth at the structure, the probability of the event producing that depth, and the uncertainty associated with the underlying hazard inputs.</p>
+<h4 id="total-water-level-uncertainty">Total Water Level Uncertainty<a class="headerlink" href="#total-water-level-uncertainty" title="Permanent link">&para;</a></h4>
+<p>Uncertainty in total water level reflects uncertainty in both surge and wave conditions. These uncertainty components are assumed to be independent and are combined using a root-sum-of-squares formulation.</p>
+<p>The uncertainty associated with total water level (TWLe) is calculated by combining the uncertainty in stillwater elevation (SWELe) and the uncertainty in controlling wave height (He), with a scaling factor applied to account for the conversion from controlling wave height to an equivalent breaking wave contribution consistent with the damage function formulation:</p>
+<div class="arithmatex">\[
+\mathrm{TWLe} = \sqrt{(\mathrm{SWELe})^2 + (0.7 \cdot \mathrm{He})^2}
+\]</div>
+<p>The coefficient of 0.7 represents the conversion from controlling wave height to breaking wave height used in coastal damage estimation.</p>
+<h4 id="flood-depth-uncertainty-at-the-structure">Flood Depth Uncertainty at the Structure<a class="headerlink" href="#flood-depth-uncertainty-at-the-structure" title="Permanent link">&para;</a></h4>
+<p>Flood depth uncertainty represents variability in the estimated depth of inundation relative to the structure’s first floor. This uncertainty arises from two independent sources—uncertainty in total water level and uncertainty in first-floor elevation.</p>
+<p>Flood depth uncertainty (BFDe) is calculated by combining these components using a root-sum-of-squares approach:</p>
+<div class="arithmatex">\[
+\mathrm{BFDe} = \sqrt{(\mathrm{FFEe})^2 + (\mathrm{TWLe})^2}
+\]</div>
+<p>where FFEe represents uncertainty in first-floor elevation and TWLe represents uncertainty in total water level.</p>
+<p>Flood depth uncertainty is propagated into damage calculations by evaluating depth-damage functions at flood depths offset by plus and minus one standard deviation. This approach produces low-, best-, and high-estimate damage and loss values while preserving the nonlinear relationship between flood depth and structural damage.</p>
+<h3 id="applying-the-depth-damage-function">Applying the Depth-Damage Function<a class="headerlink" href="#applying-the-depth-damage-function" title="Permanent link">&para;</a></h3>
+<p>Once the building flood depth relative to the first floor has been determined for each structure, the depth-damage functions are applied to estimate structural damage. Damage is evaluated using the composite depth-damage function developed for the structure, which integrates building attributes and probabilistic wave effects.</p>
+<p>For each flood depth, the composite depth-damage function is evaluated to estimate the percent of building damage associated with that level of inundation. To account for uncertainty in flood depth, damage is not evaluated at a single depth alone. Instead, three damage estimates are produced using the same composite damage function evaluated at different depth conditions.</p>
+<p>The best-estimate damage corresponds to the composite depth-damage function evaluated at the mean building flood depth. The low-estimate damage is obtained by evaluating the damage function at a flood depth reduced by one standard deviation of flood depth uncertainty, while the high-estimate damage is obtained by evaluating the same damage function at a flood depth increased by one standard deviation. This approach propagates flood depth uncertainty through the damage calculation while preserving the nonlinear relationship between depth and structural damage.</p>
+<p><em>Figure 3. Example of deriving a low, best- and high-estimate of damage using the combined damage curve and a single value of BFD and associated BFD error.</em></p>
+<p><img alt="Figure 3. low-, best-, and high-estimate damage." src="../images/CoastalDDFMethod_LowBestHigh.png" /></p>
+<p>Percent damage values are then converted to monetary losses by multiplying the estimated damage percentage by the structure’s replacement value. Losses are constrained to physically plausible conditions—structures that experience negligible inundation or remain effectively dry under a given event are assigned zero loss. These loss estimates are carried forward for probabilistic sampling and average annualized loss calculations.</p>
+<h3 id="generating-probabilistic-events-and-storm-elevations">Generating Probabilistic Events and Storm Elevations<a class="headerlink" href="#generating-probabilistic-events-and-storm-elevations" title="Permanent link">&para;</a></h3>
+<p>To capture the full range of possible events contributing to loss, the methodology uses Monte Carlo sampling to generate a probabilistic set of event probabilities. A user-defined number of random probabilities are sampled between 0.0001 and 1.0. Each probability is mapped to corresponding SWEL and wave values and then to a flood depth and damage estimate. This procedure enables characterization of low-probability, high-impact events that contribute significantly to annualized loss.</p>
+<p>Alternatively, a suite of predefined storm magnitudes may be used to ensure consistency across analyses.</p>
+<h3 id="calculating-average-annualized-loss">Calculating Average Annualized Loss<a class="headerlink" href="#calculating-average-annualized-loss" title="Permanent link">&para;</a></h3>
+<p>Average Annualized Loss (AAL) represents the long-term expected annual loss at a structure and is calculated by integrating event losses across the full range of event probabilities. To compute AAL, the low-, best-, and high-estimate losses corresponding to each of the N probabilistic storm events are first paired with their associated event probabilities. These loss–probability pairs are then sorted in descending order of probability to ensure consistent numerical integration across return periods.</p>
+<p>AAL is calculated by numerically integrating the loss–frequency relationship using a trapezoidal approximation. For each adjacent pair of probabilistic events, the average loss between the two events is weighted by the difference in their return periods. This approach captures the contribution of both frequent, low-loss events and rare, high-loss events to the long-term expected annual loss.</p>
+<p>The structure-level AAL is calculated as:</p>
+<!-- mdformat off -->
+
+<div class="arithmatex">\[
+\mathrm{AAL} = \sum_{i=1}^{n-1}
+\left[
+(F_i - F_{i+1}) \cdot \frac{L_i + L_{i+1}}{2}
+\right]
++ (F_n \cdot L_n)
+\]</div>
+<p><strong>Where:</strong></p>
+<ul>
+<li><span class="arithmatex">\(n = N\)</span>, the total number of probabilistic events</li>
+<li><span class="arithmatex">\(F_i = \dfrac{1}{\text{ith Probability}}\)</span>, the return period associated with event <span class="arithmatex">\(i\)</span></li>
+<li><span class="arithmatex">\(L_i\)</span> = loss associated with event <span class="arithmatex">\(i\)</span></li>
+</ul>
+<!-- mdformat on -->
+
+<p>This calculation is performed independently for the low-, best-, and high-estimate loss curves, resulting in three AAL values for each structure—a minimum estimate, a best estimate, and a maximum estimate. These values characterize the expected annual loss while explicitly accounting for uncertainty in hazard intensity, flood depth, and damage response.</p>
+<h2 id="results">Results<a class="headerlink" href="#results" title="Permanent link">&para;</a></h2>
+<p>The existing tool provides a range of results output including a results, prep, wave height and water surface shapefile of each building point. In addition, there is a TAB folder containing a .csv for each building analyzed, a run log file and a .tif heat map.</p>
+<h3 id="results-shapefile">Results Shapefile<a class="headerlink" href="#results-shapefile" title="Permanent link">&para;</a></h3>
+<p>A shapefile of all building points with the fields described below:</p>
+<table>
+<thead>
+<tr>
+<th>Field Name</th>
+<th>Description</th>
+<th>Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FID</td>
+<td>Sequential numeric ID starts at 0</td>
+<td>Object ID</td>
+</tr>
+<tr>
+<td>Shape</td>
+<td>Point geometry</td>
+<td>Geometry</td>
+</tr>
+<tr>
+<td>BID</td>
+<td>Sequential numeric ID starts at 1</td>
+<td>Long</td>
+</tr>
+<tr>
+<td>ORIG_ID</td>
+<td>Original NSI and Milliman ID</td>
+<td>Text</td>
+</tr>
+<tr>
+<td>BLDG_DED</td>
+<td>Building Deductible ($1,500 default)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>BLDG_LIM</td>
+<td>Building Limit ($200,000 default)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>BLDG_VAL</td>
+<td>Building Value (USD)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>CNT_DED</td>
+<td>Content Deductible ($1,000 default)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>CNT_LIM</td>
+<td>Content Limit ($100,000 default)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>CNT_VALUE</td>
+<td>Content Value (USD)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>STORY</td>
+<td>Number of stories</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>FOUND</td>
+<td>Foundation type (2–9)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>BASEFIN</td>
+<td>Basement Finish Flag (0 or 1)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>FFH</td>
+<td>First floor height (feet)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>DEMFT</td>
+<td>Ground surface elevation (feet)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>ANLYS</td>
+<td>Analysis flag (0=no results, 1=included in analysis)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>BAAL</td>
+<td>Building AAL "Best Estimate" (USD)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>BAALmin</td>
+<td>Building minimum AAL (USD)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>BAALmax</td>
+<td>Building maximum AAL (USD)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>FLAG_DF16</td>
+<td>Damage function flag (0 or 1)</td>
+<td>Double</td>
+</tr>
+</tbody>
+</table>
+<h3 id="wse-shapefile">WSE Shapefile<a class="headerlink" href="#wse-shapefile" title="Permanent link">&para;</a></h3>
+<p>This shapefile contains the water surface elevation and uncertainty value in feet for each return period available at each building point. Fields are also available with the three nearest surge node IDs. A Valid field with a 0 or 1 where 0 is to be excluded from analysis due to having a 95% chance of the DEMFT above the flood elevation of the max event; 1 otherwise.</p>
+<h3 id="wav-shapefile">WAV Shapefile<a class="headerlink" href="#wav-shapefile" title="Permanent link">&para;</a></h3>
+<p>This shapefile contains the wave height and uncertainty value in feet for each return period available at each building point. Fields are also available with the three nearest surge node IDs. A Valid field with a 0 or 1 flag is provided that is currently unused.</p>
+<h3 id="prep-shapefile">PREP Shapefile<a class="headerlink" href="#prep-shapefile" title="Permanent link">&para;</a></h3>
+<p>This shapefile contains both the WSE and WAV data, as well as four DDFs IDs representing riverine, saltwater, coastal A and V. A DDF ID for erosion is currently unused. A summary of the inventory attributes is also included.</p>
+<h3 id="heatmap">Heatmap<a class="headerlink" href="#heatmap" title="Permanent link">&para;</a></h3>
+<p>A .tif grid with a resolution of ~200 meters is created with symbology that provides the total AAL in each grid cell.</p>
+<h3 id="run-logfile">Run Logfile<a class="headerlink" href="#run-logfile" title="Permanent link">&para;</a></h3>
+<p>Processing notes and runtime messages are printed to both the screen and to a text file. A text file that describes the input and output locations, the parallel processing and each major analysis step including validation messages. The text file is named <code>[x]_run.log</code>, and is found in the output directory.</p>
+<h3 id="building-csvs">Building .csvs<a class="headerlink" href="#building-csvs" title="Permanent link">&para;</a></h3>
+<p>A TAB folder contains a .csv for each building analyzed with detailed information if the user chooses. It includes the SWEL and WSE, the DDF probability weighting, the DDF IDs used with the damage percent and losses for the low, best and high hazard values for all return periods. These are provided for all buildings, regardless of exposure to flooding or impacts.</p>
+<p>Each loss table is a 202 row × 32 column table (including header row) that will contain the various necessary calculated values to derive building loss at each value of building flood depth from -4 feet to +16 feet by increments of 0.1 feet. The attributes of the table are described below:</p>
+<table>
+<thead>
+<tr>
+<th>FIELD</th>
+<th>Sample VALUE</th>
+<th>DESC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BID</td>
+<td>1234</td>
+<td>Unique integer building ID generated by code</td>
+</tr>
+<tr>
+<td>BFD</td>
+<td>-1.9</td>
+<td>Depth of flood above first floor</td>
+</tr>
+<tr>
+<td>DEM</td>
+<td>10.696</td>
+<td>Elevation from DEM in feet, NAVD88</td>
+</tr>
+<tr>
+<td>FFE</td>
+<td>11.696</td>
+<td>First Floor Elevation in feet, NAVD88</td>
+</tr>
+<tr>
+<td>FFEe</td>
+<td>0</td>
+<td>Error associated with FFE</td>
+</tr>
+<tr>
+<td>TWL</td>
+<td>9.796</td>
+<td>Total Water Elevation in feet, NAVD88</td>
+</tr>
+<tr>
+<td>TWLe</td>
+<td>1.603</td>
+<td>Error associated with TWL</td>
+</tr>
+<tr>
+<td>BFDe</td>
+<td>1.603</td>
+<td>Error associated with BFD</td>
+</tr>
+<tr>
+<td>RP</td>
+<td>138.168</td>
+<td>Return Period</td>
+</tr>
+<tr>
+<td>PVAL</td>
+<td>0.007237566</td>
+<td>Probability (1/RP)</td>
+</tr>
+<tr>
+<td>SWEL</td>
+<td>9.795997218</td>
+<td>SWEL in feet, NAVD88</td>
+</tr>
+<tr>
+<td>SWELe</td>
+<td>1.60332847</td>
+<td>Error associated with SWEL</td>
+</tr>
+<tr>
+<td>WET</td>
+<td>0.287238001</td>
+<td>Probability that ground at building is flooded</td>
+</tr>
+<tr>
+<td>Hc</td>
+<td>0</td>
+<td>Conditional wave height in feet</td>
+</tr>
+<tr>
+<td>Hce</td>
+<td>0</td>
+<td>Error associated with Hc</td>
+</tr>
+<tr>
+<td>PWL1</td>
+<td>1</td>
+<td>Probability of waves less than 1 foot</td>
+</tr>
+<tr>
+<td>PW13</td>
+<td>0</td>
+<td>Probability of waves between 1 and 3 feet</td>
+</tr>
+<tr>
+<td>PWG3</td>
+<td>0</td>
+<td>Probability of waves greater than 3 feet</td>
+</tr>
+<tr>
+<td>DDFfam</td>
+<td>2400</td>
+<td>Building's Coastal FFRD Depth-damage function family</td>
+</tr>
+<tr>
+<td>dfx1</td>
+<td>0</td>
+<td>Damage from DDFx1 (%)</td>
+</tr>
+<tr>
+<td>dfx2</td>
+<td>0.015</td>
+<td>Damage from DDFx2 (%)</td>
+</tr>
+<tr>
+<td>dfx3</td>
+<td>0.031</td>
+<td>Damage from DDFx3 (%)</td>
+</tr>
+<tr>
+<td>DAMLw</td>
+<td>0</td>
+<td>Low Estimate Damage (%)</td>
+</tr>
+<tr>
+<td>DAMPr</td>
+<td>0</td>
+<td>BE Combined Damage (%)</td>
+</tr>
+<tr>
+<td>DAMUp</td>
+<td>0.05624</td>
+<td>High Estimate Damage (%)</td>
+</tr>
+<tr>
+<td>BVAL</td>
+<td>1008431</td>
+<td>Building replacement value ($)</td>
+</tr>
+<tr>
+<td>rLOSSLw</td>
+<td>0</td>
+<td>Raw Low Building Loss ($)</td>
+</tr>
+<tr>
+<td>rLOSSBE</td>
+<td>0</td>
+<td>Raw BE Building Loss ($)</td>
+</tr>
+<tr>
+<td>rLOSSUp</td>
+<td>56714</td>
+<td>Raw High Building Loss ($)</td>
+</tr>
+<tr>
+<td>Loss_Lw</td>
+<td>0</td>
+<td>Final Low Building Loss ($)</td>
+</tr>
+<tr>
+<td>Loss_BE</td>
+<td>0</td>
+<td>Final BE Building Loss ($)</td>
+</tr>
+<tr>
+<td>Loss_Up</td>
+<td>56714</td>
+<td>Final High Building Loss ($)</td>
+</tr>
+</tbody>
+</table>
+<p>Based on integration with the inland consequences framework, future development is likely to include a notebook interface where the user can highlight and select desired outputs and file types.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../inland_methodology/" class="btn btn-neutral float-left" title="Inland Consquences Methodology"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../building_inventories/" class="btn btn-neutral float-right" title="Building Inventories Technical Implementation">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/fema-ffrd/inland-consequences" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../inland_methodology/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../building_inventories/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+      <script src="../javascripts/katex.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

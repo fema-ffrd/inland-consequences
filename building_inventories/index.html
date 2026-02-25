@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Building Inventories Technical Implementation - Inland Consequences</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Building Inventories Technical Implementation";
+        var mkdocs_page_input_path = "building_inventories.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Inland Consequences
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="..">Consequences Solution</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Methodlogy</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../inventory_methodology/">Inventory Methodology</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../buildingvalidation_techapproach/">Building Inventory Validation Flags Technical Approach</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hazardvalidation_techapproach/">Hazard Validation Flag Technical Approach</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../inland_methodology/">Inland Consquences Methodology</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../coastal_methodology/">Coastal Consequences Methodology</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Technical Implementation</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Building Inventories Technical Implementation</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#inventory-ingestion-and-processing-approach">Inventory Ingestion and Processing Approach</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#base-buildings-class">Base Buildings Class</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#base-buildings-schema">Base Buildings Schema</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#base-buildings-data-schema">Base Buildings Data Schema:</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#national-structures-inventory-nsi">National Structures Inventory (NSI)</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#nsi-2022-public-version">NSI 2022 Public Version</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#nsi-2022-public-inland-foundation-type-mapping">NSI 2022 Public – Inland Foundation Type Mapping</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#nsi-2022-public-coastal-foundation-type-mapping">NSI 2022 Public – Coastal Foundation Type Mapping</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nsi-2022-fema-enhanced-version">NSI 2022 FEMA-Enhanced Version</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#nsi-2022-fema-enhanced-inland-foundation-type-mapping">NSI 2022 FEMA-Enhanced — Inland Foundation Type Mapping</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nsi-data-schema">NSI Data Schema:</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#milliman-market-baskets-data">Milliman Market Baskets Data</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#milliman-inland-foundation-type-mapping">Milliman — Inland Foundation Type Mapping</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#milliman-coastal-foundation-type-mapping">Milliman — Coastal Foundation Type Mapping</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#milliman-data-schema">Milliman Data Schema:</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#user-defined-data">User Defined Data</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#requirements-for-user-defined-inventories">Requirements for User-Defined Inventories</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#field-mapping-approaches">Field Mapping Approaches</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#foundation-type-coding">Foundation Type Coding</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#data-validation">Data Validation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example-complete-user-defined-workflow">Example: Complete User-Defined Workflow</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../ddf_tech_implementation/">Inland Consequences Depth-Damage Function Technical Implementation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../AAL_tech_implementation/">Average Annualized Loss (AAL) Technical Implementation</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Inland Consequences</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Technical Implementation</li>
+      <li class="breadcrumb-item active">Building Inventories Technical Implementation</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/fema-ffrd/inland-consequences/edit/master/docs/building_inventories.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="building-inventories-technical-implementation">Building Inventories Technical Implementation<a class="headerlink" href="#building-inventories-technical-implementation" title="Permanent link">&para;</a></h1>
+<p>The <strong>Consequence Modeling Solution</strong> is designed to natively ingest the <strong>National Structures Inventory (NSI)</strong> and the <strong>Milliman Market Basket</strong> datasets out of the box, while also providing a pathway for users to integrate their own <strong>custom inventory data</strong>. <strong>Table 1</strong> identifies the supported data sources, versions, expected input formats, and applicable consequence-modeling pathways.</p>
+<p><strong>Table 1. Supported Inventory Data Sources</strong></p>
+<table>
+<thead>
+<tr>
+<th><strong>Data Source</strong></th>
+<th><strong>Version</strong></th>
+<th><strong>Input File Type</strong></th>
+<th><strong>Consequence Modeling</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>NSI</strong></td>
+<td>2022 Public Version</td>
+<td>GeoPackage</td>
+<td>Inland, Coastal</td>
+</tr>
+<tr>
+<td><strong>NSI</strong></td>
+<td>2022 FEMA-Enhanced Version</td>
+<td>File Geodatabase</td>
+<td>Inland only</td>
+</tr>
+<tr>
+<td><strong>Milliman Market Baskets</strong></td>
+<td>2021 Uniform, Uncorrelated</td>
+<td>Comma-Separated Values (CSV)</td>
+<td>Inland, Coastal</td>
+</tr>
+<tr>
+<td><strong>User-defined Inventories</strong></td>
+<td>User-defined</td>
+<td>User-defined</td>
+<td>Inland, Coastal</td>
+</tr>
+</tbody>
+</table>
+<p>For additional details on inventory requirements and methodology, refer to the <strong><a href="../inventory_methodology/">Inventory Methodology Documentation</a></strong>.</p>
+<hr />
+<h2 id="inventory-ingestion-and-processing-approach">Inventory Ingestion and Processing Approach<a class="headerlink" href="#inventory-ingestion-and-processing-approach" title="Permanent link">&para;</a></h2>
+<p>Regardless of which inventory type is provided, several <strong>required fields</strong> must be present to support loss calculations. However, the <strong>Consequence Solution</strong> is designed to minimize the amount of data preprocessing required from the user by implementing the following strategies:</p>
+<ul>
+<li><strong>Auto-detection</strong> of required fields based on common naming conventions</li>
+<li><strong>Auto-population</strong> of missing fields using documented default values</li>
+<li><strong>User-provided overrides</strong> for NSI and Milliman field names</li>
+<li><strong>Comprehensive documentation</strong> for each inventory source, including requirements for user-defined datasets</li>
+<li><strong>Schema validation</strong> to ensure completeness and correctness prior to modeling</li>
+</ul>
+<hr />
+<h2 id="base-buildings-class">Base Buildings Class<a class="headerlink" href="#base-buildings-class" title="Permanent link">&para;</a></h2>
+<p>The <strong>Base Buildings Class</strong> provides standardized field mapping for building inventories. It defines target fields that all consequence analysis operations use, but <strong>does not validate or impute missing fields</strong>. The base class simply maps source field names (via auto-detection or explicit overrides) to standardized target field names.</p>
+<p><strong>Subclasses extend the base class</strong> with schema validation and field imputation:</p>
+<ul>
+<li><strong>NsiBuildings</strong>: Validates NSI required fields and imputes optional fields using NSI-specific defaults</li>
+<li><strong>MillimanBuildings</strong>: Validates Milliman required fields and imputes optional fields (including creating fields not present in source data like <code>occupancy_type</code> and <code>area</code>)</li>
+<li><strong>User-defined</strong>: Can use base Buildings class directly (requires all fields present) or create a custom subclass with validation/imputation</li>
+</ul>
+<p>The Buildings class provides flexible field mapping through:</p>
+<ul>
+<li><strong>Automatic field detection</strong> using case-insensitive matching against common aliases</li>
+<li><strong>Explicit field overrides</strong> for non-standard field names</li>
+<li><strong>Property-based access</strong> to all target fields regardless of source naming</li>
+</ul>
+<h3 id="base-buildings-schema">Base Buildings Schema<a class="headerlink" href="#base-buildings-schema" title="Permanent link">&para;</a></h3>
+<p>The following schema defines all target fields used by the Consequence Modeling Solution. <strong>Table 1</strong> provides a summary of the target fields, their data types, and usage context.</p>
+<p><strong>Table 1. Base Buildings Target Fields</strong></p>
+<table>
+<thead>
+<tr>
+<th><strong>Target Field</strong></th>
+<th><strong>Data Type</strong></th>
+<th><strong>Description</strong></th>
+<th><strong>Used In</strong></th>
+<th><strong>Common Aliases</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>id</strong></td>
+<td>String</td>
+<td>Unique identifier for the building</td>
+<td>Inland, Coastal</td>
+<td>id, building_id, bldg_id, fd_id</td>
+</tr>
+<tr>
+<td><strong>occupancy_type</strong></td>
+<td>String</td>
+<td>HAZUS occupancy classification (e.g., RES1, COM1, IND2)</td>
+<td>Inland, Coastal</td>
+<td>occupancy_type, occtype, occupancy, occ_type, building_type</td>
+</tr>
+<tr>
+<td><strong>first_floor_height</strong></td>
+<td>Numeric</td>
+<td>First floor height above ground elevation (feet)</td>
+<td>Inland, Coastal</td>
+<td>first_floor_height, found_ht, first_floor_ht, ffh, floor_height</td>
+</tr>
+<tr>
+<td><strong>foundation_type</strong></td>
+<td>String</td>
+<td>Foundation type code (BASE, PILE, SHAL, SLAB)</td>
+<td>Inland, Coastal</td>
+<td>foundation_type, fndtype, found_type, fnd_type</td>
+</tr>
+<tr>
+<td><strong>number_stories</strong></td>
+<td>Numeric</td>
+<td>Number of stories (floors) in the building</td>
+<td>Inland, Coastal</td>
+<td>number_stories, num_story, numstories, stories, num_floors</td>
+</tr>
+<tr>
+<td><strong>area</strong></td>
+<td>Numeric</td>
+<td>Building floor area (square feet)</td>
+<td>Inland, Coastal</td>
+<td>area, sqft, building_area, floor_area</td>
+</tr>
+<tr>
+<td><strong>building_cost</strong></td>
+<td>Numeric</td>
+<td>Building structural replacement cost (USD)</td>
+<td>Inland, Coastal</td>
+<td>buildingcostusd, building_cost, val_struct, cost, building_value</td>
+</tr>
+<tr>
+<td><strong>content_cost</strong></td>
+<td>Numeric</td>
+<td>Contents replacement cost (USD)</td>
+<td>Inland, Coastal</td>
+<td>contentcostusd, content_cost, val_cont, contents_cost</td>
+</tr>
+<tr>
+<td><strong>inventory_cost</strong></td>
+<td>Numeric</td>
+<td>Business inventory replacement cost (USD)</td>
+<td>Inland, Coastal</td>
+<td>inventorycostusd, inventory_cost, val_inv, inv_cost</td>
+</tr>
+<tr>
+<td><strong>general_building_type</strong></td>
+<td>String</td>
+<td>Construction material code (W, M, C, S, MH)</td>
+<td>Inland</td>
+<td>general_building_type, bldgtype, generalbuildingtype</td>
+</tr>
+<tr>
+<td><strong>eq_building_type</strong></td>
+<td>String</td>
+<td>Earthquake-specific building type classification</td>
+<td>Earthquake</td>
+<td>eqbldgtypeid, eq_building_type, earthquake_building_type</td>
+</tr>
+<tr>
+<td><strong>eq_design_level</strong></td>
+<td>String</td>
+<td>Earthquake design level classification</td>
+<td>Earthquake</td>
+<td>eqdesignlevelid, eq_design_level, design_level</td>
+</tr>
+</tbody>
+</table>
+<h3 id="base-buildings-data-schema"><em>Base Buildings Data Schema:</em><a class="headerlink" href="#base-buildings-data-schema" title="Permanent link">&para;</a></h3>
+<pre><code class="language-json">{
+  &quot;$schema&quot;: &quot;http://json-schema.org/draft-07/schema#&quot;,
+  &quot;$id&quot;: &quot;https://example.com/schemas/buildings_schema.json&quot;,
+  &quot;title&quot;: &quot;Base Buildings Schema&quot;,
+  &quot;version&quot;: &quot;0.1.0&quot;,
+  &quot;description&quot;: &quot;Base schema defining standardized target fields for building inventories. The base Buildings class performs field mapping only. Specific implementations (NsiBuildings, MillimanBuildings) extend the base class with schema validation and field imputation. The 'required' attribute indicates whether a field must be present for consequence analysis, not whether the base class validates it.&quot;,
+  &quot;target fields&quot;: {
+    &quot;id&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;description&quot;: &quot;Unique identifier for the building&quot;,
+      &quot;required&quot;: true,
+      &quot;nullable&quot;: false,
+      &quot;used_in&quot;: [&quot;inland&quot;, &quot;coastal&quot;],
+      &quot;aliases&quot;: [&quot;id&quot;, &quot;building_id&quot;, &quot;bldg_id&quot;, &quot;fd_id&quot;]
+    },
+    &quot;occupancy_type&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;description&quot;: &quot;Occupancy type code following HAZUS classification (e.g., RES1, COM1, IND2)&quot;,
+      &quot;required&quot;: true,
+      &quot;nullable&quot;: false,
+      &quot;used_in&quot;: [&quot;inland&quot;, &quot;coastal&quot;],
+      &quot;aliases&quot;: [&quot;occupancy_type&quot;, &quot;occtype&quot;, &quot;occupancy&quot;, &quot;occ_type&quot;, &quot;building_type&quot;]
+    },
+    &quot;first_floor_height&quot;: {
+      &quot;type&quot;: &quot;number&quot;,
+      &quot;description&quot;: &quot;First floor height above ground elevation (feet)&quot;,
+      &quot;required&quot;: true,
+      &quot;nullable&quot;: false,
+      &quot;used_in&quot;: [&quot;inland&quot;, &quot;coastal&quot;],
+      &quot;aliases&quot;: [&quot;first_floor_height&quot;, &quot;found_ht&quot;, &quot;first_floor_ht&quot;, &quot;ffh&quot;, &quot;floor_height&quot;]
+    },
+    &quot;foundation_type&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;description&quot;: &quot;Foundation type code for inland flood modeling (I=Pile, P=Pier, W=Solid Wall, B=Basement, C=Crawl, F=Fill, S=Slab)&quot;,
+      &quot;required&quot;: true,
+      &quot;nullable&quot;: false,
+      &quot;used_in&quot;: [&quot;inland&quot;, &quot;coastal&quot;],
+      &quot;enum&quot;: [&quot;I&quot;, &quot;P&quot;, &quot;W&quot;, &quot;B&quot;, &quot;C&quot;, &quot;F&quot;, &quot;S&quot;],
+      &quot;aliases&quot;: [&quot;foundation_type&quot;, &quot;fndtype&quot;, &quot;found_type&quot;, &quot;fnd_type&quot;]
+    },
+    &quot;number_stories&quot;: {
+      &quot;type&quot;: &quot;number&quot;,
+      &quot;description&quot;: &quot;Number of stories (floors) in the building&quot;,
+      &quot;required&quot;: true,
+      &quot;nullable&quot;: false,
+      &quot;used_in&quot;: [&quot;inland&quot;, &quot;coastal&quot;],
+      &quot;aliases&quot;: [&quot;number_stories&quot;, &quot;num_story&quot;, &quot;numstories&quot;, &quot;stories&quot;, &quot;num_floors&quot;, &quot;floors&quot;]
+    },
+    &quot;area&quot;: {
+      &quot;type&quot;: &quot;number&quot;,
+      &quot;description&quot;: &quot;Building floor area in square feet&quot;,
+      &quot;required&quot;: true,
+      &quot;nullable&quot;: false,
+      &quot;used_in&quot;: [&quot;inland&quot;, &quot;coastal&quot;],
+      &quot;aliases&quot;: [&quot;area&quot;, &quot;sqft&quot;, &quot;building_area&quot;, &quot;floor_area&quot;]
+    },
+    &quot;building_cost&quot;: {
+      &quot;type&quot;: &quot;number&quot;,
+      &quot;description&quot;: &quot;Building structural replacement cost in US dollars&quot;,
+      &quot;required&quot;: true,
+      &quot;nullable&quot;: false,
+      &quot;used_in&quot;: [&quot;inland&quot;, &quot;coastal&quot;],
+      &quot;aliases&quot;: [&quot;buildingcostusd&quot;, &quot;building_cost&quot;, &quot;val_struct&quot;, &quot;cost&quot;, &quot;replacement_cost&quot;, &quot;building_value&quot;]
+    },
+    &quot;content_cost&quot;: {
+      &quot;type&quot;: &quot;number&quot;,
+      &quot;description&quot;: &quot;Contents replacement cost in US dollars&quot;,
+      &quot;required&quot;: true,
+      &quot;nullable&quot;: false,
+      &quot;used_in&quot;: [&quot;inland&quot;, &quot;coastal&quot;],
+      &quot;aliases&quot;: [&quot;contentcostusd&quot;, &quot;content_cost&quot;, &quot;val_cont&quot;, &quot;contents_cost&quot;]
+    },
+    &quot;inventory_cost&quot;: {
+      &quot;type&quot;: &quot;number&quot;,
+      &quot;description&quot;: &quot;Business inventory replacement cost in US dollars&quot;,
+      &quot;required&quot;: true,
+      &quot;nullable&quot;: false,
+      &quot;used_in&quot;: [&quot;inland&quot;, &quot;coastal&quot;],
+      &quot;aliases&quot;: [&quot;inventorycostusd&quot;, &quot;inventory_cost&quot;, &quot;val_inv&quot;, &quot;inv_cost&quot;]
+    },
+    &quot;general_building_type&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;description&quot;: &quot;General construction type code (W=Wood, M=Masonry, C=Concrete, S=Steel, MH=Manufactured Housing)&quot;,
+      &quot;required&quot;: true,
+      &quot;nullable&quot;: false,
+      &quot;used_in&quot;: [&quot;inland&quot;],
+      &quot;enum&quot;: [&quot;W&quot;, &quot;M&quot;, &quot;C&quot;, &quot;S&quot;, &quot;MH&quot;],
+      &quot;aliases&quot;: [&quot;general_building_type&quot;, &quot;bldgtype&quot;, &quot;generalbuildingtype&quot;]
+    },
+    &quot;eq_building_type&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;description&quot;: &quot;Earthquake-specific building type classification&quot;,
+      &quot;required&quot;: true,
+      &quot;nullable&quot;: false,
+      &quot;used_in&quot;: [&quot;earthquake&quot;],
+      &quot;aliases&quot;: [&quot;eqbldgtypeid&quot;, &quot;eq_building_type&quot;, &quot;earthquake_building_type&quot;]
+    },
+    &quot;eq_design_level&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;description&quot;: &quot;Earthquake design level classification&quot;,
+      &quot;required&quot;: true,
+      &quot;nullable&quot;: false,
+      &quot;used_in&quot;: [&quot;earthquake&quot;],
+      &quot;aliases&quot;: [&quot;eqdesignlevelid&quot;, &quot;eq_design_level&quot;, &quot;design_level&quot;]
+    }
+  }
+}
+
+</code></pre>
+<hr />
+<h2 id="national-structures-inventory-nsi">National Structures Inventory (NSI)<a class="headerlink" href="#national-structures-inventory-nsi" title="Permanent link">&para;</a></h2>
+<p><img alt="NSI Example" src="../images/nsi.jpg" /></p>
+<p>The <strong>National Structures Inventory (NSI)</strong>, developed by the <strong>U.S. Army Corps of Engineers (USACE)</strong>, is a nationwide database of structures across the 50 U.S. states. At present, the NSI does not include coverage for U.S. territories. The publicly available NSI dataset provided many of the key fields used for consequence analysis; however, it is important to note that <strong>building</strong> and <strong>contents values</strong> are reported as <strong>depreciated values</strong> rather than full replacement costs. Full technical documentation for the NSI is available on the <a href="https://www.hec.usace.army.mil/confluence/nsi/technicalreferences/latest/technical-documentation"><strong>USACE NSI Technical Documentation page</strong></a>.</p>
+<p>USACE also maintains a <strong>restricted version</strong> of the NSI accessible to federal users, which contains additional attributes derived from parcel data and other proprietary sources.</p>
+<p>To support national hazard risk assessments, <strong>FEMA</strong> has developed an <strong>enhanced internal version</strong> of the NSI that extends coverage to the <strong>District of Columbia</strong>, <strong>Puerto Rico</strong>, the <strong>U.S. Virgin Islands</strong>, and <strong>Pacific Territories</strong>. This FEMA-enhanced dataset applies <strong>full replacement values</strong> consistent with the <em>Hazus 7.0 Inventory Technical Manual</em> and resolves several known data quality issues identified in the public NSI.</p>
+<h3 id="nsi-2022-public-version">NSI 2022 Public Version<a class="headerlink" href="#nsi-2022-public-version" title="Permanent link">&para;</a></h3>
+<p>The <strong>2022 Public NSI</strong> contains all attributes required to support both <strong>inland</strong> and <strong>coastal</strong> consequence modeling. <strong>Table 2</strong> lists the key fields used in the Consequence Modeling Solution, including data types, assumptions, rules, and default values assigned when data is missing.</p>
+<p><strong>Table 2. NSI 2022 Public Data Attributes for Analysis</strong></p>
+<table>
+<thead>
+<tr>
+<th><strong>Analysis Attribute</strong></th>
+<th><strong>Data Type</strong></th>
+<th><strong>NSI Field Name</strong></th>
+<th><strong>Consequence Modeling</strong></th>
+<th><strong>Assumption</strong></th>
+<th><strong>Rule</strong></th>
+<th><strong>Default if Missing</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Geometry</strong></td>
+<td>Point</td>
+<td>Shape</td>
+<td>Inland, Coastal</td>
+<td>Point geometry</td>
+<td>Must be valid point geometry</td>
+<td><strong>Error (required)</strong></td>
+</tr>
+<tr>
+<td><strong>Unique ID</strong></td>
+<td>Object ID</td>
+<td>fid</td>
+<td>Inland, Coastal</td>
+<td>Provided</td>
+<td>Must be present and unique</td>
+<td><strong>Error (required)</strong></td>
+</tr>
+<tr>
+<td><strong>Occupancy Type</strong></td>
+<td>String</td>
+<td>occtype</td>
+<td>Inland, Coastal</td>
+<td>Provided; must map to Hazus types</td>
+<td>Must map to Hazus types</td>
+<td><strong>RES1</strong></td>
+</tr>
+<tr>
+<td><strong>Building Value</strong></td>
+<td>Numeric</td>
+<td>val_struct</td>
+<td>Inland, Coastal</td>
+<td>Depreciated USD value</td>
+<td>Must be present</td>
+<td><strong>Error (required)</strong></td>
+</tr>
+<tr>
+<td><strong>Content Value</strong></td>
+<td>Numeric</td>
+<td>val_cont</td>
+<td>Inland, Coastal</td>
+<td>Depreciated USD value</td>
+<td>Validate &gt; 0; assign default if missing</td>
+<td>Default % by occupancy (see Inventory Methodology Table 3)</td>
+</tr>
+<tr>
+<td><strong>Number of Stories</strong></td>
+<td>Numeric</td>
+<td>num_story</td>
+<td>Inland, Coastal</td>
+<td>Provided</td>
+<td>Validate &gt; 0; assign default</td>
+<td><strong>1</strong></td>
+</tr>
+<tr>
+<td><strong>Area / Square Footage</strong></td>
+<td>Numeric</td>
+<td>sqft</td>
+<td>Inland</td>
+<td>Square footage</td>
+<td>Validate &gt; 0; assign default</td>
+<td>Hazus defaults (Inventory Methodology Table 2)</td>
+</tr>
+<tr>
+<td><strong>General Building Type</strong></td>
+<td>String</td>
+<td>bldgtype</td>
+<td>Inland</td>
+<td>Provided (M, W, H, S)</td>
+<td>Assign default if missing</td>
+<td><strong>W (Wood)</strong></td>
+</tr>
+<tr>
+<td><strong>Foundation Type</strong></td>
+<td>String</td>
+<td>found_type</td>
+<td>Inland, Coastal</td>
+<td>Provided (C, B, S, P, I, F, W)</td>
+<td>Assign default if missing</td>
+<td><strong>Slab</strong></td>
+</tr>
+<tr>
+<td><strong>Foundation Height</strong></td>
+<td>Numeric</td>
+<td>found_ht</td>
+<td>Inland, Coastal</td>
+<td>Feet above ground</td>
+<td>Assign default</td>
+<td>Slab = 1 ft; Shallow = 3 ft; Pile = 8 ft; Basement = 2 ft</td>
+</tr>
+<tr>
+<td><strong>Ground Elevation</strong></td>
+<td>Numeric</td>
+<td>Ground_elv</td>
+<td>Coastal</td>
+<td>Feet (NAVD88)</td>
+<td>Required for coastal modeling</td>
+<td><strong>Error (required)</strong></td>
+</tr>
+</tbody>
+</table>
+<h4 id="nsi-2022-public-inland-foundation-type-mapping">NSI 2022 Public – Inland Foundation Type Mapping<a class="headerlink" href="#nsi-2022-public-inland-foundation-type-mapping" title="Permanent link">&para;</a></h4>
+<p>For the NSI Public dataset, the <code>found_type</code> field must be mapped to the <strong>standardized inland foundation types</strong> used by the Consequence Modeling engine.</p>
+<p><strong>Implementation Rules:</strong></p>
+<ul>
+<li>The NSI <code>found_type</code> field is <strong>always</strong> used as the source field.</li>
+<li>Foundation types must be translated using <strong>Table 3</strong>.</li>
+<li>If a code does <strong>not</strong> match a supported value:</li>
+<li>Treat the foundation type as <strong>uncertain</strong>, and</li>
+<li>Assign the default inland foundation type <strong>SLAB</strong>.</li>
+<li>No parcel-derived refinements are available in the public NSI.</li>
+</ul>
+<p><strong>Table 3. Inland Foundation Type Mapping for NSI 2022 Public Version</strong></p>
+<table>
+<thead>
+<tr>
+<th><strong>found_type</strong></th>
+<th><strong>Description</strong></th>
+<th><strong>Assigned Inland Foundation Type</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C</td>
+<td>Crawl</td>
+<td>SHAL</td>
+</tr>
+<tr>
+<td>B</td>
+<td>Basement</td>
+<td>BASE</td>
+</tr>
+<tr>
+<td>S</td>
+<td>Slab</td>
+<td>SLAB</td>
+</tr>
+<tr>
+<td>P</td>
+<td>Pier</td>
+<td>SHAL</td>
+</tr>
+<tr>
+<td>F</td>
+<td>Fill</td>
+<td>SLAB</td>
+</tr>
+<tr>
+<td>W</td>
+<td>Solid Wall</td>
+<td>SHAL</td>
+</tr>
+<tr>
+<td>I</td>
+<td>Pile</td>
+<td>PILE</td>
+</tr>
+</tbody>
+</table>
+<h4 id="nsi-2022-public-coastal-foundation-type-mapping">NSI 2022 Public – Coastal Foundation Type Mapping<a class="headerlink" href="#nsi-2022-public-coastal-foundation-type-mapping" title="Permanent link">&para;</a></h4>
+<blockquote>
+<p><em>TODO:</em> Define coastal foundation type mapping rules for the NSI Public dataset.</p>
+</blockquote>
+<hr />
+<h3 id="nsi-2022-fema-enhanced-version">NSI 2022 FEMA-Enhanced Version<a class="headerlink" href="#nsi-2022-fema-enhanced-version" title="Permanent link">&para;</a></h3>
+<p>The <strong>NSI 2022 FEMA-Enhanced Version</strong> allows users to calculate losses using <strong>full replacement costs</strong> and expands structure coverage to include Washington, D.C., Puerto Rico, U.S. Virgin Islands. This enhanced version also includes <strong>parcel-derived fields</strong> that support refinement of the <strong>inland foundation type</strong> assignment.</p>
+<p>However, the FEMA-enhanced dataset does <strong>not</strong> include ground-elevation information. As a result, only <strong>inland consequence modeling</strong> is supported out of the box.
+Users may preprocess the dataset and manually supply ground elevations if they wish to perform coastal modeling using the <strong>user-defined inventory ingestion process</strong>. <strong>Table 4</strong> summarizes the attributes used in the analysis, including data types, assumptions, rules, and defaults applied when values are missing.</p>
+<p><strong>Table 4. NSI 2022 FEMA-Enhanced Data Attributes for Analysis</strong></p>
+<table>
+<thead>
+<tr>
+<th><strong>Analysis Attribute</strong></th>
+<th><strong>Data Type</strong></th>
+<th><strong>NSI Field Name</strong></th>
+<th><strong>Assumption</strong></th>
+<th><strong>Rule</strong></th>
+<th><strong>Default if Missing</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Geometry</strong></td>
+<td>Point</td>
+<td>Shape</td>
+<td>Point geometry</td>
+<td>Must be valid point geometry</td>
+<td><strong>Error (required)</strong></td>
+</tr>
+<tr>
+<td><strong>Unique ID</strong></td>
+<td>Object ID</td>
+<td>OBJECTID</td>
+<td>Provided</td>
+<td>Must be present and unique</td>
+<td><strong>Error (required)</strong></td>
+</tr>
+<tr>
+<td><strong>Occupancy Type</strong></td>
+<td>String</td>
+<td>OCCTYPE</td>
+<td>Provided; must map to Hazus occupancy types</td>
+<td>Must map to Hazus types</td>
+<td><strong>RES1</strong></td>
+</tr>
+<tr>
+<td><strong>Building Value</strong></td>
+<td>Numeric</td>
+<td>Hazus_Building_Values</td>
+<td>Full replacement cost (USD)</td>
+<td>Must be present</td>
+<td><strong>Error (required)</strong></td>
+</tr>
+<tr>
+<td><strong>Content Value</strong></td>
+<td>Numeric</td>
+<td>Hazus_Content_Values</td>
+<td>Full replacement cost (USD)</td>
+<td>Validate &gt; 0; assign default if missing</td>
+<td>Default % by occupancy (Inventory Methodology Table 3)</td>
+</tr>
+<tr>
+<td><strong>Number of Stories</strong></td>
+<td>Numeric</td>
+<td>NUM_STORY</td>
+<td>Provided</td>
+<td>Validate &gt; 0; assign default</td>
+<td><strong>1</strong></td>
+</tr>
+<tr>
+<td><strong>Area / Square Footage</strong></td>
+<td>Numeric</td>
+<td>SQFT</td>
+<td>Square footage (sq ft)</td>
+<td>Validate &gt; 0; assign default</td>
+<td>Hazus defaults (Inventory Methodology Table 2)</td>
+</tr>
+<tr>
+<td><strong>General Building Type</strong></td>
+<td>String</td>
+<td>GENERALBUILDINGTYPE</td>
+<td>Provided (M, W, H, S)</td>
+<td>Assign default if missing</td>
+<td><strong>W (Wood)</strong></td>
+</tr>
+<tr>
+<td><strong>Foundation Type</strong></td>
+<td>String</td>
+<td>FNDTYPE</td>
+<td>Provided (C, B, S, P, I, F, W)</td>
+<td>Assign default if missing</td>
+<td><strong>Slab</strong></td>
+</tr>
+<tr>
+<td><strong>Foundation Height</strong></td>
+<td>Numeric</td>
+<td>FOUND_HT</td>
+<td>Feet above ground elevation</td>
+<td>Assign default if missing</td>
+<td>Slab = 1 ft; Shallow = 3 ft; Pile = 8 ft; Basement = 2 ft</td>
+</tr>
+<tr>
+<td><strong>Foundation Type (Parcel)</strong></td>
+<td>String</td>
+<td>P_FNDTYPE</td>
+<td>Provided</td>
+<td>Used only for parcel-based refinement logic</td>
+<td>None</td>
+</tr>
+<tr>
+<td><strong>Basement Type (Parcel)</strong></td>
+<td>String</td>
+<td>P_BSMNT</td>
+<td>Provided</td>
+<td>Used only for parcel-based refinement logic</td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<h4 id="nsi-2022-fema-enhanced-inland-foundation-type-mapping">NSI 2022 FEMA-Enhanced — Inland Foundation Type Mapping<a class="headerlink" href="#nsi-2022-fema-enhanced-inland-foundation-type-mapping" title="Permanent link">&para;</a></h4>
+<p>For the FEMA-Enhanced NSI, parcel-derived fields (<code>P_FNDTYPE</code> and <code>P_BSMNT</code>) are used to refine the inland foundation type. The following rules determine the <strong>assigned inland foundation type</strong>:</p>
+<p><strong>Refinement Rules:</strong></p>
+<ul>
+<li>
+<p>If <code>P_BSMNT</code> contains any of the following codes — <code>B</code>, <code>U</code>, <code>I</code>, <code>F</code>, <code>P</code>, <code>L</code>, <code>D</code>, <code>Y</code> — set inland foundation type to <strong>BASE</strong>.</p>
+</li>
+<li>
+<p>If <code>P_FNDTYPE</code> contains any of the following codes — <code>S</code>, <code>P</code>, <code>L</code>, <code>F</code>, <code>E</code>, <code>T</code>, <code>W</code>, <code>A</code> — inland foundation type must stay <strong>blank/null</strong>, even when <code>P_BSMNT</code> indicates a basement.</p>
+</li>
+<li>
+<p>If <code>P_BSMNT</code> does not indicate a basement, inland foundation type comes directly from <code>P_FNDTYPE</code> using the mapping in <strong>Table 5</strong>.</p>
+</li>
+<li>
+<p>If <code>P_FNDTYPE</code> is null, use the NSI-provided <code>FNDTYPE</code> field and map it using the same rules as the <strong>NSI 2022 Public Version</strong> (<code>found_type</code>). <em><code>FNDTYPE</code> in FEMA-Enhanced is equivalent to <code>found_type</code> in the Public NSI.</em></p>
+</li>
+</ul>
+<p><strong>Table 5. NSI 2022 FEMA-Enhanced Parcel Foundation Type Mapping</strong></p>
+<table>
+<thead>
+<tr>
+<th><strong>P_FNDTYPE</strong></th>
+<th><strong>Description</strong></th>
+<th><strong>Assigned Inland Foundation Type</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P</td>
+<td>Piers</td>
+<td>SHAL</td>
+</tr>
+<tr>
+<td>A</td>
+<td>Concrete</td>
+<td>SLAB</td>
+</tr>
+<tr>
+<td>W</td>
+<td>Wood</td>
+<td>SHAL</td>
+</tr>
+<tr>
+<td>C</td>
+<td>Crossed Walls</td>
+<td>SLAB</td>
+</tr>
+<tr>
+<td>S</td>
+<td>Slab</td>
+<td>SLAB</td>
+</tr>
+<tr>
+<td>K</td>
+<td>Concrete Block</td>
+<td>SHAL</td>
+</tr>
+<tr>
+<td>O</td>
+<td>Other</td>
+<td>NULL</td>
+</tr>
+<tr>
+<td>G</td>
+<td>Stone</td>
+<td>SHAL</td>
+</tr>
+<tr>
+<td>D</td>
+<td>Masonry</td>
+<td>SHAL</td>
+</tr>
+<tr>
+<td>L</td>
+<td>Piling</td>
+<td>PILE</td>
+</tr>
+<tr>
+<td>R</td>
+<td>Retaining Wall</td>
+<td>SHAL</td>
+</tr>
+<tr>
+<td>T</td>
+<td>Footing</td>
+<td>SLAB</td>
+</tr>
+<tr>
+<td>B</td>
+<td>Crawl / Raised</td>
+<td>SHAL</td>
+</tr>
+<tr>
+<td>F</td>
+<td>Mud Sill</td>
+<td>SLAB</td>
+</tr>
+<tr>
+<td>E</td>
+<td>Earth</td>
+<td>SLAB</td>
+</tr>
+<tr>
+<td>Z</td>
+<td>Placeholder</td>
+<td>If <code>P_BSMNT</code> indicates basement → <strong>BASE</strong>, otherwise <strong>Slab</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="nsi-data-schema"><em>NSI Data Schema:</em><a class="headerlink" href="#nsi-data-schema" title="Permanent link">&para;</a></h3>
+<pre><code class="language-json">{
+  &quot;$schema&quot;: &quot;http://json-schema.org/draft-07/schema#&quot;,
+  &quot;$id&quot;: &quot;https://example.com/schemas/nsi_schema.json&quot;,
+  &quot;title&quot;: &quot;NSI Buildings Schema&quot;,
+  &quot;version&quot;: &quot;0.1.0&quot;,
+  &quot;description&quot;: &quot;Schema for NSI (National Structure Inventory) building data&quot;,
+    &quot;default fields&quot;: {
+        &quot;target_fid&quot;: {
+            &quot;type&quot;: &quot;string&quot;,
+            &quot;description&quot;: &quot;Unique identifier for the building&quot;,
+            &quot;default target field&quot;: &quot;id&quot;,
+            &quot;required&quot;: true,
+            &quot;nullable&quot;: false
+        },
+        &quot;occtype&quot;: {
+            &quot;type&quot;: &quot;string&quot;,
+            &quot;description&quot;: &quot;Occupancy type code (e.g., RES1, COM1)&quot;,
+            &quot;default target field&quot;: &quot;occupancy_type&quot;,
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;found_ht&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;First floor height (feet above ground)&quot;,
+            &quot;default target field&quot;: &quot;first_floor_height&quot;,
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;found_type&quot;: {
+            &quot;type&quot;: &quot;string&quot;,
+            &quot;description&quot;: &quot;Foundation type code (I=Pile, P=Pier, W=Solid Wall, B=Basement, C=Crawl, F=Fill, S=Slab)&quot;,
+            &quot;default target field&quot;: &quot;foundation_type&quot;,
+            &quot;enum&quot;: [&quot;I&quot;, &quot;P&quot;, &quot;W&quot;, &quot;B&quot;, &quot;C&quot;, &quot;F&quot;, &quot;S&quot;],
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;num_story&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Number of stories in the building&quot;,
+            &quot;default target field&quot;: &quot;number_stories&quot;,
+            &quot;required&quot;: true,
+            &quot;nullable&quot;: false
+        },
+        &quot;sqft&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Building area in square feet&quot;,
+            &quot;default target field&quot;: &quot;area&quot;,
+            &quot;required&quot;: true,
+            &quot;nullable&quot;: false
+        },
+        &quot;val_struct&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Building replacement cost ($USD)&quot;,
+            &quot;default target field&quot;: &quot;building_cost&quot;,
+            &quot;required&quot;: true,
+            &quot;nullable&quot;: false
+        },
+        &quot;val_cont&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Contents replacement cost ($USD)&quot;,
+            &quot;default target field&quot;: &quot;content_cost&quot;,
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;bldgtype&quot;: {
+            &quot;type&quot;: &quot;string&quot;,
+            &quot;description&quot;: &quot;General building type code (e.g., W=Wood, M=Masonry, C=Concrete, S=Steel)&quot;,
+            &quot;default target field&quot;: &quot;general_building_type&quot;,
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        }
+    }
+}
+
+</code></pre>
+<p>However, users may provide a crosswalk (a.k.a. override) from the target fields to the user's non-standard
+fields.</p>
+<p><em>Example of User-Provided Override for NSI Field Names:</em>
+(keys=target_field, values=user's field)</p>
+<pre><code class="language-json">{
+    &quot;building_cost&quot;: &quot;my_custom_building_cost_field&quot;
+}
+</code></pre>
+<hr />
+<h2 id="milliman-market-baskets-data">Milliman Market Baskets Data<a class="headerlink" href="#milliman-market-baskets-data" title="Permanent link">&para;</a></h2>
+<p><img alt="Milliman Uniform Book Example" src="../images/milliman-uniform.jpg" />
+The <strong>Milliman Market Baskets</strong> were developed by <strong>Milliman, Inc.</strong> to support <strong>FEMA’s Risk Rating 2.0 initiative</strong>. Milliman created Market Baskets for all U.S. states and territories to provide a representative sample of <strong>single-family homes (RES1)</strong> used in the development of rating factors. Market Basket locations were derived primarily from <strong>CoreLogic ParcelPoint</strong> data, supplemented with <strong>U.S. Census</strong> and <strong>National Hydrography Dataset (NHD)</strong> information, and refined through <strong>extensive quality control</strong> to ensure accuracy and realistic spatial distribution.</p>
+<p>Three categories of data, referred to as <strong>“books”</strong>, were created from the Market Baskets:</p>
+<ol>
+<li><strong>Uniform Book</strong> – Each property assigned identical structural and coverage characteristics, allowing geographic variability to be analyzed independently.</li>
+<li><strong>Uncorrelated Market Basket</strong> – Contains randomized property and policy characteristics not correlated with geography; <em>foundation type</em> and <em>first-floor height</em> remain linked to prevent implausible combinations.</li>
+<li><strong>Correlated Market Basket (Inforce Dataset)</strong> – Joined with FEMA policy data (GFE access required); attributes are correlated to reflect realistic joint distributions and align with observed <strong>parcel</strong> and <strong>NFIP exposure</strong> data.</li>
+</ol>
+<p>The Consequences Solution is designed and tested using the Uniform and Uncorrelated Market Basket datasets. <strong>Table 6</strong> describes the analysis attributes used across these books. Although the schema is consistent, the method of attribute imputation varies by dataset. For example, the Uncorrelated Market Basket randomizes property and coverage characteristics, while the Correlated Market Basket applies state-specific distributions to more closely represent actual conditions.</p>
+<p>The Milliman Market Basket datasets support both coastal and inland loss calculations, as they include the necessary structural, coverage, and geographic attributes for each modeling environment. Their use, however, is limited to single-family residential (RES1) structures, as the datasets were specifically developed for rating factor development under FEMA’s NFIP framework. For more details, refer to the <a href="https://www.fema.gov/sites/default/files/documents/FEMA_Risk-Rating-2.0_Methodology-and-Data-Appendix__01-22.pdf"><strong>FEMA (2022)</strong></a>.</p>
+<p><strong>Table 6. Milliman Data Attributes for Analysis</strong></p>
+<table>
+<thead>
+<tr>
+<th>Analysis Attribute</th>
+<th>NSI Field Name</th>
+<th>Data Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>X Location</td>
+<td>LON</td>
+<td>Double</td>
+<td></td>
+</tr>
+<tr>
+<td>Y Location</td>
+<td>LAT</td>
+<td>Double</td>
+<td></td>
+</tr>
+<tr>
+<td>Unique ID</td>
+<td>Location</td>
+<td>String</td>
+<td></td>
+</tr>
+<tr>
+<td>Occupancy Type</td>
+<td>--</td>
+<td>--</td>
+<td>All points are RES1</td>
+</tr>
+<tr>
+<td>Building Value</td>
+<td>BLDG_VALUE</td>
+<td>Long</td>
+<td>Full replacement value</td>
+</tr>
+<tr>
+<td>Building Insurance Deductible</td>
+<td>BLDG_DED</td>
+<td>Long</td>
+<td></td>
+</tr>
+<tr>
+<td>Building Insurance Limit</td>
+<td>BLDG_LIMIT</td>
+<td>Long</td>
+<td></td>
+</tr>
+<tr>
+<td>Content Value</td>
+<td>CNT_VALUE</td>
+<td>Long</td>
+<td>Full replacement value</td>
+</tr>
+<tr>
+<td>Content Insurance Deductible</td>
+<td>CNT_DED</td>
+<td>Long</td>
+<td></td>
+</tr>
+<tr>
+<td>Content Insurance Limit</td>
+<td>CNT_LIMIT</td>
+<td>Long</td>
+<td></td>
+</tr>
+<tr>
+<td>Number of Stories</td>
+<td>NUM_STORIES</td>
+<td>Long</td>
+<td></td>
+</tr>
+<tr>
+<td>Area/Square Footage</td>
+<td>--</td>
+<td>--</td>
+<td>Use default area for RES1 based on Hazus Methodolgy, i.e. sqft=1800</td>
+</tr>
+<tr>
+<td>General Building Type</td>
+<td>CONSTR_CODE</td>
+<td>Long</td>
+<td>Construction type, ( 1 = W, 2 = M), Use default value W if not provided.</td>
+</tr>
+<tr>
+<td>Foundation Type</td>
+<td>foundationtype</td>
+<td>Long</td>
+<td>Foundation type, (2 = basement; 4 = crawlspace; 6 = pier; 7 = fill or wall; 8 = slab; 9 = pile)</td>
+</tr>
+<tr>
+<td>Foundation Height</td>
+<td>FIRST_FLOOR_ELEV</td>
+<td>Long</td>
+<td>First floor height (feet above ground)</td>
+</tr>
+<tr>
+<td>Basement Type</td>
+<td>BasementFinishType</td>
+<td>Long</td>
+<td>Basement Finish type, (0 = no basement; 1 = unfinished basement; 2 = finished basement)</td>
+</tr>
+<tr>
+<td>Ground Elevation</td>
+<td>elev_ft</td>
+<td>Float</td>
+<td>Digital Elevation Model (DEM) (ground) elevation (feet NAVD88)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="milliman-inland-foundation-type-mapping">Milliman — Inland Foundation Type Mapping<a class="headerlink" href="#milliman-inland-foundation-type-mapping" title="Permanent link">&para;</a></h3>
+<p>For both the <strong>Uniform Book</strong> and <strong>Uncorrelated Market Basket</strong> datasets, the <code>foundation</code> field contains numeric codes that must be mapped to inland foundation types used by the Consequences Solution. These mappings support correct depth–damage function assignment.</p>
+<p><strong>Table 7. Milliman Inland Foundation Type Mapping</strong></p>
+<table>
+<thead>
+<tr>
+<th><strong>foundation</strong></th>
+<th><strong>Description</strong></th>
+<th><strong>Assigned Inland Foundation Type</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>2</strong></td>
+<td>Basement</td>
+<td><strong>BASE</strong></td>
+</tr>
+<tr>
+<td><strong>4</strong></td>
+<td>Crawlspace</td>
+<td><strong>SHAL</strong></td>
+</tr>
+<tr>
+<td><strong>6</strong></td>
+<td>Pier</td>
+<td><strong>SHAL</strong></td>
+</tr>
+<tr>
+<td><strong>7</strong></td>
+<td>Fill / Wall</td>
+<td><strong>SLAB</strong></td>
+</tr>
+<tr>
+<td><strong>8</strong></td>
+<td>Slab</td>
+<td><strong>SLAB</strong></td>
+</tr>
+<tr>
+<td><strong>9</strong></td>
+<td>Pile</td>
+<td><strong>PILE</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="milliman-coastal-foundation-type-mapping">Milliman — Coastal Foundation Type Mapping<a class="headerlink" href="#milliman-coastal-foundation-type-mapping" title="Permanent link">&para;</a></h3>
+<p><em>To be developed.</em></p>
+<h3 id="milliman-data-schema"><em>Milliman Data Schema:</em><a class="headerlink" href="#milliman-data-schema" title="Permanent link">&para;</a></h3>
+<pre><code class="language-json">{
+  &quot;$schema&quot;: &quot;http://json-schema.org/draft-07/schema#&quot;,
+  &quot;$id&quot;: &quot;https://example.com/schemas/milliman_schema.json&quot;,
+  &quot;title&quot;: &quot;Milliman Buildings Schema&quot;,
+  &quot;version&quot;: &quot;0.2.0&quot;,
+  &quot;description&quot;: &quot;Typical schema for Milliman building data (Uniform, Uncorrelated Market Basket)&quot;,
+    &quot;default fields&quot;: {
+        &quot;accntnum&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;unique policy id (0 prefix=market basket, 1 prefix=uncorrelated book, no prefix=uniform book)&quot;,
+            &quot;default target field&quot;: null,
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;location&quot;: {
+            &quot;type&quot;: &quot;string&quot;,
+            &quot;description&quot;: &quot;Location ID of building which serves as the unique identifier&quot;,
+            &quot;default target field&quot;: &quot;id&quot;,
+            &quot;required&quot;: true,
+            &quot;nullable&quot;: false
+        },
+        &quot;BLDG_DED&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Building insurance deductible  ($USD)&quot;,
+            &quot;default target field&quot;: null,
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;BLDG_LIMIT&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Building insurance limit ($USD)&quot;,
+            &quot;default target field&quot;: null,
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;CNT_DED&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Contents insurance deductible ($USD)&quot;,
+            &quot;default target field&quot;: null,
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;CNT_LIMIT&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Contents insurance limit ($USD)&quot;,
+            &quot;default target field&quot;: null,
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;STATE&quot;: {
+            &quot;type&quot;: &quot;string&quot;,
+            &quot;description&quot;: &quot;Two-letter state abbreviation&quot;,
+            &quot;default target field&quot;: null,
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;POSTCODE&quot;: {
+            &quot;type&quot;: &quot;string&quot;,
+            &quot;description&quot;: &quot;5-digit ZIP code&quot;,
+            &quot;default target field&quot;: null,
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;COUNTRY&quot;: {
+            &quot;type&quot;: &quot;string&quot;,
+            &quot;description&quot;: &quot;Country code (e.g., US)&quot;,
+            &quot;default target field&quot;: null,
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;LON&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Longitude in decimal degrees&quot;,
+            &quot;default target field&quot;: null,
+            &quot;required&quot;: true,
+            &quot;nullable&quot;: false
+        },
+        &quot;LAT&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Latitude in decimal degrees&quot;,
+            &quot;default target field&quot;: null,
+            &quot;required&quot;: true,
+            &quot;nullable&quot;: false
+        },
+        &quot;BLDG_VALUE&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Building replacement cost ($USD)&quot;,
+            &quot;default target field&quot;: &quot;building_cost&quot;,
+            &quot;required&quot;: true,
+            &quot;nullable&quot;: false
+        },
+        &quot;CNT_VALUE&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Contents replacement cost ($USD)&quot;,
+            &quot;default target field&quot;: &quot;content_cost&quot;,
+            &quot;required&quot;: true,
+            &quot;nullable&quot;: false
+        },
+        &quot;CONSTR_CODE&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Construction type code (1=wood; 2=masonry)&quot;,
+            &quot;default target field&quot;: &quot;general_building_type&quot;,
+            &quot;enum&quot;: [1, 2],
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;NUM_STORIES&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Number of stories in the building&quot;,
+            &quot;default target field&quot;: &quot;number_stories&quot;,
+            &quot;required&quot;: true,
+            &quot;nullable&quot;: false
+        },
+        &quot;YEAR_BUILT&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Year the building was constructed&quot;,
+            &quot;default target field&quot;: null,
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;FoundationType&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Foundation type code (2=basement; 4=crawlspace; 6=pier; 7=fill or wall; 8=slab; 9=pile)&quot;,
+            &quot;default target field&quot;: &quot;foundation_type&quot;,
+            &quot;enum&quot;: [2, 4, 6, 7, 8, 9],
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;BasementFinishType&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Basement finish type code (0=no basement; 1=unfinished basement; 2=finished basement)&quot;,
+            &quot;default target field&quot;: null,
+            &quot;enum&quot;: [0, 1, 2],
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        },
+        &quot;FIRST_FLOOR_ELEV&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;First floor elevation above ground in&quot;,
+            &quot;default target field&quot;: &quot;first_floor_height&quot;,
+            &quot;required&quot;: true,
+            &quot;nullable&quot;: false
+        },
+        &quot;BASE_FLOOD_ELEV&quot;: {
+            &quot;type&quot;: &quot;number&quot;,
+            &quot;description&quot;: &quot;Base flood elevation (BFE) in feet&quot;,
+            &quot;default target field&quot;: null,
+            &quot;required&quot;: false,
+            &quot;nullable&quot;: true
+        }
+
+    }
+}
+</code></pre>
+<p>However, users may provide a crosswalk (a.k.a. override) from the target fields to the user's non-standard
+fields.</p>
+<p><em>Example of User-Provided Override for Milliman Field Names:</em>
+(keys=target_field, values=user's field)</p>
+<pre><code class="language-json">{
+    &quot;building_cost&quot;: &quot;my_custom_building_cost_field&quot;
+}
+</code></pre>
+<h2 id="user-defined-data">User Defined Data<a class="headerlink" href="#user-defined-data" title="Permanent link">&para;</a></h2>
+<p>Users can provide custom building inventories for consequence analysis by ensuring their data conforms to the <strong>Base Buildings Schema</strong> defined above. The Buildings class provides flexible ingestion pathways that support various data formats and field naming conventions.</p>
+<h3 id="requirements-for-user-defined-inventories">Requirements for User-Defined Inventories<a class="headerlink" href="#requirements-for-user-defined-inventories" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Geometry</strong>: Must include valid point geometry (latitude/longitude coordinates)</p>
+</li>
+<li>
+<p><strong>Required Fields</strong>: Must contain or allow imputation of:</p>
+</li>
+<li>
+<p>Unique building identifier (<code>id</code>)</p>
+</li>
+<li>Number of stories (<code>number_stories</code>)</li>
+<li>Building floor area (<code>area</code>)</li>
+<li>
+<p>Building replacement cost (<code>building_cost</code>)</p>
+</li>
+<li>
+<p><strong>Optional Fields</strong>: May include (or rely on defaults):</p>
+</li>
+<li>
+<p>Occupancy type, foundation type, first floor height</p>
+</li>
+<li>Content cost, inventory cost, construction type</li>
+<li>Any output fields from previous analyses</li>
+</ol>
+<h3 id="field-mapping-approaches">Field Mapping Approaches<a class="headerlink" href="#field-mapping-approaches" title="Permanent link">&para;</a></h3>
+<p><strong>Approach 1: Use Standard Field Names</strong></p>
+<p>Create a GeoDataFrame with columns matching target field names or their aliases:</p>
+<pre><code class="language-python">import geopandas as gpd
+import pandas as pd
+from inland_consequences.buildings import Buildings
+
+# Create DataFrame with standard field names
+data = {
+    'id': ['B001', 'B002', 'B003'],
+    'occupancy_type': ['RES1', 'COM1', 'IND2'],
+    'building_cost': [250000, 500000, 1000000],
+    'content_cost': [125000, 500000, 1500000],
+    'number_stories': [2, 1, 3],
+    'area': [2000, 5000, 10000],
+    'first_floor_height': [1.0, 2.0, 3.0],
+    'foundation_type': ['S', 'S', 'B'],
+    'general_building_type': ['W', 'M', 'C'],
+    'latitude': [40.7, 40.8, 40.9],
+    'longitude': [-74.0, -74.1, -74.2]
+}
+
+# Create GeoDataFrame with point geometry
+gdf = gpd.GeoDataFrame(
+    data,
+    geometry=gpd.points_from_xy(data['longitude'], data['latitude']),
+    crs='EPSG:4326'
+)
+
+# No overrides needed - fields auto-detected
+buildings = Buildings(gdf)
+</code></pre>
+<p><strong>Approach 2: Provide Field Overrides</strong></p>
+<p>Map your custom field names to target fields using the <code>overrides</code> parameter:</p>
+<pre><code class="language-python"># User has non-standard field names
+data = {
+    'building_id': ['B001', 'B002', 'B003'],
+    'use_code': ['RES1', 'COM1', 'IND2'],
+    'struct_value': [250000, 500000, 1000000],
+    'contents_value': [125000, 500000, 1500000],
+    'floors': [2, 1, 3],
+    'sqft': [2000, 5000, 10000],
+    'ffh_ft': [1.0, 2.0, 3.0],
+    'foundation': ['SLAB', 'SLAB', 'BASEMENT'],
+    'construction': ['WOOD', 'MASONRY', 'CONCRETE'],
+    'lat': [40.7, 40.8, 40.9],
+    'lon': [-74.0, -74.1, -74.2]
+}
+
+gdf = gpd.GeoDataFrame(
+    data,
+    geometry=gpd.points_from_xy(data['lon'], data['lat']),
+    crs='EPSG:4326'
+)
+
+# Provide explicit mapping from target fields to user's fields
+overrides = {
+    'id': 'building_id',
+    'occupancy_type': 'use_code', 
+    'building_cost': 'struct_value',
+    'content_cost': 'contents_value',
+    'number_stories': 'floors',
+    'area': 'sqft',
+    'first_floor_height': 'ffh_ft',
+    'foundation_type': 'foundation',
+    'general_building_type': 'construction'
+}
+
+buildings = Buildings(gdf, overrides=overrides)
+</code></pre>
+<p><strong>Approach 3: Rely on Default Imputation</strong></p>
+<p>Provide only required fields; optional fields will be imputed using documented defaults:</p>
+<pre><code class="language-python"># Minimal dataset - only required fields
+data = {
+    'building_id': ['B001', 'B002', 'B003'],
+    'building_cost': [250000, 500000, 1000000],
+    'number_stories': [2, 1, 3],
+    'area': [2000, 5000, 10000],
+    'latitude': [40.7, 40.8, 40.9],
+    'longitude': [-74.0, -74.1, -74.2]
+}
+
+gdf = gpd.GeoDataFrame(
+    data,
+    geometry=gpd.points_from_xy(data['longitude'], data['latitude']),
+    crs='EPSG:4326'
+)
+
+overrides = {'id': 'building_id'}
+
+# Optional fields will be imputed:
+# - occupancy_type: RES1
+# - foundation_type: S (Slab)
+# - first_floor_height: 1.0 ft (slab default)
+# - general_building_type: W (Wood)
+# - content_cost: 50% of building_cost (RES1 default)
+buildings = Buildings(gdf, overrides=overrides)
+</code></pre>
+<h3 id="foundation-type-coding">Foundation Type Coding<a class="headerlink" href="#foundation-type-coding" title="Permanent link">&para;</a></h3>
+<p>If your data uses different foundation type codes than the standardized codes (I, P, W, B, C, F, S), you must preprocess your data to translate to the standard codes:</p>
+<table>
+<thead>
+<tr>
+<th><strong>Standard Code</strong></th>
+<th><strong>Description</strong></th>
+<th><strong>Inland Foundation Type</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>I</strong></td>
+<td>Pile (Infilled)</td>
+<td>PILE</td>
+</tr>
+<tr>
+<td><strong>P</strong></td>
+<td>Pier/Post</td>
+<td>SHAL (Shallow)</td>
+</tr>
+<tr>
+<td><strong>W</strong></td>
+<td>Solid Wall</td>
+<td>SHAL (Shallow)</td>
+</tr>
+<tr>
+<td><strong>B</strong></td>
+<td>Basement</td>
+<td>BASE (Basement)</td>
+</tr>
+<tr>
+<td><strong>C</strong></td>
+<td>Crawlspace</td>
+<td>SHAL (Shallow)</td>
+</tr>
+<tr>
+<td><strong>F</strong></td>
+<td>Fill</td>
+<td>SLAB</td>
+</tr>
+<tr>
+<td><strong>S</strong></td>
+<td>Slab on Grade</td>
+<td>SLAB</td>
+</tr>
+</tbody>
+</table>
+<h3 id="data-validation">Data Validation<a class="headerlink" href="#data-validation" title="Permanent link">&para;</a></h3>
+<p>The Buildings class performs automatic validation:</p>
+<ul>
+<li><strong>Required fields present</strong>: Verifies all required fields exist (either directly or through aliases)</li>
+<li><strong>No missing required values</strong>: Ensures required fields have no NULL/NaN values</li>
+<li><strong>Valid geometry</strong>: Confirms point geometry is valid and has a coordinate reference system</li>
+</ul>
+<p>If validation fails, the class raises descriptive errors indicating which fields are missing or invalid.</p>
+<h3 id="example-complete-user-defined-workflow">Example: Complete User-Defined Workflow<a class="headerlink" href="#example-complete-user-defined-workflow" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python">from inland_consequences.buildings import Buildings
+from inland_consequences.inland_flood_analysis import InlandFloodAnalysis
+from inland_consequences.raster_collection import RasterCollection
+from inland_consequences.default_vulnerability import DefaultVulnerability
+
+# 1. Load user's building data
+user_buildings_gdf = gpd.read_file('my_buildings.gpkg')
+
+# 2. Define field mappings
+field_overrides = {
+    'id': 'UNIQUE_ID',
+    'occupancy_type': 'OCCUPANCY',
+    'building_cost': 'REPLACEMENT_VALUE',
+    'number_stories': 'NUM_FLOORS',
+    'area': 'FLOOR_AREA_SQFT'
+}
+
+# 3. Create Buildings object (auto-validates and imputes defaults)
+buildings = Buildings(user_buildings_gdf, overrides=field_overrides)
+
+# 4. Use in analysis
+hazard_rasters = RasterCollection('flood_depth_*.tif')
+vulnerability = DefaultVulnerability()
+
+with InlandFloodAnalysis(hazard_rasters, buildings, vulnerability) as analysis:
+    analysis.calculate_losses()
+    results_gdf = analysis.buildings.gdf  # GeoDataFrame with loss results
+</code></pre>
+<p>For additional guidance on default values and imputation strategies, see the <strong><a href="../inventory_methodology/">Inventory Methodology Documentation</a></strong>.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../coastal_methodology/" class="btn btn-neutral float-left" title="Coastal Consequences Methodology"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../ddf_tech_implementation/" class="btn btn-neutral float-right" title="Inland Consequences Depth-Damage Function Technical Implementation">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/fema-ffrd/inland-consequences" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../coastal_methodology/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../ddf_tech_implementation/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+      <script src="../javascripts/katex.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

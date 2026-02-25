@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Hazard Validation Flag Technical Approach - Inland Consequences</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Hazard Validation Flag Technical Approach";
+        var mkdocs_page_input_path = "hazardvalidation_techapproach.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Inland Consequences
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="..">Consequences Solution</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Methodlogy</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../inventory_methodology/">Inventory Methodology</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../buildingvalidation_techapproach/">Building Inventory Validation Flags Technical Approach</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Hazard Validation Flag Technical Approach</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#structure-level-depth-and-velocity-anomalies">Structure-Level Depth and Velocity Anomalies</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#loss-ratio-consistency-checks">Loss Ratio Consistency Checks</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#average-annual-loss-ratio-review">Average Annual Loss Ratio Review</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#return-period-monotonicity-and-uncertainty-consistency">Return Period Monotonicity and Uncertainty Consistency</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#outputs-and-use-of-hazard-validation-flags">Outputs and Use of Hazard Validation Flags</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../inland_methodology/">Inland Consquences Methodology</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../coastal_methodology/">Coastal Consequences Methodology</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Technical Implementation</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../building_inventories/">Building Inventories Technical Implementation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../ddf_tech_implementation/">Inland Consequences Depth-Damage Function Technical Implementation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../AAL_tech_implementation/">Average Annualized Loss (AAL) Technical Implementation</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Inland Consequences</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Methodlogy</li>
+      <li class="breadcrumb-item active">Hazard Validation Flag Technical Approach</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/fema-ffrd/inland-consequences/edit/master/docs/hazardvalidation_techapproach.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="hazard-validation-flag-technical-approach">Hazard Validation Flag Technical Approach<a class="headerlink" href="#hazard-validation-flag-technical-approach" title="Permanent link">&para;</a></h1>
+<p>This approach defines a set of hazard-based validation flags intended to identify unusual or inconsistent hazard and loss characteristics at the structure level that may indicate potential issues with building location, hazard inputs, or damage function assignment. These conditions are often, but not always, associated with data anomalies and are intended to prompt user review rather than trigger automatic correction or exclusion. All flags are advisory in nature and are designed to support improved interpretability and confidence in hazard and loss outputs while maintaining continuity of downstream analyses.</p>
+<h2 id="structure-level-depth-and-velocity-anomalies">Structure-Level Depth and Velocity Anomalies<a class="headerlink" href="#structure-level-depth-and-velocity-anomalies" title="Permanent link">&para;</a></h2>
+<p>One component of the hazard validation focuses on identifying unusually high flood depths and velocities at or within structures for a given return period. For the 10-year return period, structures are flagged when flood depths in-structure exceed five feet or velocities exceed ten feet per second, as these conditions are uncommon for frequent events and may indicate erroneous building locations, spatial misalignment, or localized issues within the hazard data. For all other return periods, more conservative thresholds are applied, with structures flagged when depths exceed twenty feet in-structure or velocities exceed thirty feet per second. While these thresholds may be refined by return period in the future, they are intended to capture the majority of anomalous conditions without over-flagging typical high-hazard environments. When triggered, the user is notified that hazard parameters are unusually high and should be reviewed for potential location or hazard data anomalies.</p>
+<p>From a combined hazard and loss perspective, unusually high depths or velocities occurring at or within structures, particularly for frequent return periods, are treated as strong indicators of potential issues with the underlying hazard data or structure placement. These conditions are surfaced through advisory flags to support targeted review.</p>
+<h2 id="loss-ratio-consistency-checks">Loss Ratio Consistency Checks<a class="headerlink" href="#loss-ratio-consistency-checks" title="Permanent link">&para;</a></h2>
+<p>Additional validation evaluates the consistency of modeled losses relative to exposed value. Structures are flagged when building or content loss ratios exceed 1.0, indicating modeled losses greater than 100 percent of the associated value. These conditions typically suggest issues with depth-damage function assignment, value attribution, or hazard inputs and warrant further review. No automatic adjustments are applied as part of this validation.</p>
+<p>For frequent events, additional scrutiny is applied to loss severity. Structures with 10-year return period losses exceeding 50 percent of building or content value are flagged for review, as such high losses during frequent events often indicate erroneous building locations or anomalies in the hazard data. These flags are intended to draw attention to potentially unrealistic hazard–exposure interactions.</p>
+<h2 id="average-annual-loss-ratio-review">Average Annual Loss Ratio Review<a class="headerlink" href="#average-annual-loss-ratio-review" title="Permanent link">&para;</a></h2>
+<p>Average Annual Loss (AAL) ratios are also evaluated as part of the hazard validation framework. Structures with AAL loss ratios exceeding 10 percent are flagged for review, as unusually high AAL values may indicate persistent exposure to extreme hazard conditions, mislocated structures, or inconsistencies across return period hazard inputs. This validation supports identification of cases where aggregated loss behavior is inconsistent with expected hazard frequency and severity.</p>
+<h2 id="return-period-monotonicity-and-uncertainty-consistency">Return Period Monotonicity and Uncertainty Consistency<a class="headerlink" href="#return-period-monotonicity-and-uncertainty-consistency" title="Permanent link">&para;</a></h2>
+<p>The final hazard validation evaluates consistency of flood depths and velocities across return periods. Flood depths and velocities at a structure are expected to increase monotonically with increasing return period, following the sequence 10-, 20-, 50-, 100-, 200-, 500-, 1,000-, and 2,000-year events. Structures are flagged when this monotonic relationship is violated, as such patterns may indicate issues with hazard surface generation, interpolation artifacts, or uncertainty handling.</p>
+<p>This validation extends to cases where uncertainty is applied. Minimum and maximum hazard values derived from uncertainty bounds are expected to preserve the same increasing relationship across return periods. For example, the minimum flood depth for the 2,000-year event, even when computed as mean minus standard deviation, should exceed the corresponding minimum for the 1,000-year event. Violations of this expectation are flagged for review to ensure internal consistency of probabilistic hazard inputs.</p>
+<h2 id="outputs-and-use-of-hazard-validation-flags">Outputs and Use of Hazard Validation Flags<a class="headerlink" href="#outputs-and-use-of-hazard-validation-flags" title="Permanent link">&para;</a></h2>
+<p>Each hazard validation condition produces a discrete, non-blocking flag accompanied by plain-language guidance indicating the nature of the anomaly and the recommended focus of review. Flags are advisory and are intended to support transparency, diagnostics, and informed quality assurance without interrupting loss modeling workflows. Collectively, these validations provide a structured framework for identifying potential hazard and loss inconsistencies while preserving analytical continuity.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../buildingvalidation_techapproach/" class="btn btn-neutral float-left" title="Building Inventory Validation Flags Technical Approach"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../inland_methodology/" class="btn btn-neutral float-right" title="Inland Consquences Methodology">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/fema-ffrd/inland-consequences" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../buildingvalidation_techapproach/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../inland_methodology/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+      <script src="../javascripts/katex.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
