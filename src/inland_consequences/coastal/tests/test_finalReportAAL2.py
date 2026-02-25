@@ -11,7 +11,7 @@ def test_inputs():
     root_dir = path.abspath(path.dirname(__file__))
     out_data_dir = path.join(root_dir, "_data", "TEST_CALC", "output")
 
-    results_shp = path.join(out_data_dir, "TEST1_RESULTS.SHP")
+    results_shp = path.join(out_data_dir, "TEST1_RESULTS.shp")
     out_log = path.join(out_data_dir, "finalReportAAL2_OUTPUT.log")
 
     return results_shp, out_log
