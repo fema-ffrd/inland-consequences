@@ -10,23 +10,24 @@ def get_test_data():
     test_dir = path.join(root_dir, "_data","TEST_CALC","output")
 
     prep_shp_path = path.join(test_dir, "Test1_PREP.shp")
-    prep_df = gpd.read_file(prep_shp_path, ignore_geometry=True)
+    #prep_df = gpd.read_file(prep_shp_path, ignore_geometry=True)
 
     pvals_csv_path = path.join(test_dir, "pvals.csv")
-    pval_df = pd.read_csv(pvals_csv_path)
+    #pval_df = pd.read_csv(pvals_csv_path)
 
     buildings_shp_path = path.join(test_dir, "Test1_BUILDINGS.shp")
-    buildings_df = gpd.read_file(buildings_shp_path, ignore_geometry=True)
+    #buildings_df = gpd.read_file(buildings_shp_path, ignore_geometry=True)
 
     results_shp_path = path.join(test_dir, "Test1_RESULTS.shp")
-    results_df = gpd.read_file(results_shp_path, ignore_geometry=True)
+    #results_df = gpd.read_file(results_shp_path, ignore_geometry=True)
 
-    return prep_df, pval_df, buildings_df, results_df
+    return prep_shp_path, pvals_csv_path, buildings_shp_path, results_shp_path
 
 @pytest.fixture
 def runMC_AALU_x4_output(get_test_data):
     lib = _pfracoastal_lib._PFRACoastal_Lib()
-    prep_df, pval_df = get_test_data[:2]
+    prep_df =  gpd.read_file(get_test_data[0], ignore_geometry=True)
+    pval_df = gpd.read_file(get_test_data[1], ignore_geometry=True)
     bid_list = prep_df["BID"].to_list()
 
     inputs_obj = pfracoastal.PFRACoastal()
@@ -41,7 +42,7 @@ def runMC_AALU_x4_output(get_test_data):
 @pytest.fixture
 def postprocessing_results(get_test_data, runMC_AALU_x4_output):
     # create a base to which to add run results AAL results
-    bldg_df = get_test_data[2]
+    bldg_df = gpd.read_file(get_test_data[2], ignore_geometry=True)
     runMC_AALU_x4_output.loc[:,"A"] = 1
     base_tab = pd.DataFrame(data={"BID":bldg_df.loc[:,"BID"], "ANLYS":[0 for i in range(bldg_df.shape[0])]})
 
@@ -63,7 +64,7 @@ def postprocessing_results(get_test_data, runMC_AALU_x4_output):
     return results_df
 
 def test_runMC_AALU_x4(get_test_data, postprocessing_results):
-    comp_df = get_test_data[3]
+    comp_df = gpd.read_file(get_test_data[3], ignore_geometry=True)
     assert postprocessing_results.eq(comp_df).all().all()
 
 

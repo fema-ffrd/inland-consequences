@@ -731,10 +731,6 @@ class _PFRACoastal_Lib:
         
         return pd.DataFrame({'DL':DAMLL.iloc[:,1],'DB':Damage,'DU':DAMLU.iloc[:,1]})
         
-        
-        
-        
-    
     ####################
     # buildSampledLoss2()
     # 	
@@ -816,7 +812,7 @@ class _PFRACoastal_Lib:
     #	buildSampledLoss2()
     # 	Calc_Nrp_AnnLoss4()
     def runMC_AALU_x4(self, in_tab: pd.DataFrame, pvals: pd.DataFrame, in_building: int, inputs) -> pd.DataFrame:
-        this_bldg_attr = in_tab.query(f"BID = {in_building}").copy()
+        this_bldg_attr = in_tab.query(f"BID = {in_building}")
         
         # Build the loss table by building flood depth
         FBtab0 = self.buildBldgFloodDepthTable6(this_bldg_attr, inputs.use_waves)
