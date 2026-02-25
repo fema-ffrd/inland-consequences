@@ -11,7 +11,7 @@ import csv
 from re import sub
 import sys
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("pfraCoastal")
 
 class _PFRACoastal_Lib:
     def __init__(self) -> object:
@@ -190,6 +190,7 @@ class _PFRACoastal_Lib:
         self.write_log(".finish b validation.")
         return intab
     
+    ####################
     # get_NNx()
     # 	given single point coordinate (a), 
     #		find the nearest x points of a collection of point coordinates (b)
@@ -730,10 +731,6 @@ class _PFRACoastal_Lib:
             DAMLU = pd.DataFrame({'BFDBound':BFDBound.iloc[:,1],'Damage':Damage})
         
         return pd.DataFrame({'DL':DAMLL.iloc[:,1],'DB':Damage,'DU':DAMLU.iloc[:,1]})
-        
-        
-        
-        
     
     ####################
     # buildSampledLoss2()
@@ -790,3 +787,57 @@ class _PFRACoastal_Lib:
         out_tab = pd.DataFrame(data={"MC_prob":MC_prob, "MC_rp":MC_rp, "MC_Lw":MC_Lw, "MC_Be":MC_Be, "MC_Up":MC_Up})
         out_tab.mask(out_tab.isna(), 0, inplace=True)
         return out_tab
+    
+    #####################
+    # finalReportAAL2()
+    #	format and print the AAL results to screen/log
+    # in:
+    #	results_tab = DataFrame of RESULTS.shp
+    #   prep_attr_map = prep_attr_map DataFrame
+    # out:
+    #	NULL
+    # called by:
+    #	main()
+    # calls:
+    #	NULL
+    def finalReportAAL2(self, results_tab=pd.DataFrame, prep_attr_map=pd.DataFrame) -> None:
+        # summary statistics
+        self.write_log(" ")
+        self.write_log("Reporting AAL...")
+        sel_col = prep_attr_map.query("DESC=='building value'").iat[0,prep_attr_map.columns.get_loc("OUT")]
+        # Stats for all buildings in dataset
+        self.write_log("* All Buildings *")
+        self.write_log("Total Buildings:\t\t{0}".format(results_tab.shape[0]))
+        self.write_log("Analyzed Buildings:\t\t{0}".format(int(results_tab.loc[:,"ANLYS"].sum(skipna=True))))
+        self.write_log("Total Bldg AAL, Min Estimate:\t${:,}".format(int(round(pd.to_numeric(results_tab.loc[:,"BAALmin"]).sum(skipna=True),0))))
+        self.write_log("Total Bldg AAL, Best Estimate:\t${:,}".format(int(round(pd.to_numeric(results_tab.loc[:,"BAAL"]).sum(skipna=True),0))))
+        self.write_log("Total Bldg AAL, Max Estimate:\t${:,}".format(int(round(pd.to_numeric(results_tab.loc[:,"BAALmax"]).sum(skipna=True),0))))
+        self.write_log("Total Building Exposure:\t${:,}".format(int(round(pd.to_numeric(results_tab.loc[:,sel_col]).sum(skipna=True),0))))
+        
+        # Stats on buildings that incurred loss
+        self.write_log(" ")
+        self.write_log("Min Estimate")
+        sel = results_tab["BAALmin"].gt(0).to_list()
+        self.write_log("\tBuildings:\t{0} Bldgs w/ AAL > 0".format(results_tab.iloc[sel,:].shape[0]))
+        self.write_log("\tAAL:\t\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAALmin")].sum(skipna=True),0))))
+        self.write_log("\tMean AAL:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAALmin")].mean(skipna=True),0))))
+        self.write_log("\tExposure:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].sum(skipna=True),0))))
+        self.write_log("\tMean Exp:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].mean(skipna=True),0))))
+        
+        self.write_log(" ")
+        self.write_log("Best Estimate")
+        sel = results_tab["BAAL"].gt(0).to_list()
+        self.write_log("\tBuildings:\t{0} Bldgs w/ AAL > 0".format(results_tab.iloc[sel,:].shape[0]))
+        self.write_log("\tAAL:\t\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAAL")].sum(skipna=True),0))))
+        self.write_log("\tMean AAL:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAAL")].mean(skipna=True),0))))
+        self.write_log("\tExposure:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].sum(skipna=True),0))))
+        self.write_log("\tMean Exp:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].mean(skipna=True),0))))
+        
+        self.write_log(" ")
+        self.write_log("Max Estimate")
+        sel = results_tab["BAALmax"].gt(0).to_list()
+        self.write_log("\tBuildings:\t{0} Bldgs w/ AAL > 0".format(results_tab.iloc[sel,:].shape[0]))
+        self.write_log("\tAAL:\t\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAALmax")].sum(skipna=True),0))))
+        self.write_log("\tMean AAL:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAALmax")].mean(skipna=True),0))))
+        self.write_log("\tExposure:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].sum(skipna=True),0))))
+        self.write_log("\tMean Exp:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].mean(skipna=True),0))))
