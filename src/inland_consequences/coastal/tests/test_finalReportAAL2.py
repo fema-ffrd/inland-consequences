@@ -36,4 +36,4 @@ def test_finalReportAAL2(test_inputs):
     lib.finalReportAAL2(results_tab=results_df, prep_attr_map=attr_map)
     logging.shutdown()
 
-    assert path.exists(test_inputs[1])
+    assert path.exists(test_inputs[1]) and path.getsize(test_inputs[1]) > 0
