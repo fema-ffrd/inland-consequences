@@ -136,18 +136,15 @@ class NsiBuildings(Buildings):
 
         # impute foundation_type if missing
         if "foundation_type" in gdf.columns:
-            gdf["foundation_type"] = gdf["foundation_type"].fillna("S")  # Default to Slab
+            gdf["foundation_type"] = gdf["foundation_type"].fillna("SLAB")  # Default to Slab
 
         # impute first floor height (found_ht) if missing based on foundation_type
         if "found_ht" in gdf.columns and "foundation_type" in gdf.columns:
             found_ht_defaults = {
-                "I": 8.0,  # Pile
-                "P": 3.0,  # Pier, aligns with Shallow Foundation default
-                "W": 3.0,  # Solid Wall, aligns with Shallow Foundation default
-                "B": 2.0,  # Basement
-                "C": 3.0,  # Crawl, aligns with Shallow Foundation default
-                "F": 1.0,  # Fill, aligns with Slab default
-                "S": 1.0,  # Slab
+                "PILE": 8.0,  # Pile
+                "SHAL": 3.0,  # Shallow (Pier, Crawl, Solid Wall)
+                "BASE": 2.0,  # Basement
+                "SLAB": 1.0,  # Slab (includes Fill)
             }
             # Convert categorical to float before filling
             defaults = gdf["foundation_type"].map(found_ht_defaults).fillna(1.0).astype(float)
@@ -204,6 +201,16 @@ class NsiBuildings(Buildings):
         """
         Pre-process the GeoDataFrame by cleaning occupancy and foundation types.
         
+        Maps NSI single-letter foundation codes to 4-letter HAZUS codes per
+        building_inventories.md Table 3 (NSI 2022 Public Foundation Type Mapping):
+        - C (Crawl) → SHAL
+        - B (Basement) → BASE
+        - S (Slab) → SLAB
+        - P (Pier) → SHAL
+        - F (Fill) → SLAB
+        - W (Solid Wall) → SHAL
+        - I (Pile) → PILE
+        
         Args:
             gdf: GeoDataFrame to preprocess
             
@@ -217,9 +224,20 @@ class NsiBuildings(Buildings):
             gdf.loc[mask, "occtype"] = gdf.loc[mask, "occtype"].astype(str).str.split('-', n=1).str[0]
          
         # Pre-process the foundation type field
-        # found_type contains string codes (S, C, I, etc.) - rename to foundation_type
+        # Map NSI single-letter codes to 4-letter HAZUS codes
         if "found_type" in gdf.columns and "foundation_type" not in gdf.columns:
-            gdf["foundation_type"] = gdf["found_type"].astype("category")
+            foundation_type_map = {
+                "C": "SHAL",  # Crawl → Shallow
+                "B": "BASE",  # Basement → Basement
+                "S": "SLAB",  # Slab → Slab
+                "P": "SHAL",  # Pier → Shallow
+                "F": "SLAB",  # Fill → Slab
+                "W": "SHAL",  # Solid Wall → Shallow
+                "I": "PILE",  # Pile → Pile
+            }
+            
+            # Using pandas categories for memory efficiency (matching Milliman approach)
+            gdf["foundation_type"] = gdf["found_type"].map(foundation_type_map).astype("category")
             gdf = gdf.drop(columns=["found_type"])
         
         # Impute optional fields with default values if missing

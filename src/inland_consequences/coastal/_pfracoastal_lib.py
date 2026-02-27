@@ -11,7 +11,7 @@ import csv
 from re import sub
 import sys
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("pfraCoastal")
 
 class _PFRACoastal_Lib:
     def __init__(self) -> object:
@@ -190,6 +190,7 @@ class _PFRACoastal_Lib:
         self.write_log(".finish b validation.")
         return intab
     
+    ####################
     # get_NNx()
     # 	given single point coordinate (a), 
     #		find the nearest x points of a collection of point coordinates (b)
@@ -207,7 +208,7 @@ class _PFRACoastal_Lib:
     def get_NNx(self, b_coords: np.ndarray, a_coord: np.ndarray, x=3) -> pd.DataFrame:
         nn_dist = scipy.spatial.distance.cdist(b_coords, a_coord, metric='euclidean')
         nn_res = pd.DataFrame(nn_dist, columns=['NN.dist'])
-        nn_res['rowid'] = list(range(1, nn_dist.shape[0]+1))
+        nn_res['rowid'] = list(range(nn_dist.shape[0]))
         
         #get rowids for the three min distances
         nn_res.sort_values(by='NN.dist', axis=0, inplace=True)
@@ -460,7 +461,7 @@ class _PFRACoastal_Lib:
 
         # Open shapefile, if that fails, kill script
         try:
-            s_tab = gpd.read_file(s_path)
+            s_gdf = gpd.read_file(s_path)
         except Exception as e:
             self.write_log(f'Error loading node shapefile, {s_path}')
             self.write_log("Here's the original error message:")
@@ -469,11 +470,12 @@ class _PFRACoastal_Lib:
         
         self.write_log('.reformatting node table')
         # add unique surge ID
-        s_tab['SID'] = range(1, len(s_tab)+1)
+        s_gdf['SID'] = range(1, len(s_gdf)+1)
         
         # if incoming surge shape is Z-aware or M-aware,
         # then strip away all but the first two coordinate-columns
-        s_tab['geometry'] = s_tab['geometry'].force_2d()
+        s_gdf['geometry'] = s_gdf['geometry'].force_2d()
+        s_tab = s_gdf.drop(columns=s_gdf.geometry.name)
         
         # find required attributes and make them if they dont exist
         for column in this_att_map.columns:
@@ -498,8 +500,8 @@ class _PFRACoastal_Lib:
             self.haltscript()
             
         self.write_log('.packaging nodes.')
-
-        return s_tab
+        
+        return gpd.GeoDataFrame(s_tab, geometry=s_gdf.geometry, crs=s_gdf.geometry.crs)
     
     ####################
     # Calc_Nrp_AnnLoss4()
@@ -574,3 +576,268 @@ class _PFRACoastal_Lib:
     ##  -4 -3 -2 -1    0    1    2    3   4    5   6    7    8    9   10   11   12   13  14  15  16   17   18   19   20   21   22   23   24
     ##1  0  0  0  0 0.18 0.22 0.25 0.28 0.3 0.31 0.4 0.43 0.43 0.45 0.46 0.47 0.47 0.49 0.5 0.5 0.5 0.51 0.51 0.52 0.52 0.53 0.53 0.54 0.54
     # ####################
+    
+    ####################
+    # calcKernelDensity()
+    # 	function to calculate the weighted kernel density 
+    #	Inputs:
+    #		NNtab = Pandas dataframe of nearby points within distance=bandwidth
+    #			BID = point ID
+    #			AAL = building AAL = the weight
+    #			Dist = distance (feet) of building to cell centroid
+    #		bw = bandwidth
+    #	Outputs:
+    #		weighted 2D kernel density calculation
+    # 	https://desktop.arcgis.com/en/arcmap/latest/tools/spatial-analyst-toolbox/how-kernel-density-works.htm
+    #	called by:
+    #		main()
+    #	calls:
+    #		NULL
+    def calcKernelDensity(self, NNtab:pd.DataFrame, bw:int) -> float:
+        NNtab = NNtab.copy()
+        NNtab.loc[:,'radius'] = bw
+        in_sigma = NNtab.apply(lambda x: ((3/scipy.constants.pi)*x.iat[1]*(1-((x.iat[2]/x.iat[3])**2))**2), axis=1)
+        sum_sigma = in_sigma.sum()
+        out_val = (1/(bw**2))*sum_sigma
+        return out_val
+      
+    # attachWSELtoBUILDING3()
+    # 	function to find the 3 nearest surge points to a building point and adopt 
+    # 	the mean average at each return period.  Replace -99999 (null) with NA before
+    #	running mean, and then replace NaN after running mean with NA.  This will 
+    #	compute averages without -99999 and insert NA where all input values are NULL
+    # in:
+    #	bldg_row = a row from a DataFrame of buildings dataset (from buildings GeoDataFrame with dropped geometry column)
+    #   bldg_coord = numpy array of coordinates of the building (from buldings GeodataFrame.geometry.get_coordinates())
+    #	surge_shp = GeoDataFrame of surge point dataset (inc geometry)
+    #	in_attr_map = appropriate attribute map for SWEL or SWERR
+    # out:
+    #	mean surge values for all return periods for nearest surge points
+    # called by:
+    #	main()
+    # calls:
+    #	get_NNx()
+    def attachWSELtoBUILDING3(self, bldg_row: pd.Series, bldg_coord: np.ndarray, surge_shp: gpd.GeoDataFrame,  in_attr_map: pd.DataFrame) -> pd.DataFrame:
+        # unpack surge table and coordinates
+        surge_tab = surge_shp.to_wkb().drop(columns=surge_shp.geometry.name)
+        surge_coords = surge_shp.geometry.get_coordinates().to_numpy()
+        bldg_coord_resize = np.resize(bldg_coord,(1,2))
+
+        # find 3NN surge points to the building
+        NN_res = self.get_NNx(surge_coords, bldg_coord_resize) 
+        sid_func = lambda x, other: other["SID"].iat[x]
+        NN_res["SID"] = NN_res["rowid"].apply(sid_func, args=(surge_tab,))
+
+        # record the 3NN surge IDs
+        row_prefix = pd.DataFrame.from_dict(data={"BID":[bldg_row.loc["BID"]],"DEMFT":[bldg_row.loc["DEMFT"]],"VALID":[0],"spt1":[NN_res.iat[0,2]],"spt2":[NN_res.iat[1,2]],"spt3":[NN_res.iat[2,2]]})
+
+        # get the surge point rows identified above
+        surge_res = surge_tab.iloc[surge_tab["SID"].isin(NN_res['SID'].to_list()).to_list(),:].copy()
+        
+        # swap -99999 for NA
+        surge_res.mask(surge_res.eq(in_attr_map.iat[1,in_attr_map.columns.get_loc("DEF")]), pd.NA, inplace=True)
+        
+        # make a copy and plug NAs with lowest value in the row
+        surge_resf = surge_res.copy()
+        
+        # swap surge.res with surge.resf to
+        # get average of 3 surge points at each stage frequency, swapping NaN with NA
+        # from the "fixed" results table
+        surge_mean = surge_resf.iloc[:,in_attr_map.query("DDC == 1").index.to_list()].mean(axis=0, skipna=True, numeric_only=True)
+        surge_mean.mask(surge_mean.isna(), pd.NA, inplace=True)
+        
+        # finally, use closest node to determine if nulls exist at building
+        #   determine closest node from NN.res
+        #if NAs exist in that node, transfer them to the same RP in surge.mean
+        sel = surge_res.iloc[surge_res.eq(NN_res["SID"].iat[0]).any(axis=1).to_list(),:].isna().any()
+        
+        if sel.any():
+            surge_mean.mask(sel, pd.NA, inplace=True)
+
+        # fix the hiccups in surge.mean by lowering the offender to match the average of the bounding values
+        surge_mean.index = list(range(surge_mean.size))
+        diff_series = surge_mean.iloc[surge_mean.notna().to_list()].diff()
+        if not diff_series.iloc[1:].ge(0).all():
+            s_index_list = surge_mean.iloc[surge_mean.notna().to_list()].sort_index(ascending=False).index.to_list()[1:]
+            for i in s_index_list:
+                if surge_mean.at[i] > surge_mean.at[i+1]:
+                    surge_mean.at[i] = surge_mean.at[i+1]
+        
+        # prep for merge and output
+        row_suffix = surge_mean.apply(round, args=(3,))
+        row_suffix.index = in_attr_map.query("DDC == 1")["OUT"].to_list()
+        row_suffix = pd.DataFrame(data=row_suffix).T
+        
+        # create output row and add to table
+        full_row = pd.concat([row_prefix,row_suffix], axis='columns')
+        return full_row
+
+
+    ####################
+    # simulateDamageError6()
+    #	function to simulate error on damage curve from 
+    # In:
+    #	intab = n(BFD) x 8 dataframe with columns for 
+    #		Building flood depth
+    #		Building flood depth error
+    #		prob of wave height less than 1 ft
+    #		prob of wave height between 1 and 3 feet
+    #		prob of wave height greater or equal to 3 feet
+    #		damage from DDF2
+    #		damage from DDF3
+    #		damage from DDF4
+    # Out:
+    #	 n(BFD) x 3 dataframe with columns for 
+    #		min damage 
+    #		best estimate damage
+    #		max damage
+    # called by:
+    #	buildBldgFloodDepthTable6()
+    # calls:
+    #	NULL
+    def simulateDamageError6(self, intab:pd.DataFrame) -> pd.DataFrame:
+        
+        BFDBound = pd.DataFrame({"LL": intab.iloc[:,0] - intab.iloc[:,1],"LU": intab.iloc[:,0] + intab.iloc[:,1]})
+        Damage = (intab.iloc[:,2]*intab.iloc[:,5]) + (intab.iloc[:,3]*intab.iloc[:,6]) + (intab.iloc[:,4]*intab.iloc[:,7])
+        
+        # If there are more than 1 null value
+        if int(intab.iloc[:,1].isna().sum()) > 1:
+            
+            y = Damage.values
+            min_damage = np.nanmin(Damage)
+
+            # lower bound:
+            x_LL = intab.iloc[:,0].values
+            xp_LL = BFDBound["LL"].values
+            DamLL = np.interp(xp_LL,x_LL,y,left=np.nan,right=np.nan)
+            DAMLL = pd.DataFrame({'LL':BFDBound.iloc[:,0],'Damage_LL':DamLL})
+            mask_LL = DAMLL["LL"].notna() & DAMLL["Damage_LL"].isna()
+            DAMLL.loc[mask_LL, "Damage_LL"] = min_damage
+            
+            # upper bound:
+            x_LU = intab.iloc[:,1].values
+            xp_LU = BFDBound["LU"].values
+            DamLU = np.interp(xp_LU,x_LU,y,left=np.nan,right=np.nan)
+            DAMLU = pd.DataFrame({'LU':BFDBound.iloc[:,0],'Damage_LU':DamLU})
+            mask_LU = DAMLU["LU"].notna() & DAMLU["Damage_LU"].isna()
+            DAMLU.loc[mask_LU, "Damage_LU"] = min_damage
+                        
+        else:
+            # Select rows where they are not null
+            sel = intab.iloc[:,1].notna()
+            DAMLL = pd.DataFrame({'BFDBound':BFDBound.iloc[:,1],'Damage':Damage})
+            DAMLL.iloc[sel,1] = 0
+ 
+            DAMLU = pd.DataFrame({'BFDBound':BFDBound.iloc[:,1],'Damage':Damage})
+        
+        return pd.DataFrame({'DL':DAMLL.iloc[:,1],'DB':Damage,'DU':DAMLU.iloc[:,1]})
+    
+    ####################
+    # buildSampledLoss2()
+    # 	
+    # in:
+    #	FBtab0 = a buildings loss table
+    #   pvals = N probabilistoc events 0..1
+    # out:
+    #	N x 5 dataframe with a row for each pval and columns for 
+    #   pval, return period, Low curve value, best estimate curve value,
+    #   high curve value 
+    # called by:
+    #	runMC_AALU_x4()
+    # calls:
+    #	NULL
+    def buildSampledLoss2(self, FBtab0: pd.DataFrame, pvals: pd.DataFrame) -> pd.DataFrame:
+        MC_prob = pvals.iloc[:,0].sort_values(ascending=False)
+        MC_rp = MC_prob.copy().apply(lambda x: 1/x)
+        FBrp = FBtab0["RP"].copy()
+        
+        # make sure there are at least two RPs between 1 & 10k
+        if FBrp.count() < 2:
+            return pd.DataFrame(data={"MC_prob":[pd.NA], "MC_rp":[pd.NA], "MC_Lw":[0], "MC_Be":[0], "MC_Up":[0]})
+        
+        # initialize final loss = raw loss
+        FBpLw = FBtab0["Loss_Lw"]
+        FBpBe = FBtab0["Loss_BE"]
+        FBpUp = FBtab0["Loss_Up"]
+        
+        # sample the loss curve
+        if FBpBe.count() > 1:
+            FBrp_log10 = np.log10(FBrp.to_numpy().flatten())
+            FBrp_log10 = FBrp_log10[~np.isnan(FBrp_log10)]
+            
+            MCrp_log10 = np.log10(MC_rp.to_numpy())
+            MCrp_log10 = MCrp_log10[~np.isnan(MCrp_log10)]
+
+            MC_Lw = np.interp(x=MCrp_log10, xp=FBrp_log10, fp=FBpLw.to_numpy()[~np.isnan(FBpLw.to_numpy())], left=-999, right=-999)
+            MC_Be = np.interp(x=MCrp_log10, xp=FBrp_log10, fp=FBpBe.to_numpy()[~np.isnan(FBpBe.to_numpy())], left=-999, right=-999)
+            MC_Up = np.interp(x=MCrp_log10, xp=FBrp_log10, fp=FBpUp.to_numpy()[~np.isnan(FBpUp.to_numpy())], left=-999, right=-999)
+
+            MC_Lw[MC_Lw==-999] = np.nan
+            MC_Be[MC_Be==-999] = np.nan
+            MC_Up[MC_Up==-999] = np.nan
+        else:
+            sel = FBtab0["RP"].notna().to_list()
+            MC_prob = FBtab0["PVAL"].iloc[sel]
+            MC_rp = FBtab0["RP"].iloc[sel]
+            MC_Lw = FBpLw.iloc[sel]
+            MC_Be = FBpBe.iloc[sel]
+            MC_Up = FBpUp.iloc[sel]
+
+        # create output table
+        out_tab = pd.DataFrame(data={"MC_prob":MC_prob, "MC_rp":MC_rp, "MC_Lw":MC_Lw, "MC_Be":MC_Be, "MC_Up":MC_Up})
+        out_tab.mask(out_tab.isna(), 0, inplace=True)
+        return out_tab
+    
+    #####################
+    # finalReportAAL2()
+    #	format and print the AAL results to screen/log
+    # in:
+    #	results_tab = DataFrame of RESULTS.shp
+    #   prep_attr_map = prep_attr_map DataFrame
+    # out:
+    #	NULL
+    # called by:
+    #	main()
+    # calls:
+    #	NULL
+    def finalReportAAL2(self, results_tab=pd.DataFrame, prep_attr_map=pd.DataFrame) -> None:
+        # summary statistics
+        self.write_log(" ")
+        self.write_log("Reporting AAL...")
+        sel_col = prep_attr_map.query("DESC=='building value'").iat[0,prep_attr_map.columns.get_loc("OUT")]
+        # Stats for all buildings in dataset
+        self.write_log("* All Buildings *")
+        self.write_log("Total Buildings:\t\t{0}".format(results_tab.shape[0]))
+        self.write_log("Analyzed Buildings:\t\t{0}".format(int(results_tab.loc[:,"ANLYS"].sum(skipna=True))))
+        self.write_log("Total Bldg AAL, Min Estimate:\t${:,}".format(int(round(pd.to_numeric(results_tab.loc[:,"BAALmin"]).sum(skipna=True),0))))
+        self.write_log("Total Bldg AAL, Best Estimate:\t${:,}".format(int(round(pd.to_numeric(results_tab.loc[:,"BAAL"]).sum(skipna=True),0))))
+        self.write_log("Total Bldg AAL, Max Estimate:\t${:,}".format(int(round(pd.to_numeric(results_tab.loc[:,"BAALmax"]).sum(skipna=True),0))))
+        self.write_log("Total Building Exposure:\t${:,}".format(int(round(pd.to_numeric(results_tab.loc[:,sel_col]).sum(skipna=True),0))))
+        
+        # Stats on buildings that incurred loss
+        self.write_log(" ")
+        self.write_log("Min Estimate")
+        sel = results_tab["BAALmin"].gt(0).to_list()
+        self.write_log("\tBuildings:\t{0} Bldgs w/ AAL > 0".format(results_tab.iloc[sel,:].shape[0]))
+        self.write_log("\tAAL:\t\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAALmin")].sum(skipna=True),0))))
+        self.write_log("\tMean AAL:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAALmin")].mean(skipna=True),0))))
+        self.write_log("\tExposure:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].sum(skipna=True),0))))
+        self.write_log("\tMean Exp:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].mean(skipna=True),0))))
+        
+        self.write_log(" ")
+        self.write_log("Best Estimate")
+        sel = results_tab["BAAL"].gt(0).to_list()
+        self.write_log("\tBuildings:\t{0} Bldgs w/ AAL > 0".format(results_tab.iloc[sel,:].shape[0]))
+        self.write_log("\tAAL:\t\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAAL")].sum(skipna=True),0))))
+        self.write_log("\tMean AAL:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAAL")].mean(skipna=True),0))))
+        self.write_log("\tExposure:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].sum(skipna=True),0))))
+        self.write_log("\tMean Exp:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].mean(skipna=True),0))))
+        
+        self.write_log(" ")
+        self.write_log("Max Estimate")
+        sel = results_tab["BAALmax"].gt(0).to_list()
+        self.write_log("\tBuildings:\t{0} Bldgs w/ AAL > 0".format(results_tab.iloc[sel,:].shape[0]))
+        self.write_log("\tAAL:\t\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAALmax")].sum(skipna=True),0))))
+        self.write_log("\tMean AAL:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAALmax")].mean(skipna=True),0))))
+        self.write_log("\tExposure:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].sum(skipna=True),0))))
+        self.write_log("\tMean Exp:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].mean(skipna=True),0))))
