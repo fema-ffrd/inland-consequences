@@ -6,12 +6,15 @@ The **Consequence Modeling Solution** is designed to natively ingest the **Natio
 
 | **Data Source**              | **Version**                | **Input File Type**          | **Consequence Modeling** |
 | ---------------------------- | -------------------------- | ---------------------------- | ------------------------ |
-| **NSI**                      | 2022 Public Version        | GeoPackage                   | Inland, Coastal          |
-| **NSI**                      | 2022 FEMA-Enhanced Version | File Geodatabase             | Inland only              |
-| **Milliman Market Baskets**  | 2021 Uniform, Uncorrelated | Comma-Separated Values (CSV) | Inland, Coastal          |
-| **User-defined Inventories** | User-defined               | User-defined                 | Inland, Coastal          |
+| **NSI**                      | 2022 Public Version        | GeoPackage                   | Inland                   |
+| **Milliman Market Baskets**  | 2021 Uniform, Uncorrelated | Comma-Separated Values (CSV) | Inland, Coastal\*\*      |
+| **User-defined Inventories** | User-defined               | User-defined                 | Inland                   |
+
+\*\* The Coastal Consequence Solutions tool was converted from an existing R based application that relies on shapefile inputs. To provide continuity for ongoing coastal projects, the Coastal Consquence Solution is designed to use the shapefile version of the Milliman Market Basekts rather than native csv format.
 
 For additional details on inventory requirements and methodology, refer to the **[Inventory Methodology Documentation](inventory_methodology.md)**.
+
+Although, not available in the current version of the consequences tool as a supported default inventory, we have provided information on how a power user could extend the Consequence Solution to utilize the NSI 2022 FEMA-Enhanced Version to integrate the latest Open Hazus research from across PTS Standard Operations periods and accounts.
 
 ______________________________________________________________________
 
@@ -29,7 +32,7 @@ ______________________________________________________________________
 
 ## Base Buildings Class
 
-The **Base Buildings Class** provides standardized field mapping for building inventories. It defines target fields that all consequence analysis operations use, but **does not validate or impute missing fields**. The base class simply maps source field names (via auto-detection or explicit overrides) to standardized target field names.
+The **Base Buildings Class** provides standardized field mapping for building inventories. It defines target fields that the inland consequence analysis operations use, but **does not validate or impute missing fields**. The base class simply maps source field names (via auto-detection or explicit overrides) to standardized target field names.
 
 **Subclasses extend the base class** with schema validation and field imputation:
 
@@ -49,20 +52,20 @@ The following schema defines all target fields used by the Consequence Modeling 
 
 **Table 1. Base Buildings Target Fields**
 
-| **Target Field**          | **Data Type** | **Description**                                         | **Used In**     | **Common Aliases**                                               |
-| ------------------------- | ------------- | ------------------------------------------------------- | --------------- | ---------------------------------------------------------------- |
-| **id**                    | String        | Unique identifier for the building                      | Inland, Coastal | id, building_id, bldg_id, fd_id                                  |
-| **occupancy_type**        | String        | HAZUS occupancy classification (e.g., RES1, COM1, IND2) | Inland, Coastal | occupancy_type, occtype, occupancy, occ_type, building_type      |
-| **first_floor_height**    | Numeric       | First floor height above ground elevation (feet)        | Inland, Coastal | first_floor_height, found_ht, first_floor_ht, ffh, floor_height  |
-| **foundation_type**       | String        | Foundation type code (I, P, W, B, C, F, S)              | Inland, Coastal | foundation_type, fndtype, found_type, fnd_type                   |
-| **number_stories**        | Numeric       | Number of stories (floors) in the building              | Inland, Coastal | number_stories, num_story, numstories, stories, num_floors       |
-| **area**                  | Numeric       | Building floor area (square feet)                       | Inland, Coastal | area, sqft, building_area, floor_area                            |
-| **building_cost**         | Numeric       | Building structural replacement cost (USD)              | Inland, Coastal | buildingcostusd, building_cost, val_struct, cost, building_value |
-| **content_cost**          | Numeric       | Contents replacement cost (USD)                         | Inland, Coastal | contentcostusd, content_cost, val_cont, contents_cost            |
-| **inventory_cost**        | Numeric       | Business inventory replacement cost (USD)               | Inland, Coastal | inventorycostusd, inventory_cost, val_inv, inv_cost              |
-| **general_building_type** | String        | Construction material code (W, M, C, S, MH)             | Inland          | general_building_type, bldgtype, generalbuildingtype             |
-| **eq_building_type**      | String        | Earthquake-specific building type classification        | Earthquake      | eqbldgtypeid, eq_building_type, earthquake_building_type         |
-| **eq_design_level**       | String        | Earthquake design level classification                  | Earthquake      | eqdesignlevelid, eq_design_level, design_level                   |
+| **Target Field**          | **Data Type** | **Description**                                         | **Used In** | **Common Aliases**                                               |
+| ------------------------- | ------------- | ------------------------------------------------------- | ----------- | ---------------------------------------------------------------- |
+| **id**                    | String        | Unique identifier for the building                      | Inland      | id, building_id, bldg_id, fd_id                                  |
+| **occupancy_type**        | String        | HAZUS occupancy classification (e.g., RES1, COM1, IND2) | Inland      | occupancy_type, occtype, occupancy, occ_type, building_type      |
+| **first_floor_height**    | Numeric       | First floor height above ground elevation (feet)        | Inland      | first_floor_height, found_ht, first_floor_ht, ffh, floor_height  |
+| **foundation_type**       | String        | Foundation type code (PILE, SHALLOW, BASEMENT, SLAB)    | Inland      | foundation_type, fndtype, found_type, fnd_type                   |
+| **number_stories**        | Numeric       | Number of stories (floors) in the building              | Inland      | number_stories, num_story, numstories, stories, num_floors       |
+| **area**                  | Numeric       | Building floor area (square feet)                       | Inland      | area, sqft, building_area, floor_area                            |
+| **building_cost**         | Numeric       | Building structural replacement cost (USD)              | Inland      | buildingcostusd, building_cost, val_struct, cost, building_value |
+| **content_cost**          | Numeric       | Contents replacement cost (USD)                         | Inland      | contentcostusd, content_cost, val_cont, contents_cost            |
+| **inventory_cost**        | Numeric       | Business inventory replacement cost (USD)               | Inland      | inventorycostusd, inventory_cost, val_inv, inv_cost              |
+| **general_building_type** | String        | Construction material code (W, M, C, S, MH)             | Inland      | general_building_type, bldgtype, generalbuildingtype             |
+| **eq_building_type**      | String        | Earthquake-specific building type classification        | Earthquake  | eqbldgtypeid, eq_building_type, earthquake_building_type         |
+| **eq_design_level**       | String        | Earthquake design level classification                  | Earthquake  | eqdesignlevelid, eq_design_level, design_level                   |
 
 ### *Base Buildings Data Schema:*
 
@@ -86,7 +89,7 @@ To support national hazard risk assessments, **FEMA** has developed an **enhance
 
 ### NSI 2022 Public Version
 
-The **2022 Public NSI** contains all attributes required to support both **inland** and **coastal** consequence modeling. **Table 2** lists the key fields used in the Consequence Modeling Solution, including data types, assumptions, rules, and default values assigned when data is missing.
+The **2022 Public NSI** contains all attributes required to support both **inland** and **coastal** consequence modeling. **Table 2** lists the key fields used in the Consequence Modeling Solution, including data types, assumptions, rules, and default values assigned when data is missing. At present, only the Inland Consequences Solution is natively compatible with the 2022 Public NSI. To use the 2022 Public Data for the Coastal Consequences Solution, users must pre-process the data to match the Milliman Market Basket shapefile schema described later in this documentation.
 
 **Table 2. NSI 2022 Public Data Attributes for Analysis**
 
@@ -100,7 +103,7 @@ The **2022 Public NSI** contains all attributes required to support both **inlan
 | **Number of Stories**     | Numeric       | num_story          | Inland, Coastal          | Provided                          | Validate > 0; assign default            | **1**                                                      |
 | **Area / Square Footage** | Numeric       | sqft               | Inland                   | Square footage                    | Validate > 0; assign default            | Hazus defaults (Inventory Methodology Table 2)             |
 | **General Building Type** | String        | bldgtype           | Inland                   | Provided (M, W, H, S)             | Assign default if missing               | **W (Wood)**                                               |
-| **Foundation Type**       | String        | found_type         | Inland, Coastal          | Provided (C, B, S, P, I, F, W)    | Assign default if missing               | **Slab**                                                   |
+| **Foundation Type**       | String        | found_type         | Inland, Coastal          | Provided (C, B, S, P, I, F, W)    | Assign default if missing               | **slab**                                                   |
 | **Foundation Height**     | Numeric       | found_ht           | Inland, Coastal          | Feet above ground                 | Assign default                          | Slab = 1 ft; Shallow = 3 ft; Pile = 8 ft; Basement = 2 ft  |
 | **Ground Elevation**      | Numeric       | Ground_elv         | Coastal                  | Feet (NAVD88)                     | Required for coastal modeling           | **Error (required)**                                       |
 
@@ -121,78 +124,28 @@ For the NSI Public dataset, the `found_type` field must be mapped to the **stand
 
 | **found_type** | **Description** | **Assigned Inland Foundation Type** |
 | -------------- | --------------- | ----------------------------------- |
-| C              | Crawl           | SHAL                                |
-| B              | Basement        | BASE                                |
+| C              | Crawl           | SHALLOW                             |
+| B              | Basement        | BASEMENT                            |
 | S              | Slab            | SLAB                                |
-| P              | Pier            | SHAL                                |
-| F              | Fill            | SLAB                                |
-| W              | Solid Wall      | SHAL                                |
+| P              | Pier            | SHALLOW                             |
+| F              | Fill            | BASEMENT                            |
+| W              | Solid Wall      | SHALLOW                             |
 | I              | Pile            | PILE                                |
 
 #### NSI 2022 Public – Coastal Foundation Type Mapping
 
-> *TODO:* Define coastal foundation type mapping rules for the NSI Public dataset.
+Although the current Coastal Consequences Solution is compatible only with the Milliman shapefile dataset, an advanced user can pre process NSI data to make it conform to the Milliman input schema. For advanced users, we recommend the following foundation type mappings.
+**Table 4. Coastal Foundation Type Mapping for NSI 2022 Public Version**
 
-______________________________________________________________________
-
-### NSI 2022 FEMA-Enhanced Version
-
-The **NSI 2022 FEMA-Enhanced Version** allows users to calculate losses using **full replacement costs** and expands structure coverage to include Washington, D.C., Puerto Rico, U.S. Virgin Islands. This enhanced version also includes **parcel-derived fields** that support refinement of the **inland foundation type** assignment.
-
-However, the FEMA-enhanced dataset does **not** include ground-elevation information. As a result, only **inland consequence modeling** is supported out of the box.
-Users may preprocess the dataset and manually supply ground elevations if they wish to perform coastal modeling using the **user-defined inventory ingestion process**. **Table 4** summarizes the attributes used in the analysis, including data types, assumptions, rules, and defaults applied when values are missing.
-
-**Table 4. NSI 2022 FEMA-Enhanced Data Attributes for Analysis**
-
-| **Analysis Attribute**       | **Data Type** | **NSI Field Name**    | **Assumption**                              | **Rule**                                    | **Default if Missing**                                    |
-| ---------------------------- | ------------- | --------------------- | ------------------------------------------- | ------------------------------------------- | --------------------------------------------------------- |
-| **Geometry**                 | Point         | Shape                 | Point geometry                              | Must be valid point geometry                | **Error (required)**                                      |
-| **Unique ID**                | Object ID     | OBJECTID              | Provided                                    | Must be present and unique                  | **Error (required)**                                      |
-| **Occupancy Type**           | String        | OCCTYPE               | Provided; must map to Hazus occupancy types | Must map to Hazus types                     | **RES1**                                                  |
-| **Building Value**           | Numeric       | Hazus_Building_Values | Full replacement cost (USD)                 | Must be present                             | **Error (required)**                                      |
-| **Content Value**            | Numeric       | Hazus_Content_Values  | Full replacement cost (USD)                 | Validate > 0; assign default if missing     | Default % by occupancy (Inventory Methodology Table 3)    |
-| **Number of Stories**        | Numeric       | NUM_STORY             | Provided                                    | Validate > 0; assign default                | **1**                                                     |
-| **Area / Square Footage**    | Numeric       | SQFT                  | Square footage (sq ft)                      | Validate > 0; assign default                | Hazus defaults (Inventory Methodology Table 2)            |
-| **General Building Type**    | String        | GENERALBUILDINGTYPE   | Provided (M, W, H, S)                       | Assign default if missing                   | **W (Wood)**                                              |
-| **Foundation Type**          | String        | FNDTYPE               | Provided (C, B, S, P, I, F, W)              | Assign default if missing                   | **Slab**                                                  |
-| **Foundation Height**        | Numeric       | FOUND_HT              | Feet above ground elevation                 | Assign default if missing                   | Slab = 1 ft; Shallow = 3 ft; Pile = 8 ft; Basement = 2 ft |
-| **Foundation Type (Parcel)** | String        | P_FNDTYPE             | Provided                                    | Used only for parcel-based refinement logic | None                                                      |
-| **Basement Type (Parcel)**   | String        | P_BSMNT               | Provided                                    | Used only for parcel-based refinement logic | None                                                      |
-
-#### NSI 2022 FEMA-Enhanced — Inland Foundation Type Mapping
-
-For the FEMA-Enhanced NSI, parcel-derived fields (`P_FNDTYPE` and `P_BSMNT`) are used to refine the inland foundation type. The following rules determine the **assigned inland foundation type**:
-
-**Refinement Rules:**
-
-- If `P_BSMNT` contains any of the following codes — `B`, `U`, `I`, `F`, `P`, `L`, `D`, `Y` — set inland foundation type to **BASE**.
-
-- If `P_FNDTYPE` contains any of the following codes — `S`, `P`, `L`, `F`, `E`, `T`, `W`, `A` — inland foundation type must stay **blank/null**, even when `P_BSMNT` indicates a basement.
-
-- If `P_BSMNT` does not indicate a basement, inland foundation type comes directly from `P_FNDTYPE` using the mapping in **Table 5**.
-
-- If `P_FNDTYPE` is null, use the NSI-provided `FNDTYPE` field and map it using the same rules as the **NSI 2022 Public Version** (`found_type`). *`FNDTYPE` in FEMA-Enhanced is equivalent to `found_type` in the Public NSI.*
-
-**Table 5. NSI 2022 FEMA-Enhanced Parcel Foundation Type Mapping**
-
-| **P_FNDTYPE** | **Description** | **Assigned Inland Foundation Type**                            |
-| ------------- | --------------- | -------------------------------------------------------------- |
-| P             | Piers           | SHAL                                                           |
-| A             | Concrete        | SLAB                                                           |
-| W             | Wood            | SHAL                                                           |
-| C             | Crossed Walls   | SLAB                                                           |
-| S             | Slab            | SLAB                                                           |
-| K             | Concrete Block  | SHAL                                                           |
-| O             | Other           | NULL                                                           |
-| G             | Stone           | SHAL                                                           |
-| D             | Masonry         | SHAL                                                           |
-| L             | Piling          | PILE                                                           |
-| R             | Retaining Wall  | SHAL                                                           |
-| T             | Footing         | SLAB                                                           |
-| B             | Crawl / Raised  | SHAL                                                           |
-| F             | Mud Sill        | SLAB                                                           |
-| E             | Earth           | SLAB                                                           |
-| Z             | Placeholder     | If `P_BSMNT` indicates basement → **BASE**, otherwise **Slab** |
+| **found_type** | **Description** | **Assigned Coastal Foundation Type** |
+| -------------- | --------------- | ------------------------------------ |
+| C              | Crawl           | 4                                    |
+| B              | Basement        | 2                                    |
+| S              | Slab            | 8                                    |
+| P              | Pier            | 6                                    |
+| F              | Fill            | 7                                    |
+| W              | Solid Wall      | 4                                    |
+| I              | Pile            | 9                                    |
 
 ### *NSI Data Schema:*
 
@@ -214,6 +167,66 @@ fields.
 }
 ```
 
+### NSI 2022 FEMA-Enhanced Version
+
+As noted above, the Consequence Solutions do not support the NSI 2022 FEMA Enhanced versions by default. However, a user may wish to use this enhanced version instead of the public version to calculate losses using full replacement costs and to extend structure coverage to Washington, D.C., Puerto Rico, and the U.S. Virgin Islands. An advanced user could rely on the existing NSI Public building class for this purpose, but could also extend this approach by incorporating the latest PTS Open Hazus research on using parcel derived fields to refine inland foundation type assignments.
+
+Similarly, an advanced user may choose to use the FEMA Enhanced NSI for coastal modeling; however, the dataset must first be pre processed to match the coastal schema, and users must manually supply ground elevations.
+
+To create a custom NSI 2022 FEMA-Enhanced building class, users can reference **Table 4**, which summarizes the attributes used in the analysis, including data types, assumptions, rules, and defaults applied when values are missing.
+
+**Table 4. NSI 2022 FEMA-Enhanced Data Attributes for Analysis**
+
+| **Analysis Attribute**       | **Data Type** | **NSI Field Name**    | **Assumption**                              | **Rule**                                    | **Default if Missing**                                    |
+| ---------------------------- | ------------- | --------------------- | ------------------------------------------- | ------------------------------------------- | --------------------------------------------------------- |
+| **Geometry**                 | Point         | Shape                 | Point geometry                              | Must be valid point geometry                | **Error (required)**                                      |
+| **Unique ID**                | Object ID     | OBJECTID              | Provided                                    | Must be present and unique                  | **Error (required)**                                      |
+| **Occupancy Type**           | String        | OCCTYPE               | Provided; must map to Hazus occupancy types | Must map to Hazus types                     | **RES1**                                                  |
+| **Building Value**           | Numeric       | Hazus_Building_Values | Full replacement cost (USD)                 | Must be present                             | **Error (required)**                                      |
+| **Content Value**            | Numeric       | Hazus_Content_Values  | Full replacement cost (USD)                 | Validate > 0; assign default if missing     | Default % by occupancy (Inventory Methodology Table 3)    |
+| **Number of Stories**        | Numeric       | NUM_STORY             | Provided                                    | Validate > 0; assign default                | **1**                                                     |
+| **Area / Square Footage**    | Numeric       | SQFT                  | Square footage (sq ft)                      | Validate > 0; assign default                | Hazus defaults (Inventory Methodology Table 2)            |
+| **General Building Type**    | String        | GENERALBUILDINGTYPE   | Provided (M, W, H, S)                       | Assign default if missing                   | **W (Wood)**                                              |
+| **Foundation Type**          | String        | FNDTYPE               | Provided (C, B, S, P, I, F, W)              | Assign default if missing                   | **slab**                                                  |
+| **Foundation Height**        | Numeric       | FOUND_HT              | Feet above ground elevation                 | Assign default if missing                   | Slab = 1 ft; Shallow = 3 ft; Pile = 8 ft; Basement = 2 ft |
+| **Foundation Type (Parcel)** | String        | P_FNDTYPE             | Provided                                    | Used only for parcel-based refinement logic | None                                                      |
+| **Basement Type (Parcel)**   | String        | P_BSMNT               | Provided                                    | Used only for parcel-based refinement logic | None                                                      |
+
+#### NSI 2022 FEMA-Enhanced — Inland Foundation Type Mapping
+
+For the FEMA-Enhanced NSI, parcel-derived fields (`P_FNDTYPE` and `P_BSMNT`) could be used to refine the inland foundation type. The following rules determine the **assigned inland foundation type**:
+
+**Refinement Rules:**
+
+- If `P_BSMNT` contains any of the following codes — `B`, `U`, `I`, `F`, `P`, `L`, `D`, `Y` — set inland foundation type to **BASE**.
+
+- If `P_FNDTYPE` contains any of the following codes — `S`, `P`, `L`, `F`, `E`, `T`, `W`, `A` — inland foundation type must stay **blank/null**, even when `P_BSMNT` indicates a basement.
+
+- If `P_BSMNT` does not indicate a basement, inland foundation type comes directly from `P_FNDTYPE` using the mapping in **Table 5**.
+
+- If `P_FNDTYPE` is null, use the NSI-provided `FNDTYPE` field and map it using the same rules as the **NSI 2022 Public Version** (`found_type`). *`FNDTYPE` in FEMA-Enhanced is equivalent to `found_type` in the Public NSI.*
+
+**Table 5. NSI 2022 FEMA-Enhanced Parcel Foundation Type Mapping**
+
+| **P_FNDTYPE** | **Description** | **Assigned Inland Foundation Type**                                |
+| ------------- | --------------- | ------------------------------------------------------------------ |
+| P             | Piers           | SHALLOW                                                            |
+| A             | Concrete        | SLAB                                                               |
+| W             | Wood            | SALLOW                                                             |
+| C             | Crossed Walls   | SLAB                                                               |
+| S             | Slab            | SLAB                                                               |
+| K             | Concrete Block  | SHALLOW                                                            |
+| O             | Other           | NULL                                                               |
+| G             | Stone           | SHALLOW                                                            |
+| D             | Masonry         | SHALLOW                                                            |
+| L             | Piling          | PILE                                                               |
+| R             | Retaining Wall  | SHALLOW                                                            |
+| T             | Footing         | SLAB                                                               |
+| B             | Crawl / Raised  | SHALLOW                                                            |
+| F             | Mud Sill        | SLAB                                                               |
+| E             | Earth           | SLAB                                                               |
+| Z             | Placeholder     | If `P_BSMNT` indicates basement → **BASEMENT**, otherwise **SLAB** |
+
 ______________________________________________________________________
 
 ## Milliman Market Baskets Data
@@ -227,13 +240,15 @@ Three categories of data, referred to as **“books”**, were created from the 
 1. **Uncorrelated Market Basket** – Contains randomized property and policy characteristics not correlated with geography; *foundation type* and *first-floor height* remain linked to prevent implausible combinations.
 1. **Correlated Market Basket (Inforce Dataset)** – Joined with FEMA policy data (GFE access required); attributes are correlated to reflect realistic joint distributions and align with observed **parcel** and **NFIP exposure** data.
 
-The Consequences Solution is designed and tested using the Uniform and Uncorrelated Market Basket datasets. **Table 6** describes the analysis attributes used across these books. Although the schema is consistent, the method of attribute imputation varies by dataset. For example, the Uncorrelated Market Basket randomizes property and coverage characteristics, while the Correlated Market Basket applies state-specific distributions to more closely represent actual conditions.
+The Consequences Solution is designed and tested using the Uniform and Uncorrelated Market Basket datasets. Although the schema is consistent, the method of attribute imputation varies by dataset. For example, the Uncorrelated Market Basket randomizes property and coverage characteristics, while the Correlated Market Basket applies state-specific distributions to more closely represent actual conditions.
+
+*Table 6* summarizes the analysis attributes used across these books for the Inland Consequences Solution, which uses CSV inputs. *Table 7* summarizes the analysis attributes used across these books for the Coastal Consequences Solution, which uses a shapefile input. As noted above, the Coastal Consequences module currently uses the shapefile format to maintain continuity with ongoing project work; however, a future enhancement could align inputs across modules to ensure consistency with the native CSV Milliman Market Basket format.
 
 The Milliman Market Basket datasets support both coastal and inland loss calculations, as they include the necessary structural, coverage, and geographic attributes for each modeling environment. Their use, however, is limited to single-family residential (RES1) structures, as the datasets were specifically developed for rating factor development under FEMA’s NFIP framework. For more details, refer to the [**FEMA (2022)**](https://www.fema.gov/sites/default/files/documents/FEMA_Risk-Rating-2.0_Methodology-and-Data-Appendix__01-22.pdf).
 
-**Table 6. Milliman Data Attributes for Analysis**
+**Table 6. Milliman Data Attributes for Inland Analysis**
 
-| Analysis Attribute            | NSI Field Name     | Data Type | Notes                                                                                           |
+| Analysis Attribute            | Field Name         | Data Type | Notes                                                                                           |
 | ----------------------------- | ------------------ | --------- | ----------------------------------------------------------------------------------------------- |
 | X Location                    | LON                | Double    |                                                                                                 |
 | Y Location                    | LAT                | Double    |                                                                                                 |
@@ -253,24 +268,41 @@ The Milliman Market Basket datasets support both coastal and inland loss calcula
 | Basement Type                 | BasementFinishType | Long      | Basement Finish type, (0 = no basement; 1 = unfinished basement; 2 = finished basement)         |
 | Ground Elevation              | elev_ft            | Float     | Digital Elevation Model (DEM) (ground) elevation (feet NAVD88)                                  |
 
+**Table 7. Milliman Data Attributes for Coastal Analysis**
+
+| Analysis Attribute            | Field Name | Data Type | Notes                                                                                           |
+| ----------------------------- | ---------- | --------- | ----------------------------------------------------------------------------------------------- |
+| Unique ID                     | location   | Numeric   |                                                                                                 |
+| Building Value                | BLDG_VALUE | Numeric   | Full replacement value                                                                          |
+| Building Insurance Deductible | BLDG_DED   | Numeric   |                                                                                                 |
+| Building Insurance Limit      | BLDG_LIMIT | Numeric   |                                                                                                 |
+| Content Value                 | CNT_VALUE  | Numeric   | Full replacement value                                                                          |
+| Content Insurance Deductible  | CNT_DED    | Numeric   |                                                                                                 |
+| Content Insurance Limit       | CNT_LIMIT  | Numeric   |                                                                                                 |
+| Number of Stories             | NUM_STORIE | Numeric   |                                                                                                 |
+| Foundation Type               | foundation | Numeric   | Foundation type, (2 = basement; 4 = crawlspace; 6 = pier; 7 = fill or wall; 8 = slab; 9 = pile) |
+| Foundation Height             | FIRST_FLOO | Numeric   | First floor height (feet above ground)                                                          |
+| Basement Type                 | BasementFi | Numeric   | Basement Finish type, (0 = no basement; 1 = unfinished basement; 2 = finished basement)         |
+| Ground Elevation              | DEMft      | Numeric   | Digital Elevation Model (DEM) (ground) elevation (feet NAVD88)                                  |
+
 ### Milliman — Inland Foundation Type Mapping
 
 For both the **Uniform Book** and **Uncorrelated Market Basket** datasets, the `foundation` field contains numeric codes that must be mapped to inland foundation types used by the Consequences Solution. These mappings support correct depth–damage function assignment.
 
-**Table 7. Milliman Inland Foundation Type Mapping**
+**Table 8. Milliman Inland Foundation Type Mapping**
 
 | **foundation** | **Description** | **Assigned Inland Foundation Type** |
 | -------------- | --------------- | ----------------------------------- |
-| **2**          | Basement        | **BASE**                            |
-| **4**          | Crawlspace      | **SHAL**                            |
-| **6**          | Pier            | **SHAL**                            |
+| **2**          | Basement        | **BASEMENT**                        |
+| **4**          | Crawlspace      | **SHALLOW**                         |
+| **6**          | Pier            | **SHALLOW**                         |
 | **7**          | Fill / Wall     | **SLAB**                            |
 | **8**          | Slab            | **SLAB**                            |
 | **9**          | Pile            | **PILE**                            |
 
 ### Milliman — Coastal Foundation Type Mapping
 
-*To be developed.*
+The original Coastal Future of Flood Risk Data Analysis Average Annualized Losses Calculation Tool, on which the Coastal Consequences Solution is based, was designed to be compatible with the Milliman Market Baskets datasets by default; therefore, no additional mapping is required.
 
 ### *Milliman Data Schema:*
 
