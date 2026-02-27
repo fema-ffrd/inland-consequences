@@ -20,6 +20,11 @@ dependencies = [
   "typing==3.7.4.3",
   "duckdb>=1.4.3",
   "pyarrow>=22.0.0",
+  "marimo>=0.20.2",
+  "pydantic-ai>=1.63.0",
+  "folium>=0.20.0",
+  "lonboard",
+  "matplotlib",
 ]
 
 [tool.uv.workspace]
@@ -42,6 +47,7 @@ build-backend = "hatchling.build"
 # Include the top-level `src` and each package's `src` so the wheel
 # will find packages located under those directories.
 packages = [
+    "src/inland_consequences",
     "packages/core/src/sphere",
     "packages/data/src/sphere",
     "packages/flood/src/sphere",
@@ -49,6 +55,7 @@ packages = [
 
 [tool.hatch.build.targets.sdist]
 packages = [
+    "src/inland_consequences",
     "packages/core/src/sphere",
     "packages/data/src/sphere",
     "packages/flood/src/sphere",
@@ -71,3 +78,6 @@ number = false
 markers = [
     "manual: mark test to run only when specifically requested (uv run pytest -m manual)"
 ]
+
+[tool.marimo.runtime]
+output_max_bytes = 10_000_000
