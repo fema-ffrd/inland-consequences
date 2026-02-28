@@ -483,6 +483,9 @@ class InlandFloodAnalysis:
         # Concatenate all return period DataFrames
         hazard_df = pd.concat(rp_dataframes, ignore_index=True)
         
+        # Exclude rows where depth is 0
+        hazard_df = hazard_df[hazard_df["depth"] > 0]
+
         # Load into DuckDB using pyarrow (pa.Table.from_pandas works with pandas DataFrame)
         hazard_arrow = pa.Table.from_pandas(hazard_df)
         connection.register("hazard_arrow", hazard_arrow)
@@ -1362,19 +1365,19 @@ class InlandFloodAnalysis:
             -- 3. Generate Hazard Evaluation Points
             -- For every building, we create 3 rows: Mean, Mean + Std, Mean - Std
             hazard_points AS (
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth as eval_depth
+                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth - sdf.first_floor_height as eval_depth
                 FROM hazard h
                 JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
                 
                 UNION ALL
                 
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth + h.std_dev as eval_depth
+                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth - sdf.first_floor_height + h.std_dev as eval_depth
                 FROM hazard h
                 JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
                 
                 UNION ALL
                 
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth - h.std_dev as eval_depth
+                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth - sdf.first_floor_height - h.std_dev as eval_depth
                 FROM hazard h
                 JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
             ),
@@ -1531,7 +1534,9 @@ class InlandFloodAnalysis:
                 b.ID,
                 d.return_period,
                 ROUND(b.building_cost * (d.d_min / 100.0), 2) AS loss_min,
-                ROUND(b.building_cost * (d.damage_percent_mean / 100.0), 2) AS loss_mean,
+                ROUND(b.building_cost * (d.d_mode / 100.0), 2) AS loss_mode_clamped,
+                ROUND(b.building_cost * (d.damage_percent / 100.0), 2) AS loss_mean,
+                ROUND(b.building_cost * (d.damage_percent_mean / 100.0), 2) AS loss_mean_adjusted,
                 ROUND(b.building_cost * (d.damage_percent_std / 100.0), 2) AS loss_std,
                 ROUND(b.building_cost * (d.d_max / 100.0), 2) AS loss_max
             FROM buildings b
@@ -1542,8 +1547,93 @@ class InlandFloodAnalysis:
 
     def _calculate_aal(self, connection: duckdb.DuckDBPyConnection) -> None:
         # Calculate AAL using trapezoidal rule, including min, mean, and max values
-
         sql_statement = '''
+            CREATE OR REPLACE TABLE aal_losses AS
+            WITH probabilities AS (
+                SELECT 
+                    ID,
+                    1.0 / return_period as prob,
+                    loss_min,
+                    loss_mean,
+                    loss_std,
+                    loss_max
+                FROM losses
+            ),
+
+            -- 1. Add Anchor Points to close the curve at P=1 and P=0
+            anchored_points AS (
+                -- Original Data
+                SELECT * FROM probabilities
+                
+                UNION ALL
+                
+                -- Anchor: 1-year return (P=1.0). Assuming 0 loss for high frequency.
+                SELECT DISTINCT 
+                    ID, 
+                    1.0 as prob, 
+                    0.0 as loss_min, 
+                    0.0 as loss_mean, 
+                    0.0 as loss_std, 
+                    0.0 as loss_max 
+                FROM probabilities
+                
+                UNION ALL
+                
+                -- Anchor: Infinite return (P=0.0). 
+                -- We use the losses from the highest RP (lowest prob) to create a tail rectangle.
+                SELECT 
+                    ID, 
+                    0.0 as prob,
+                    -- Use FIRST_VALUE to get the losses associated with the smallest probability
+                    FIRST_VALUE(loss_min) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_min,
+                    FIRST_VALUE(loss_mean) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_mean,
+                    FIRST_VALUE(loss_std) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_std,
+                    FIRST_VALUE(loss_max) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_max
+                FROM probabilities
+            ),
+
+            -- 2. Create Trapezoidal Segments
+            -- Sorting DESC ensures we move from Prob 1.0 (High Freq) toward Prob 0.0 (Tail)
+            segments AS (
+                SELECT 
+                    ID,
+                    prob as p_start,
+                    loss_min as lmin_start,
+                    loss_mean as l_start,
+                    loss_std as s_start,
+                    loss_max as lmax_start,
+                    LEAD(prob) OVER (PARTITION BY ID ORDER BY prob DESC) as p_end,
+                    LEAD(loss_min) OVER (PARTITION BY ID ORDER BY prob DESC) as lmin_end,
+                    LEAD(loss_mean) OVER (PARTITION BY ID ORDER BY prob DESC) as l_end,
+                    LEAD(loss_std) OVER (PARTITION BY ID ORDER BY prob DESC) as s_end,
+                    LEAD(loss_max) OVER (PARTITION BY ID ORDER BY prob DESC) as lmax_end
+                FROM (SELECT DISTINCT * FROM anchored_points) -- Distinct handles cases where 1yr RP already exists
+            ),
+
+            -- 3. Calculate Area of Segments
+            segment_areas AS (
+                SELECT 
+                    ID,
+                    ( (lmin_start + lmin_end) / 2.0 ) * (p_start - p_end) as aal_contribution_min,
+                    ( (l_start + l_end) / 2.0 ) * (p_start - p_end) as aal_contribution_mean,
+                    ( (s_start + s_end) / 2.0 ) * (p_start - p_end) as aal_contribution_std,
+                    ( (lmax_start + lmax_end) / 2.0 ) * (p_start - p_end) as aal_contribution_max
+                FROM segments
+                WHERE p_end IS NOT NULL
+            )
+
+            -- 4. Final Aggregation
+            SELECT 
+                ID,
+                SUM(aal_contribution_min) as aal_min,
+                SUM(aal_contribution_mean) as aal_mean,
+                SUM(aal_contribution_std) as aal_std,
+                SUM(aal_contribution_max) as aal_max
+            FROM segment_areas
+            GROUP BY ID;
+        '''
+
+        sql_statement_trapezoidal = '''
             CREATE OR REPLACE TABLE aal_losses AS
 
             WITH 

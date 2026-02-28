@@ -4,7 +4,7 @@ import geopandas as gpd
 import pytest
 
 import duckdb
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from inland_consequences.nsi_buildings import NsiBuildings
 
 from inland_consequences.inland_flood_analysis import InlandFloodAnalysis
@@ -141,21 +141,45 @@ def flood_analysis_results(tmp_path_factory, mock_raster_collection, mock_buildi
     # The __exit__ method in the DataProcessor handles the conn.close()
 
 @pytest.mark.manual
-def test_manual_calculate_losses(mock_raster_collection, mock_buildings, mock_vulnerability):
+def test_manual_calculate_losses(tmp_path):
     # To run this test manually, execute the statement in the command line
     # uv run pytest -m manual tests/test_inland_flood_analysis.py
-    
-    analysis = InlandFloodAnalysis(
-            raster_collection=mock_raster_collection,
-            buildings=mock_buildings,
-            vulnerability=mock_vulnerability,
+    from pathlib import Path
+    from sphere.flood.single_value_reader import SingleValueRaster
+    from inland_consequences.inland_vulnerability import InlandFloodVulnerability
+
+    examples_dir = Path(__file__).parent.parent / "examples" / "Duwamish"
+
+    return_periods = [10, 20, 50, 100, 200, 500, 1000, 2000]
+    rp_map = {}
+    for rp in return_periods:
+        rp_map[rp] = {
+            "depth": SingleValueRaster(str(examples_dir / f"aep_mean_depth_{rp}yr_sample_EPSG4326.tif")),
+            "velocity": SingleValueRaster(str(examples_dir / f"aep_mean_velocity_{rp}yr_sample_EPSG4326.tif")),
+            "uncertainty": SingleValueRaster(str(examples_dir / f"aep_stdev_depth_{rp}yr_sample_EPSG4326.tif")),
+        }
+    raster_collection = RasterCollection(rp_map)
+
+    nsi_gdf = gpd.read_parquet(str(examples_dir / "nsi_duwamish.parquet"))
+    buildings = NsiBuildings(nsi_gdf, overrides={"id": "fd_id"})
+
+    vulnerability = InlandFloodVulnerability(buildings=buildings)
+
+    with patch(
+        "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
+        return_value=str(tmp_path / "test_duwamish.duckdb")
+    ):
+        analysis = InlandFloodAnalysis(
+            raster_collection=raster_collection,
+            buildings=buildings,
+            vulnerability=vulnerability,
             calculate_aal=True
         )
         
-    # 3. Enter the context manager to open the connection and setup tables
-    with analysis:
-        # **This is where the expensive data-creating call happens ONCE**
-        analysis.calculate_losses()
+        with analysis:
+            analysis.calculate_losses()
+
+    
 
 def test_buildings_copied(flood_analysis_results):
     """Test that buildings data is copied into the analysis database."""
