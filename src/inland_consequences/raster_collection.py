@@ -57,9 +57,9 @@ class RasterCollection:
                     f"Uncertainty for return period {rp} must be an AbstractRasterReader, numeric, or None"
                 )
 
-            for name, val in (("velocity", velocity), ("duration", duration)):
+            for field_name, val in (("velocity", velocity), ("duration", duration)):
                 if val is not None and not isinstance(val, AbstractRasterReader):
-                    raise ValueError(f"{name} for return period {rp} must be an AbstractRasterReader or None")
+                    raise ValueError(f"{field_name} for return period {rp} must be an AbstractRasterReader or None")
 
             self.rasters[int(rp)] = {
                 "depth": depth,

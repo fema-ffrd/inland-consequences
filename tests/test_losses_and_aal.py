@@ -293,16 +293,23 @@ def _expected_damage_stats(depth: float, std_dev: float):
 
 
 def _expected_aal(losses_100, losses_500):
-    """Trapezoidal AAL between two return periods (100, 500).
+    """Full-curve trapezoidal AAL with anchor points matching the SQL implementation.
 
-    p_100 = 1/100 = 0.01
-    p_500 = 1/500 = 0.002
-    Sorted DESC by probability → p_start = 0.01, p_end = 0.002
-    Width = 0.01 - 0.002 = 0.008
-    AAL = ((loss_100 + loss_500) / 2) * 0.008
+    The SQL adds two anchor points to close the exceedance-probability curve:
+      - P=1.0 (1-year return period) with loss = 0  (no damage at annual flood)
+      - P=0.0 (infinite return period) with loss = losses_500  (tail rectangle)
+
+    Integration segments (sorted DESC by probability):
+      1. P=1.0  → P=0.01  : area = ((0 + losses_100) / 2) * (1.0 - 0.01)
+      2. P=0.01 → P=0.002 : area = ((losses_100 + losses_500) / 2) * 0.008
+      3. P=0.002 → P=0.0  : area = losses_500 * 0.002  (tail rectangle)
     """
-    p_width = (1.0 / 100) - (1.0 / 500)  # 0.008
-    return ((losses_100 + losses_500) / 2.0) * p_width
+    p_100 = 1.0 / 100   # 0.01
+    p_500 = 1.0 / 500   # 0.002
+    seg1 = ((0.0 + losses_100) / 2.0) * (1.0 - p_100)
+    seg2 = ((losses_100 + losses_500) / 2.0) * (p_100 - p_500)
+    seg3 = losses_500 * p_500
+    return seg1 + seg2 + seg3
 
 
 # ===================================================================

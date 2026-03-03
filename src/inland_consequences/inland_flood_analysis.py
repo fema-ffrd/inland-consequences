@@ -3,6 +3,8 @@ from sphere.core.schemas.abstract_raster_reader import AbstractRasterReader
 from sphere.core.schemas.abstract_vulnerability_function import AbstractVulnerabilityFunction
 from .raster_collection import RasterCollection
 import inspect
+import logging
+import json
 import numpy as np
 import pandas as pd
 import geopandas as gpd
@@ -12,6 +14,12 @@ from pathlib import Path
 from datetime import datetime
 import time
 import secrets
+try:
+    from importlib.metadata import version as _pkg_version
+except ImportError:
+    from importlib_metadata import version as _pkg_version  # type: ignore
+
+logger = logging.getLogger(__name__)
 
 # Raster inputs are provided via a RasterCollection instance which
 # enforces labeled rasters per return period (depth required, optional
@@ -112,6 +120,7 @@ class InlandFloodAnalysis:
             # Mode 2: Standalone (create, use, and close temporary connection)
             db_id = self._get_db_identifier()
             temp_conn = duckdb.connect(database=db_id)
+            self._setup_logging(db_id)
             return temp_conn, True # conn_is_temporary = True
 
     # ----------------------------------------------------
@@ -124,6 +133,7 @@ class InlandFloodAnalysis:
             
         db_id = self._get_db_identifier()
         self.conn = duckdb.connect(database=db_id)
+        self._setup_logging(db_id)
         return self
         
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -131,6 +141,195 @@ class InlandFloodAnalysis:
         if self.conn:
             self.conn.close()
         self.conn = None # Reset the connection attribute
+
+    # ----------------------------------------------------
+    # Logging Helpers
+    # ----------------------------------------------------
+
+    def _setup_logging(self, db_path: str) -> None:
+        """Configure console and file logging handlers for this analysis run.
+
+        The log file is co-located with the DuckDB database file using the same
+        stem but a `.log` extension. Handlers are only added once per logger
+        instance to avoid duplicate output across context-manager and standalone
+        modes.
+        """
+        if logger.handlers:
+            return  # Already configured for this process
+
+        log_path = Path(db_path).with_suffix(".log")
+        fmt = logging.Formatter("%(asctime)s [%(levelname)-8s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(fmt)
+
+        file_handler = logging.FileHandler(str(log_path), mode="a", encoding="utf-8")
+        file_handler.setFormatter(fmt)
+
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(console_handler)
+        logger.addHandler(file_handler)
+
+    def _create_run_log_table(self, conn: duckdb.DuckDBPyConnection) -> None:
+        """Create the run_log table to capture step-by-step execution messages."""
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS run_log (
+                id UUID PRIMARY KEY DEFAULT uuidv7(),
+                logged_at TIMESTAMP DEFAULT now(),
+                level VARCHAR,
+                step VARCHAR,
+                message VARCHAR,
+                elapsed_seconds DOUBLE
+            )
+        """)
+
+    def _log(
+        self,
+        conn: duckdb.DuckDBPyConnection,
+        level: str,
+        step: str,
+        message: str,
+        elapsed: Optional[float] = None,
+    ) -> None:
+        """Write a log entry to both the Python logger and the run_log DuckDB table."""
+        log_line = f"[{step}] {message}"
+        if elapsed is not None:
+            log_line += f" ({elapsed:.2f}s)"
+
+        getattr(logger, level.lower(), logger.info)(log_line)
+
+        try:
+            conn.execute(
+                "INSERT INTO run_log (level, step, message, elapsed_seconds) VALUES (?, ?, ?, ?)",
+                [level.upper(), step, message, elapsed],
+            )
+        except Exception:
+            pass  # Never let logging failure interrupt analysis
+
+    def _create_run_metadata_table(self, conn: duckdb.DuckDBPyConnection) -> None:
+        """Create the run_metadata table and insert one row for this analysis run."""
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS run_metadata (
+                id UUID PRIMARY KEY DEFAULT uuidv7(),
+                created_at TIMESTAMP DEFAULT now(),
+                package_version VARCHAR,
+                buildings_type VARCHAR,
+                raster_info JSON,
+                return_periods JSON,
+                wildcard_fields JSON,
+                calculate_aal BOOLEAN,
+                aal_rate_limit_low DOUBLE,
+                aal_rate_limit_high DOUBLE
+            )
+        """)
+
+        try:
+            pkg_ver = _pkg_version("inland-consequences")
+        except Exception:
+            pkg_ver = "unknown"
+
+        buildings_type = type(self.buildings).__name__
+
+        def _safe_source(raster) -> str | None:
+            """Return data_source as string, or None if unavailable/not serializable."""
+            if raster is None:
+                return None
+            try:
+                src = raster.data_source
+                return str(src) if src is not None else None
+            except Exception:
+                return None
+
+        # Build raster_info: { rp: { data_source, depth_class, uncertainty_class, velocity_class, duration_class } }
+        raster_info: Dict[int, Any] = {}
+        for rp in self.raster_collection.return_periods():
+            spec = self.raster_collection.get(rp)
+            depth_r = spec.get("depth")
+            uncert_r = spec.get("uncertainty")
+            vel_r = spec.get("velocity")
+            dur_r = spec.get("duration")
+            raster_info[rp] = {
+                "depth_source": _safe_source(depth_r),
+                "depth_class": type(depth_r).__name__ if depth_r is not None else None,
+                "uncertainty_source": _safe_source(uncert_r) if isinstance(uncert_r, AbstractRasterReader) else (str(uncert_r) if uncert_r is not None else None),
+                "uncertainty_class": type(uncert_r).__name__ if uncert_r is not None else None,
+                "velocity_source": _safe_source(vel_r),
+                "velocity_class": type(vel_r).__name__ if vel_r is not None else None,
+                "duration_source": _safe_source(dur_r),
+                "duration_class": type(dur_r).__name__ if dur_r is not None else None,
+            }
+
+        return_periods = self.raster_collection.return_periods()
+        wildcard_fields = self.wildcard_fields
+
+        aal_low = None
+        aal_high = None
+        if self.aal_rate_limits is not None:
+            aal_low, aal_high = float(self.aal_rate_limits[0]), float(self.aal_rate_limits[1])
+
+        conn.execute(
+            """INSERT INTO run_metadata
+               (package_version, buildings_type, raster_info, return_periods,
+                wildcard_fields, calculate_aal, aal_rate_limit_low, aal_rate_limit_high)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            [
+                pkg_ver,
+                buildings_type,
+                json.dumps(raster_info),
+                json.dumps(return_periods),
+                json.dumps(wildcard_fields),
+                self.calculate_aal,
+                aal_low,
+                aal_high,
+            ],
+        )
+
+    def _log_validation_summary(self, conn: duckdb.DuckDBPyConnection) -> None:
+        """Query validation_log and log per-rule distinct building counts and percentages."""
+        try:
+            total_buildings = conn.execute("SELECT COUNT(*) FROM buildings").fetchone()[0]
+            if total_buildings == 0:
+                return
+
+            rows = conn.execute("""
+                SELECT
+                    severity,
+                    rule,
+                    COUNT(DISTINCT building_id) AS affected_buildings,
+                    ROUND(100.0 * COUNT(DISTINCT building_id) / ?, 1) AS pct
+                FROM validation_log
+                GROUP BY severity, rule
+                ORDER BY severity DESC, affected_buildings DESC
+            """, [total_buildings]).fetchall()
+
+            if not rows:
+                self._log(conn, "INFO", "validation_summary", "No validation warnings or errors.")
+                return
+
+            affected_ids = conn.execute(
+                "SELECT COUNT(DISTINCT building_id) FROM validation_log"
+            ).fetchone()[0]
+
+            header = (
+                f"Validation Summary — {len(rows)} rule(s) flagged across "
+                f"{affected_ids:,} building(s) (total: {total_buildings:,}):"
+            )
+            logger.warning(header)
+            conn.execute(
+                "INSERT INTO run_log (level, step, message) VALUES ('WARNING', 'validation_summary', ?)",
+                [header],
+            )
+
+            for severity, rule, count, pct in rows:
+                line = f"  [{severity:<7}] {rule:<45}: {count:>6,} buildings ({pct}%)"
+                log_level = "warning" if severity in ("WARNING", "ERROR") else "info"
+                getattr(logger, log_level)(line)
+                conn.execute(
+                    "INSERT INTO run_log (level, step, message) VALUES (?, 'validation_summary', ?)",
+                    [severity, line],
+                )
+        except Exception:
+            pass  # Never let summary failure interrupt analysis
 
     def _calculate_exposure(self) -> pd.DataFrame:
         """Vectorized sampling of all rasters for all building geometries.
@@ -296,52 +495,98 @@ class InlandFloodAnalysis:
         # 6. Unpivot the wide damage functions that were gathered to interpolate the damage ratios from the depth and uncertainty
         
         conn, close_after_use = self._get_or_create_connection()
+        run_start = time.perf_counter()
         
         try:
-            # Use the connection
+            # Create run_log and run_metadata tables first so all subsequent steps are recorded
+            self._create_run_log_table(conn)
+            self._create_run_metadata_table(conn)
+
+            n_buildings = len(self.buildings.gdf)
+            n_rps = len(self.raster_collection.return_periods())
+            self._log(conn, "INFO", "startup",
+                      f"Starting inland flood analysis — {n_buildings:,} buildings × {n_rps} return period(s)")
+
             # Enable GeoArrow extensions for spatial data support
+            t = time.perf_counter()
             conn.execute("INSTALL spatial;")
             conn.execute("LOAD spatial;")
             conn.execute("CALL register_geoarrow_extensions()")
+            self._log(conn, "INFO", "spatial_extensions", "Spatial extensions loaded", time.perf_counter() - t)
             
             # Ensure the shared validation table exists before running checks
             self._create_validation_table(conn)
             
             # Copy buildings to database
+            t = time.perf_counter()
             self._create_buildings_table(conn)
+            self._log(conn, "INFO", "buildings_table",
+                      f"Buildings table created ({n_buildings:,} rows)", time.perf_counter() - t)
             
             # Copy vulnerability tables to database
+            t = time.perf_counter()
             self._create_vulnerability_tables(conn)
+            self._log(conn, "INFO", "vulnerability_tables", "Vulnerability tables loaded", time.perf_counter() - t)
             
             # Copy hazard inputs to database
-            self._create_hazard_tables(conn)    
+            t = time.perf_counter()
+            self._create_hazard_tables(conn)
+            self._log(conn, "INFO", "hazard_tables",
+                      f"Hazard tables created ({n_rps} return period(s))", time.perf_counter() - t)
 
             # Assign peril type
+            t = time.perf_counter()
             self._assign_flood_peril_type(conn)
+            self._log(conn, "INFO", "flood_peril_type", "Flood peril types assigned", time.perf_counter() - t)
 
             # Run building-level validation logic (non-fatal)
+            t = time.perf_counter()
             self._run_building_logic(conn)
+            self._log(conn, "INFO", "building_validation", "Building validation checks complete", time.perf_counter() - t)
 
             # Run hazard-level validation logic (non-fatal)
+            t = time.perf_counter()
             self._run_hazard_logic(conn)
+            self._log(conn, "INFO", "hazard_validation", "Hazard validation checks complete", time.perf_counter() - t)
 
             # Gather damage functions from vulnerability function
+            t = time.perf_counter()
             self._gather_damage_functions(conn)
+            self._log(conn, "INFO", "damage_function_matching", "Damage function matching complete", time.perf_counter() - t)
 
             # Gather damage functions for attributes outside
+            t = time.perf_counter()
             self._gather_missing_functions(conn)
+            self._log(conn, "INFO", "missing_function_fallback",
+                      "Missing damage function fallback (clamping) complete", time.perf_counter() - t)
 
             # Compute the mean and std. deviation of the damage functions
+            t = time.perf_counter()
             self._compute_damage_function_statistics(conn)
+            self._log(conn, "INFO", "ddf_statistics",
+                      "Damage function statistics (triangular distribution) computed", time.perf_counter() - t)
 
             # Calculate damages
+            t = time.perf_counter()
             self._calculate_losses(conn)
+            self._log(conn, "INFO", "loss_calculation", "Return period losses calculated", time.perf_counter() - t)
 
             # Run AAL
+            t = time.perf_counter()
             self._calculate_aal(conn)
+            self._log(conn, "INFO", "aal_calculation", "AAL calculated (trapezoidal rule)", time.perf_counter() - t)
 
             # Run results-level validation logic (non-fatal)
+            t = time.perf_counter()
             self._run_results_logic(conn)
+            self._log(conn, "INFO", "results_validation", "Results validation checks complete", time.perf_counter() - t)
+
+            # Log validation summary (distinct building counts + % per rule)
+            self._log_validation_summary(conn)
+
+            total_elapsed = time.perf_counter() - run_start
+            self._log(conn, "INFO", "complete",
+                      f"Analysis complete — {n_buildings:,} buildings processed in {total_elapsed:.1f}s")
 
         finally:
             # Only close if we created it ourselves (Standalone Mode)
