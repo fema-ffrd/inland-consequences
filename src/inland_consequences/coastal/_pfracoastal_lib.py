@@ -945,7 +945,7 @@ class _PFRACoastal_Lib:
         # initialize zero error attributes
         DEMe = 0
         FFHe = 0
-
+        
         # get building attributes from attribute table
         b_DEM = this_bldg_attr.iloc[0, this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC=='ground elevation'")["OUT"].iat[0])]
         b_FFH = this_bldg_attr.iloc[0, this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC=='first floor height'")["OUT"].iat[0])]
@@ -955,21 +955,21 @@ class _PFRACoastal_Lib:
         #b_VAL = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "building value", "OUT"].iloc[0]]
         
         # get surge and surge errors attached to building
-        b_SC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC == 'surge elevation'")["OUT"].iat[0])]
-        b_SEC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC == 'surge error'")["OUT"].iat[0])]
+        b_SC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_indexer(prep_attr_map.query("DESC == 'surge elevation'")["OUT"].to_list())]
+        b_SEC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_indexer(prep_attr_map.query("DESC == 'surge error'")["OUT"].to_list())]
         #b_SC = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map['DESC'] == 'surge elevation', 'OUT']]
         #b_SEC = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "surge error", "OUT"]]
         
         # get wave and wave errors attached to building
         if use_waves:
-            b_WC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC == 'wave height'")["OUT"].iat[0])]
-            b_WEC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC == 'wave error'")["OUT"].iat[0])]
+            b_WC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_indexer(prep_attr_map.query("DESC == 'wave height'")["OUT"].to_list())]
+            b_WEC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_indexer(prep_attr_map.query("DESC == 'wave error'")["OUT"].to_list())]
             #b_WEC = this_bldg_attr.iloc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "wave error", "OUT"]]
         else:
             b_WC = None
             b_WEC = None
         
-        # extract RP from SWEL 
+        # extract RP from SWEL
         b_rpnames = [int(self.removeNonNumeric(i)) for i in b_SC.index.tolist()]
         
         # extract the SWEL, SWEL error, WAVE, and WAVE error values
@@ -994,7 +994,7 @@ class _PFRACoastal_Lib:
         # Create Table by Building Flood Depths
         FBvals = [round(x, 1) for x in [i / 10 for i in range(-40, 161)]]
 
-        FBtab = pd.DataFrame({'BID':[this_bldg_attr.loc[0,'BID']]*len(FBvals),'BFD':FBvals})
+        FBtab = pd.DataFrame({'BID':[this_bldg_attr['BID'].iat[0]]*len(FBvals),'BFD':FBvals})
         FBtab['DEM'] = np.round(b_DEM, 3)
         FBtab['FFE'] = np.round(b_FFH+b_DEM, 3)
         FBtab['FFEe']  = np.round(math.sqrt((FFHe**2)+(DEMe**2)), 3)
@@ -1063,11 +1063,11 @@ class _PFRACoastal_Lib:
             FBtab['PWG3'] = 0
             
         # get damages for each of the three assigned DDFs
-        FBtab['DDFfam'] = this_bldg_attr.loc[0,'DDF1']
-        dfnames = ["df" + str(int(v)) for v in this_bldg_attr.loc[0, ["DDF2", "DDF3", "DDF4"]].tolist()]
-        temp = self.getCurveByDDFid(bldg_ddf_lut, int(this_bldg_attr.loc[0,'DDF2']))
+        FBtab['DDFfam'] = this_bldg_attr['DDF1'].iat[0]
+        dfnames = ["df" + str(int(v)) for v in this_bldg_attr.iloc[0, this_bldg_attr.columns.get_indexer(["DDF2", "DDF3", "DDF4"])].tolist()]
+        temp = self.getCurveByDDFid(bldg_ddf_lut, int(this_bldg_attr['DDF2'].iat[0]))
         if temp.hasnans:
-            self.write_log(f"Bad DDF assigned to BID {FBtab.loc[0,'BID']}. Setting damages to zero.")
+            self.write_log(f"Bad DDF assigned to BID {FBtab['BID'].iat[0]}. Setting damages to zero.")
             temp.fillna(0)
 
         interp = np.interp(x=FBtab['BFD'].values, xp=temp.index.astype(int).tolist(), fp=temp.values.astype(float), left=np.nan, right=np.nan)
@@ -1075,9 +1075,9 @@ class _PFRACoastal_Lib:
         
         
         if use_waves:
-            temp = self.getCurveByDDFid(bldg_ddf_lut, this_bldg_attr.loc[0,'DDF3'])
+            temp = self.getCurveByDDFid(bldg_ddf_lut, this_bldg_attr['DDF3'].iat[0])
             if temp.hasnans:
-                self.write_log(f"Bad DDF assigned to BID {FBtab.loc[0,'BID']}. Setting damages to zero.")
+                self.write_log(f"Bad DDF assigned to BID {FBtab['BID'].iat[0]}. Setting damages to zero.")
                 temp.fillna(0)
 
             interp = np.interp(x=FBtab['BFD'].values, xp=temp.index.astype(int).tolist(), fp=temp.values.astype(float), left=np.nan, right=np.nan)
@@ -1085,9 +1085,9 @@ class _PFRACoastal_Lib:
             # Assign to the column named by the SECOND element of dfnames (index 1 in Python)
             FBtab[dfnames[1]] = interp
             
-            temp = self.getCurveByDDFid(bldg_ddf_lut, this_bldg_attr.loc[0,'DDF4'])
+            temp = self.getCurveByDDFid(bldg_ddf_lut, this_bldg_attr['DDF4'].iat[0])
             if temp.hasnans:
-                self.write_log(f"Bad DDF assigned to BID {FBtab.loc[0,'BID']}. Setting damages to zero.")
+                self.write_log(f"Bad DDF assigned to BID {FBtab['BID'].iat[0]}. Setting damages to zero.")
                 temp.fillna(0)
 
             # Approx equivalent
@@ -1102,10 +1102,10 @@ class _PFRACoastal_Lib:
             
         temp = pd.DataFrame({'Hc':FBtab['Hc']})
         temp['Hc'].fillna(0)
-        temp['ddf1'] = this_bldg_attr.loc[0,'DDF1'] 
-        temp['ddf2'] = this_bldg_attr.loc[0,'DDF2']
-        temp['ddf3'] = this_bldg_attr.loc[0,'DDF3']
-        temp['ddf4'] = this_bldg_attr.loc[0,'DDF4']
+        temp['ddf1'] = this_bldg_attr['DDF1'].iat[0] 
+        temp['ddf2'] = this_bldg_attr['DDF2'].iat[0]
+        temp['ddf3'] = this_bldg_attr['DDF3'].iat[0]
+        temp['ddf4'] = this_bldg_attr['DDF4'].iat[0]
         
         # get simulated damage range (min, best estimate, max) from each curve
         DamCurve = self.simulateDamageError6(FBtab[["BFD","BFDe","PWL1","PW13","PWG3",f'df{temp['ddf2'][0]}',f'df{temp['ddf3'][0]}',f'df{temp['ddf4'][0]}']])
