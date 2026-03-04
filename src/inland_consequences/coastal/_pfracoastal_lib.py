@@ -947,18 +947,24 @@ class _PFRACoastal_Lib:
         FFHe = 0
 
         # get building attributes from attribute table
-        b_DEM = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "ground elevation", "OUT"].iloc[0]]
-        b_FFH = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "first floor height", "OUT"].iloc[0]]
-        b_VAL = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "building value", "OUT"].iloc[0]]
+        b_DEM = this_bldg_attr.iloc[0, this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC=='ground elevation'")["OUT"].iat[0])]
+        b_FFH = this_bldg_attr.iloc[0, this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC=='first floor height'")["OUT"].iat[0])]
+        b_VAL = this_bldg_attr.iloc[0, this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC=='building value'")["OUT"].iat[0])]
+        #b_DEM = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "ground elevation", "OUT"].iloc[0]]
+        #b_FFH = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "first floor height", "OUT"].iloc[0]]
+        #b_VAL = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "building value", "OUT"].iloc[0]]
         
         # get surge and surge errors attached to building
-        b_SC = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map['DESC'] == 'surge elevation', 'OUT']]
-        b_SEC = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "surge error", "OUT"]]
+        b_SC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC == 'surge elevation'")["OUT"].iat[0])]
+        b_SEC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC == 'surge error'")["OUT"].iat[0])]
+        #b_SC = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map['DESC'] == 'surge elevation', 'OUT']]
+        #b_SEC = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "surge error", "OUT"]]
         
         # get wave and wave errors attached to building
         if use_waves:
-            b_WC = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "wave height", "OUT"]]
-            b_WEC = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "wave error", "OUT"]]
+            b_WC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC == 'wave height'")["OUT"].iat[0])]
+            b_WEC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC == 'wave error'")["OUT"].iat[0])]
+            #b_WEC = this_bldg_attr.iloc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "wave error", "OUT"]]
         else:
             b_WC = None
             b_WEC = None
