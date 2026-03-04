@@ -6,12 +6,14 @@ import scipy
 import logging
 import typing
 import multiprocessing
+from scipy.stats import norm
+import math
 import os
 import csv
 from re import sub
 import sys
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("pfraCoastal")
 
 class _PFRACoastal_Lib:
     def __init__(self) -> object:
@@ -190,6 +192,7 @@ class _PFRACoastal_Lib:
         self.write_log(".finish b validation.")
         return intab
     
+    ####################
     # get_NNx()
     # 	given single point coordinate (a), 
     #		find the nearest x points of a collection of point coordinates (b)
@@ -553,7 +556,7 @@ class _PFRACoastal_Lib:
     #	removeNonNumeric()
     def getCurveByDDFid(self, in_lut: pd.DataFrame, in_ddf: int) -> pd.Series:
         sel = [in_lut.columns.get_loc(col) for col in in_lut.columns.to_list() if len(self.removeNonNumeric(col)) > 0]
-        
+
         if in_lut["BldgDmgFnID"].isin([in_ddf]).any():
             ddf_row = in_lut.query(f"BldgDmgFnID == {in_ddf}")
             ddf_curve = ddf_row.iloc[0,min(sel):max(sel)+1].div(100)
@@ -566,7 +569,7 @@ class _PFRACoastal_Lib:
         return ddf_curve
     # Example,
     #> bldg_ddf_lut.head(2)
-    ##  BldgDmgFnID Occupancy     Source                               Description m4 m3 m2 m1 p0 p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16 p17 p18 p19 p20 p21 p22 p23 p24 Comment
+    ##  BldgDmgFnID Occupancy     Source                   F            Description m4 m3 m2 m1 p0 p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16 p17 p18 p19 p20 p21 p22 p23 p24 Comment
     ##1         105      RES1        FIA one floor, no basement, Structure, A-Zone  0  0  0  0 18 22 25 28 30 31 40 43 43 45  46  47  47  49  50  50  50  51  51  52  52  53  53  54  54    NULL
     ##2         106      RES1 FIA (MOD.) one floor, w/ basement, Structure, A-Zone  7  7  7 11 17 21 29 34 38 43 50 50 54 55  55  57  58  60  62  63  65  67  69  70  72  74  76  77  79    NULL
     #> bldg_ddf = 105
@@ -701,9 +704,10 @@ class _PFRACoastal_Lib:
         
         # If there are more than 1 null value
         if int(intab.iloc[:,1].isna().sum()) > 1:
-            
+
             y = Damage.values
             min_damage = np.nanmin(Damage)
+            max_damage = np.nanmax(Damage)
 
             # lower bound:
             x_LL = intab.iloc[:,0].values
@@ -714,23 +718,24 @@ class _PFRACoastal_Lib:
             DAMLL.loc[mask_LL, "Damage_LL"] = min_damage
             
             # upper bound:
-            x_LU = intab.iloc[:,1].values
+            x_LU = intab.iloc[:,0].values
             xp_LU = BFDBound["LU"].values
             DamLU = np.interp(xp_LU,x_LU,y,left=np.nan,right=np.nan)
-            DAMLU = pd.DataFrame({'LU':BFDBound.iloc[:,0],'Damage_LU':DamLU})
+            DAMLU = pd.DataFrame({'LU':BFDBound.iloc[:,1],'Damage_LU':DamLU})
             mask_LU = DAMLU["LU"].notna() & DAMLU["Damage_LU"].isna()
-            DAMLU.loc[mask_LU, "Damage_LU"] = min_damage
+            DAMLU.loc[mask_LU, "Damage_LU"] = max_damage
                         
         else:
             # Select rows where they are not null
             sel = intab.iloc[:,1].notna()
-            DAMLL = pd.DataFrame({'BFDBound':BFDBound.iloc[:,1],'Damage':Damage})
+            DAMLL = pd.DataFrame({'BFDBound':BFDBound.iloc[:,0],'Damage':Damage})
             DAMLL.iloc[sel,1] = 0
  
-            DAMLU = pd.DataFrame({'BFDBound':BFDBound.iloc[:,1],'Damage':Damage})
+            DAMLU = pd.DataFrame({'BFDBound':BFDBound.iloc[:,0],'Damage':Damage})
         
         return pd.DataFrame({'DL':DAMLL.iloc[:,1],'DB':Damage,'DU':DAMLU.iloc[:,1]})
         
+    
     ####################
     # buildSampledLoss2()
     # 	
@@ -912,3 +917,253 @@ class _PFRACoastal_Lib:
                                      index=[0]
                                     )
         return out_df
+
+   
+        
+    
+    ####################
+    # buildBldgFloodDepthTable6()
+    # 	function to 
+    # in:
+    #	this.attr.map = appropriate attribute map, for SWEL or TWL
+    #	 use_waves = switch for wave use T/F
+    #   prep_attr_map = the prep attribute map
+    # out:
+    #	mean surge values for all return periods for nearest surge points
+    # called by:
+    #	runMC_AALU_x4()
+    # calls:
+    #	removeNonNumeric()
+    #	getZscore()
+    #	getCurveByDDFid()
+    #	simulateDamageError6()
+    def buildBldgFloodDepthTable6(self, this_bldg_attr:pd.DataFrame, use_waves:bool, prep_attr_map:pd.DataFrame, bldg_ddf_lut:pd.DataFrame) -> pd.DataFrame:
+        	
+        # initialize zero error attributes
+        DEMe = 0
+        FFHe = 0
+
+        # get building attributes from attribute table
+        b_DEM = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "ground elevation", "OUT"].iloc[0]]
+        b_FFH = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "first floor height", "OUT"].iloc[0]]
+        b_VAL = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "building value", "OUT"].iloc[0]]
+        
+        # get surge and surge errors attached to building
+        b_SC = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map['DESC'] == 'surge elevation', 'OUT']]
+        b_SEC = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "surge error", "OUT"]]
+        
+        # get wave and wave errors attached to building
+        if use_waves:
+            b_WC = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "wave height", "OUT"]]
+            b_WEC = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "wave error", "OUT"]]
+        else:
+            b_WC = None
+            b_WEC = None
+        
+        # extract RP from SWEL 
+        b_rpnames = [int(self.removeNonNumeric(i)) for i in b_SC.index.tolist()]
+        
+        # extract the SWEL, SWEL error, WAVE, and WAVE error values
+        SWvals = b_SC.tolist()
+        # SWEL 1 stddev
+        SWerrs = b_SEC.tolist()
+        
+        if use_waves:
+            WVvals = b_WC.tolist()
+            
+            WVerrs = b_WEC.tolist()
+        else:
+            WVvals = [0 for _ in range(len(SWvals))]
+            WVerrs = WVvals
+
+        # Build TWL values from SWEL and WAVEs
+        TWLvals = [sw + (wv * 0.7) for sw, wv in zip(SWvals, WVvals)]
+        # TWLerrs = np.sqrt(np.asarray(SWerrs, float)**2 + (np.asarray(WVerrs, float) * 0.7)**2)
+        TWLerrs = [math.sqrt((sw**2) + ((wv*0.7)**2)) for sw, wv in zip(SWerrs, WVerrs)]
+
+        
+        # Create Table by Building Flood Depths
+        FBvals = [round(x, 1) for x in [i / 10 for i in range(-40, 161)]]
+
+        FBtab = pd.DataFrame({'BID':[this_bldg_attr.loc[0,'BID']]*len(FBvals),'BFD':FBvals})
+        FBtab['DEM'] = np.round(b_DEM, 3)
+        FBtab['FFE'] = np.round(b_FFH+b_DEM, 3)
+        FBtab['FFEe']  = np.round(math.sqrt((FFHe**2)+(DEMe**2)), 3)
+        FBtab['TWL'] = round((FBtab["BFD"] + FBtab["FFE"]), 3)
+        
+        # place holders for values to be calculated
+        FBtab['TWLe'] = 0
+        FBtab['BFDe'] = 0
+        
+        if ((FBtab['TWL'] >= min(TWLvals)) & (FBtab['TWL'] <= max(TWLvals))).sum() < 2:
+            # There is not enough data in the table to continue
+            # Less than two BFD@TWL values that intersect the range of TWL on the frequency curve
+            # approx of the BFD@TWL will not be possible
+            # Stop
+            return FBtab
+        
+        interp = np.interp(x=FBtab['TWL'].values, xp=TWLvals, fp=np.log(b_rpnames), left=np.nan, right=np.nan)
+        # Back-transform and round
+        FBtab['RP'] = np.round(np.exp(interp), 3)
+        FBtab['PVAL'] = 1/FBtab['RP']
+
+        if FBtab['RP'].count() < 2:
+            # There is not enough data in the table to continue
+            # Less than two values of BFD have an RP on the curve
+            # approx() will not be possible
+            # Stop
+            return FBtab
+        
+        interp = np.interp(x=np.log10(FBtab['RP'].values), xp=np.log10(b_rpnames), fp=TWLerrs, left=np.nan, right=np.nan)
+
+        FBtab['TWLe'] = np.round(interp, 3)
+
+	    #calc depth above FF error
+        FBtab['BFDe'] = np.sqrt((FBtab['FFEe']**2)+(FBtab['TWLe']**2))
+    
+        interp = np.interp(x=np.log10(FBtab['RP'].values), xp=np.log10(b_rpnames), fp=SWvals)
+        FBtab['SWEL'] = interp
+
+
+        interp = np.interp(x=np.log10(FBtab['RP'].values), xp=np.log10(b_rpnames), fp=SWerrs)
+        FBtab['SWELe'] = interp
+        Z = self.getZscore(b_DEM, FBtab['SWEL'], FBtab['SWELe'])
+        FBtab['WET'] = 1 - norm.cdf(Z)
+
+        if use_waves:
+            
+            interp = np.interp(x=np.log10(FBtab['RP'].values), xp=np.log10(b_rpnames), fp=WVvals)
+            FBtab['Hc'] = interp
+            
+            interp = np.interp(x=np.log10(FBtab['RP'].values), xp=np.log10(b_rpnames), fp=WVerrs)
+            FBtab['Hce'] = interp
+
+            Z = self.getZscore(1, FBtab['Hc'], FBtab['Hce'])
+            FBtab['PWL1'] = norm.cdf(Z)
+            FBtab['PW13'] = 0
+
+            Z = self.getZscore(3, FBtab['Hc'], FBtab['Hce'])
+            FBtab['PWG3'] = 1 - norm.cdf(Z)
+            FBtab['PW13'] = (1 - FBtab['PWG3']) - FBtab['PWL1']
+            
+        else:
+            FBtab['Hc'] = 0
+            FBtab['Hce'] = 0
+            FBtab['PWL1'] = 1
+            FBtab['PW13'] = 0
+            FBtab['PWG3'] = 0
+            
+        # get damages for each of the three assigned DDFs
+        FBtab['DDFfam'] = this_bldg_attr.loc[0,'DDF1']
+        dfnames = ["df" + str(int(v)) for v in this_bldg_attr.loc[0, ["DDF2", "DDF3", "DDF4"]].tolist()]
+        temp = self.getCurveByDDFid(bldg_ddf_lut, int(this_bldg_attr.loc[0,'DDF2']))
+        if temp.hasnans:
+            self.write_log(f"Bad DDF assigned to BID {FBtab.loc[0,'BID']}. Setting damages to zero.")
+            temp.fillna(0)
+
+        interp = np.interp(x=FBtab['BFD'].values, xp=temp.index.astype(int).tolist(), fp=temp.values.astype(float), left=np.nan, right=np.nan)
+        FBtab[dfnames[0]] = interp
+        
+        
+        if use_waves:
+            temp = self.getCurveByDDFid(bldg_ddf_lut, this_bldg_attr.loc[0,'DDF3'])
+            if temp.hasnans:
+                self.write_log(f"Bad DDF assigned to BID {FBtab.loc[0,'BID']}. Setting damages to zero.")
+                temp.fillna(0)
+
+            interp = np.interp(x=FBtab['BFD'].values, xp=temp.index.astype(int).tolist(), fp=temp.values.astype(float), left=np.nan, right=np.nan)
+
+            # Assign to the column named by the SECOND element of dfnames (index 1 in Python)
+            FBtab[dfnames[1]] = interp
+            
+            temp = self.getCurveByDDFid(bldg_ddf_lut, this_bldg_attr.loc[0,'DDF4'])
+            if temp.hasnans:
+                self.write_log(f"Bad DDF assigned to BID {FBtab.loc[0,'BID']}. Setting damages to zero.")
+                temp.fillna(0)
+
+            # Approx equivalent
+            interp = np.interp(x=FBtab['BFD'].values, xp=temp.index.astype(int).tolist(), fp=temp.values.astype(float), left=np.nan, right=np.nan)
+
+            # Assign using the THIRD element of dfnames
+            FBtab[dfnames[2]] = interp
+
+        else:
+            FBtab[dfnames[1]] = 0
+            FBtab[dfnames[2]] = 0
+            
+        temp = pd.DataFrame({'Hc':FBtab['Hc']})
+        temp['Hc'].fillna(0)
+        temp['ddf1'] = this_bldg_attr.loc[0,'DDF1'] 
+        temp['ddf2'] = this_bldg_attr.loc[0,'DDF2']
+        temp['ddf3'] = this_bldg_attr.loc[0,'DDF3']
+        temp['ddf4'] = this_bldg_attr.loc[0,'DDF4']
+        
+        # get simulated damage range (min, best estimate, max) from each curve
+        DamCurve = self.simulateDamageError6(FBtab[["BFD","BFDe","PWL1","PW13","PWG3",f'df{temp['ddf2'][0]}',f'df{temp['ddf3'][0]}',f'df{temp['ddf4'][0]}']])
+        
+        FBtab['DAMLw'] = DamCurve['DL']
+        FBtab['DAMPr'] = DamCurve['DB']
+        FBtab['DAMUp'] = DamCurve['DU']
+        
+        FBtab['BVAL'] = b_VAL
+
+        FBtab['rLOSSLw'] = (FBtab['DAMLw'] * FBtab['BVAL']).round(0)
+        FBtab['rLOSSBE'] = (FBtab['DAMPr'] * FBtab['BVAL']).round(0)
+        FBtab['rLOSSUp'] = (FBtab['DAMUp'] * FBtab['BVAL']).round(0)
+
+        return FBtab         
+    
+    
+    #####################
+    # finalReportAAL2()
+    #	format and print the AAL results to screen/log
+    # in:
+    #	results_tab = DataFrame of RESULTS.shp
+    #   prep_attr_map = prep_attr_map DataFrame
+    # out:
+    #	NULL
+    # called by:
+    #	main()
+    # calls:
+    #	NULL
+    def finalReportAAL2(self, results_tab=pd.DataFrame, prep_attr_map=pd.DataFrame) -> None:
+        # summary statistics
+        self.write_log(" ")
+        self.write_log("Reporting AAL...")
+        sel_col = prep_attr_map.query("DESC=='building value'").iat[0,prep_attr_map.columns.get_loc("OUT")]
+        # Stats for all buildings in dataset
+        self.write_log("* All Buildings *")
+        self.write_log("Total Buildings:\t\t{0}".format(results_tab.shape[0]))
+        self.write_log("Analyzed Buildings:\t\t{0}".format(int(results_tab.loc[:,"ANLYS"].sum(skipna=True))))
+        self.write_log("Total Bldg AAL, Min Estimate:\t${:,}".format(int(round(pd.to_numeric(results_tab.loc[:,"BAALmin"]).sum(skipna=True),0))))
+        self.write_log("Total Bldg AAL, Best Estimate:\t${:,}".format(int(round(pd.to_numeric(results_tab.loc[:,"BAAL"]).sum(skipna=True),0))))
+        self.write_log("Total Bldg AAL, Max Estimate:\t${:,}".format(int(round(pd.to_numeric(results_tab.loc[:,"BAALmax"]).sum(skipna=True),0))))
+        self.write_log("Total Building Exposure:\t${:,}".format(int(round(pd.to_numeric(results_tab.loc[:,sel_col]).sum(skipna=True),0))))
+        
+        # Stats on buildings that incurred loss
+        self.write_log(" ")
+        self.write_log("Min Estimate")
+        sel = results_tab["BAALmin"].gt(0).to_list()
+        self.write_log("\tBuildings:\t{0} Bldgs w/ AAL > 0".format(results_tab.iloc[sel,:].shape[0]))
+        self.write_log("\tAAL:\t\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAALmin")].sum(skipna=True),0))))
+        self.write_log("\tMean AAL:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAALmin")].mean(skipna=True),0))))
+        self.write_log("\tExposure:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].sum(skipna=True),0))))
+        self.write_log("\tMean Exp:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].mean(skipna=True),0))))
+        
+        self.write_log(" ")
+        self.write_log("Best Estimate")
+        sel = results_tab["BAAL"].gt(0).to_list()
+        self.write_log("\tBuildings:\t{0} Bldgs w/ AAL > 0".format(results_tab.iloc[sel,:].shape[0]))
+        self.write_log("\tAAL:\t\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAAL")].sum(skipna=True),0))))
+        self.write_log("\tMean AAL:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAAL")].mean(skipna=True),0))))
+        self.write_log("\tExposure:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].sum(skipna=True),0))))
+        self.write_log("\tMean Exp:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].mean(skipna=True),0))))
+        
+        self.write_log(" ")
+        self.write_log("Max Estimate")
+        sel = results_tab["BAALmax"].gt(0).to_list()
+        self.write_log("\tBuildings:\t{0} Bldgs w/ AAL > 0".format(results_tab.iloc[sel,:].shape[0]))
+        self.write_log("\tAAL:\t\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAALmax")].sum(skipna=True),0))))
+        self.write_log("\tMean AAL:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc("BAALmax")].mean(skipna=True),0))))
+        self.write_log("\tExposure:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].sum(skipna=True),0))))
+        self.write_log("\tMean Exp:\t${:,}".format(int(round(results_tab.iloc[sel, results_tab.columns.get_loc(sel_col)].mean(skipna=True),0))))
