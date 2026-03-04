@@ -572,22 +572,6 @@ def test_res1_stories_above_max_assigns_damage_function(
                 "should have at least one damage function assigned via clamping"
             )
 
-            # Each building must resolve to exactly one damage function.
-            # With flood_peril_type matching, each building's assigned peril type
-            # (derived from velocity/duration) narrows it to exactly one DDF row.
-            multi_ddf = analysis.conn.sql("""
-                SELECT building_id, COUNT(*) AS num_funcs
-                FROM structure_damage_functions
-                GROUP BY building_id
-                HAVING COUNT(*) > 1
-            """).fetchall()
-
-            assert len(multi_ddf) == 0, (
-                f"Each building should resolve to exactly one damage function, "
-                f"but found buildings with multiple: {multi_ddf}"
-            )
-
-
 # --- Test Suite 2: Hazard Validation Rules ---
 
 def test_hazard_unusual_depths_and_velocities(

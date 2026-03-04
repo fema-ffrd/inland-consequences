@@ -71,7 +71,7 @@ def _header(mo):
 
 @app.cell
 def _config(Path):
-    DB_PATH = Path(__file__).parent.parent / "inland_flood_analysis_20260302_232714.duckdb"
+    DB_PATH = Path(__file__).parent.parent / "inland_flood_analysis_20260303_221911.duckdb"
     return (DB_PATH,)
 
 
@@ -619,7 +619,7 @@ def _breakdown_chart(
                 _aal_lbl = _fmt_pretty(_row["aal_mean"])
                 _ratio = _row["aal_ratio"]
                 _ratio_lbl = f"  ({_ratio:,.0f}/M)" if _ratio == _ratio else ""  # noqa: PLR0124
-            
+
                 # Add `_group_val` to the front of the text string
                 _ax.text(
                     _label_x, _yi,
