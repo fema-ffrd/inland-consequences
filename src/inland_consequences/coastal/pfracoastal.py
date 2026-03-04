@@ -9,7 +9,7 @@ import multiprocessing
 import os
 from ._pfracoastal_lib import _PFRACoastal_Lib
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("pfraCoastal")
 
 class Inputs:
     BLDG_ATTR_MAP_DATA = {
@@ -248,7 +248,7 @@ class PFRACoastal:
     
     def runPFRACoastal(self, inputs: Inputs) -> None:
         # configure logging
-        log_format_str = "{levelname} [{asctime}] {message}"
+        logger.setLevel("INFO")
         if inputs.blabpath:
             fh = logging.FileHandler(inputs.blabpath, mode='a')
             fh.setLevel("INFO")
@@ -261,4 +261,5 @@ class PFRACoastal:
         else:
             ch = logging.NullHandler()
         
-        logging.basicConfig(handlers=[fh,ch], format=log_format_str, style='{') # configures the root logger
+        logger.addHandler(fh)
+        logger.addHandler(ch)
