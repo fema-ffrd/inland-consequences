@@ -751,7 +751,7 @@ class _PFRACoastal_Lib:
     # calls:
     #	NULL
     def buildSampledLoss2(self, FBtab0: pd.DataFrame, pvals: pd.DataFrame) -> pd.DataFrame:
-        MC_prob = pvals.iloc[:,0].sort_values(ascending=False)
+        MC_prob = pd.to_numeric(pvals.iloc[:,0].sort_values(ascending=False))
         MC_rp = MC_prob.copy().apply(lambda x: 1/x)
         FBrp = FBtab0["RP"].copy()
         
