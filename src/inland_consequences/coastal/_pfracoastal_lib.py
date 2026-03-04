@@ -703,9 +703,10 @@ class _PFRACoastal_Lib:
         
         # If there are more than 1 null value
         if int(intab.iloc[:,1].isna().sum()) > 1:
-            
+
             y = Damage.values
             min_damage = np.nanmin(Damage)
+            max_damage = np.nanmax(Damage)
 
             # lower bound:
             x_LL = intab.iloc[:,0].values
@@ -716,20 +717,20 @@ class _PFRACoastal_Lib:
             DAMLL.loc[mask_LL, "Damage_LL"] = min_damage
             
             # upper bound:
-            x_LU = intab.iloc[:,1].values
+            x_LU = intab.iloc[:,0].values
             xp_LU = BFDBound["LU"].values
             DamLU = np.interp(xp_LU,x_LU,y,left=np.nan,right=np.nan)
-            DAMLU = pd.DataFrame({'LU':BFDBound.iloc[:,0],'Damage_LU':DamLU})
+            DAMLU = pd.DataFrame({'LU':BFDBound.iloc[:,1],'Damage_LU':DamLU})
             mask_LU = DAMLU["LU"].notna() & DAMLU["Damage_LU"].isna()
-            DAMLU.loc[mask_LU, "Damage_LU"] = min_damage
+            DAMLU.loc[mask_LU, "Damage_LU"] = max_damage
                         
         else:
             # Select rows where they are not null
             sel = intab.iloc[:,1].notna()
-            DAMLL = pd.DataFrame({'BFDBound':BFDBound.iloc[:,1],'Damage':Damage})
+            DAMLL = pd.DataFrame({'BFDBound':BFDBound.iloc[:,0],'Damage':Damage})
             DAMLL.iloc[sel,1] = 0
  
-            DAMLU = pd.DataFrame({'BFDBound':BFDBound.iloc[:,1],'Damage':Damage})
+            DAMLU = pd.DataFrame({'BFDBound':BFDBound.iloc[:,0],'Damage':Damage})
         
         return pd.DataFrame({'DL':DAMLL.iloc[:,1],'DB':Damage,'DU':DAMLU.iloc[:,1]})
         
