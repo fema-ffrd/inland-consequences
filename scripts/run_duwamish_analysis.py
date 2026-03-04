@@ -335,6 +335,14 @@ def export_wide_parquet(conn: duckdb.DuckDBPyConnection, output_path: Path) -> N
 def main():
     print("Loading NSI buildings ...")
     nsi_gdf = gpd.read_file(str(NSI_GPKG))
+    # Filter NSI buildings to cbfips starting with '53033'
+    if "cbfips" in nsi_gdf.columns:
+        # ensure column is string type then filter by prefix
+        nsi_gdf["cbfips"] = nsi_gdf["cbfips"].astype(str)
+        nsi_gdf = nsi_gdf[nsi_gdf["cbfips"].str.startswith("53033")]
+    else:
+        print("Warning: 'cbfips' column not found in NSI dataset; skipping cbfips filter")
+
     buildings = NsiBuildings(nsi_gdf, overrides={"id": "fd_id"})
 
     print("Building raster collection ...")

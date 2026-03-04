@@ -1575,91 +1575,6 @@ class InlandFloodAnalysis:
     def _compute_damage_function_statistics(self, connection: duckdb.DuckDBPyConnection) -> None:
         # Compute the mean and std. deviation of the damage functions.
 
-        """
-        # Original SQL that we came up with prior to triangular distribution logic.
-
-        sql_statement = '''
-            CREATE OR REPLACE TABLE damage_function_statistics AS
-
-            WITH 
-            -- 1. Unpivot DDF Structure (Cleaned and Cast)
-            -- We filter out NULLs immediately to keep the index clean
-            ddf_points AS (
-                SELECT 
-                    ddf_id,
-                    CAST(REPLACE(REPLACE(REPLACE(variable_name, 'depth_', ''), 'm', '-'), '_', '.') AS DOUBLE) AS depth_ft,
-                    value_column as value
-                FROM ddf_structure 
-                UNPIVOT EXCLUDE NULLS (
-                    value_column FOR variable_name IN (COLUMNS('^depth_'))
-                )
-            ),
-
-            -- 2. Create Interpolation Segments
-            -- We look ahead to the next point to define the line segment (slope) for each interval.
-            ddf_segments AS (
-                SELECT 
-                    ddf_id,
-                    depth_ft as x1,
-                    value as y1,
-                    LEAD(depth_ft) OVER (PARTITION BY ddf_id ORDER BY depth_ft) as x2,
-                    LEAD(value) OVER (PARTITION BY ddf_id ORDER BY depth_ft) as y2
-                FROM ddf_points
-            ),
-
-            -- 3. Generate Hazard Evaluation Points
-            -- For every building, we create 3 rows: Mean, Mean + Std, Mean - Std
-            hazard_points AS (
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth - sdf.first_floor_height as eval_depth
-                FROM hazard h
-                JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
-                
-                UNION ALL
-                
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth - sdf.first_floor_height + h.std_dev as eval_depth
-                FROM hazard h
-                JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
-                
-                UNION ALL
-                
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth - sdf.first_floor_height - h.std_dev as eval_depth
-                FROM hazard h
-                JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
-            ),
-
-            -- 4. Perform Linear Interpolation
-            interpolated_results AS (
-                SELECT 
-                    hp.id,
-                    hp.return_period,
-                    hp.eval_depth,
-                    -- Interpolation Logic
-                    CASE 
-                        -- Case A: Depth is below the lowest defined point on curve -> Assume 0 damage (or clamp to min)
-                        WHEN ds.x1 IS NULL THEN 0 
-                        -- Case B: Depth is above the highest defined point -> Clamp to max damage found
-                        WHEN ds.x2 IS NULL THEN ds.y1
-                        -- Case C: Standard Linear Interpolation: y = y1 + (x - x1) * slope
-                        ELSE ds.y1 + (hp.eval_depth - ds.x1) * (ds.y2 - ds.y1) / (ds.x2 - ds.x1)
-                    END as calc_damage
-                FROM hazard_points hp
-                -- ASOF JOIN allows us to find the specific segment where: segment_start <= current_depth
-                ASOF LEFT JOIN ddf_segments ds 
-                    ON hp.ddf_id = ds.ddf_id 
-                    AND hp.eval_depth >= ds.x1
-            )
-
-            -- 5. Final Aggregation
-            SELECT 
-                id as building_id,
-                return_period,
-                AVG(calc_damage) as damage_percent,
-                STDDEV(calc_damage) as damage_percent_std
-            FROM interpolated_damages
-            GROUP BY id, return_period;
-        '''
-        """
-
         sql_statement = '''
             CREATE OR REPLACE TABLE damage_function_statistics AS
 
@@ -1689,13 +1604,13 @@ class InlandFloodAnalysis:
 
             -- 3. Generate Hazard Evaluation Points (With Tagging)
             hazard_points AS (
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth as eval_depth, 'mean' as point_type
+                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth - sdf.first_floor_height as eval_depth, 'mean' as point_type
                 FROM hazard h JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
                 UNION ALL
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth + h.std_dev as eval_depth, 'max' as point_type
+                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth + h.std_dev - sdf.first_floor_height as eval_depth, 'max' as point_type
                 FROM hazard h JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
                 UNION ALL
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth - h.std_dev as eval_depth, 'min' as point_type
+                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth - h.std_dev - sdf.first_floor_height as eval_depth, 'min' as point_type
                 FROM hazard h JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
             ),
 
@@ -1794,7 +1709,16 @@ class InlandFloodAnalysis:
         # Calculate AAL using trapezoidal rule, including min, mean, and max values
         sql_statement = '''
             CREATE OR REPLACE TABLE aal_losses AS
-            WITH probabilities AS (
+
+            -- 0. Define Global Toggles
+            WITH settings AS (
+                -- 0 = Non-Truncated (Hazus default): Averages $0 modeled losses with the next period.
+                -- 1 = Truncated (GoConsequences): Excludes $0 modeled loss periods from the summation entirely.
+                SELECT 0 as truncation_option
+            ),
+
+            -- 1. Base Probabilities
+            probabilities AS (
                 SELECT 
                     ID,
                     1.0 / return_period as prob,
@@ -1805,7 +1729,7 @@ class InlandFloodAnalysis:
                 FROM losses
             ),
 
-            -- 1. Add Anchor Points to close the curve at P=1 and P=0
+            -- 2. Add Anchor Points to close the curve at P=1 and P=0
             anchored_points AS (
                 -- Original Data
                 SELECT * FROM probabilities
@@ -1825,11 +1749,9 @@ class InlandFloodAnalysis:
                 UNION ALL
                 
                 -- Anchor: Infinite return (P=0.0). 
-                -- We use the losses from the highest RP (lowest prob) to create a tail rectangle.
                 SELECT 
                     ID, 
                     0.0 as prob,
-                    -- Use FIRST_VALUE to get the losses associated with the smallest probability
                     FIRST_VALUE(loss_min) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_min,
                     FIRST_VALUE(loss_mean) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_mean,
                     FIRST_VALUE(loss_std) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_std,
@@ -1837,8 +1759,7 @@ class InlandFloodAnalysis:
                 FROM probabilities
             ),
 
-            -- 2. Create Trapezoidal Segments
-            -- Sorting DESC ensures we move from Prob 1.0 (High Freq) toward Prob 0.0 (Tail)
+            -- 3. Create Trapezoidal Segments
             segments AS (
                 SELECT 
                     ID,
@@ -1852,93 +1773,48 @@ class InlandFloodAnalysis:
                     LEAD(loss_mean) OVER (PARTITION BY ID ORDER BY prob DESC) as l_end,
                     LEAD(loss_std) OVER (PARTITION BY ID ORDER BY prob DESC) as s_end,
                     LEAD(loss_max) OVER (PARTITION BY ID ORDER BY prob DESC) as lmax_end
-                FROM (SELECT DISTINCT * FROM anchored_points) -- Distinct handles cases where 1yr RP already exists
+                FROM (SELECT DISTINCT * FROM anchored_points)
             ),
 
-            -- 3. Calculate Area of Segments
+            -- 4. Calculate Area of Segments (Hazus vs GoConsequences Logic)
             segment_areas AS (
                 SELECT 
-                    ID,
-                    ( (lmin_start + lmin_end) / 2.0 ) * (p_start - p_end) as aal_contribution_min,
-                    ( (l_start + l_end) / 2.0 ) * (p_start - p_end) as aal_contribution_mean,
-                    ( (s_start + s_end) / 2.0 ) * (p_start - p_end) as aal_contribution_std,
-                    ( (lmax_start + lmax_end) / 2.0 ) * (p_start - p_end) as aal_contribution_max
-                FROM segments
-                WHERE p_end IS NOT NULL
+                    s.ID,
+                    
+                    -- MIN
+                    CASE 
+                        WHEN s.p_start = 1.0 THEN 0.0 -- ALWAYS prevent the P=1.0 anchor from blowing up AAL
+                        WHEN set.truncation_option = 1 AND s.lmin_start = 0 THEN 0.0 -- GoConsequences (Truncated)
+                        ELSE ( (s.lmin_start + s.lmin_end) / 2.0 ) * (s.p_start - s.p_end) -- Hazus (Non-Truncated)
+                    END as aal_contribution_min,
+
+                    -- MEAN
+                    CASE 
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.l_start = 0 THEN 0.0
+                        ELSE ( (s.l_start + s.l_end) / 2.0 ) * (s.p_start - s.p_end)
+                    END as aal_contribution_mean,
+
+                    -- STD
+                    CASE 
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.s_start = 0 THEN 0.0
+                        ELSE ( (s.s_start + s.s_end) / 2.0 ) * (s.p_start - s.p_end)
+                    END as aal_contribution_std,
+
+                    -- MAX
+                    CASE 
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.lmax_start = 0 THEN 0.0
+                        ELSE ( (s.lmax_start + s.lmax_end) / 2.0 ) * (s.p_start - s.p_end)
+                    END as aal_contribution_max
+                    
+                FROM segments s
+                CROSS JOIN settings set
+                WHERE s.p_end IS NOT NULL
             )
 
-            -- 4. Final Aggregation
-            SELECT 
-                ID,
-                SUM(aal_contribution_min) as aal_min,
-                SUM(aal_contribution_mean) as aal_mean,
-                SUM(aal_contribution_std) as aal_std,
-                SUM(aal_contribution_max) as aal_max
-            FROM segment_areas
-            GROUP BY ID;
-        '''
-
-        sql_statement_trapezoidal = '''
-            CREATE OR REPLACE TABLE aal_losses AS
-
-            WITH 
-            -- 1. Convert Return Period to Annual Probability
-            probabilities AS (
-                SELECT 
-                    ID,
-                    return_period,
-                    loss_min,
-                    loss_mean,
-                    loss_std,
-                    loss_max,
-                    1.0 / return_period as prob
-                FROM losses
-            ),
-
-            -- 2. Create Trapezoidal Segments
-            -- We sort by Probability DESC (High Frequency -> Low Frequency)
-            -- Example: 10yr (0.1) -> 50yr (0.02) -> 100yr (0.01)
-            segments AS (
-                SELECT 
-                    ID,
-                    prob as p_start,
-                    loss_min as lmin_start,
-                    loss_mean as l_start,
-                    loss_std as s_start,
-                    loss_max as lmax_start,
-                    -- Look ahead to the next probability point
-                    LEAD(prob) OVER (PARTITION BY ID ORDER BY prob DESC) as p_end,
-                    LEAD(loss_min) OVER (PARTITION BY ID ORDER BY prob DESC) as lmin_end,
-                    LEAD(loss_mean) OVER (PARTITION BY ID ORDER BY prob DESC) as l_end,
-                    LEAD(loss_std) OVER (PARTITION BY ID ORDER BY prob DESC) as s_end,
-                    LEAD(loss_max) OVER (PARTITION BY ID ORDER BY prob DESC) as lmax_end
-                FROM probabilities
-            ),
-
-            -- 3. Calculate Area of Segments
-            segment_areas AS (
-                SELECT 
-                    ID,
-                    -- Trapezoid Area: Average Height * Width
-                    -- Width = (Start Prob - End Prob)
-                    
-                    -- Min AAL Contribution
-                    ( (lmin_start + lmin_end) / 2.0 ) * (p_start - p_end) as aal_contribution_min,
-                    
-                    -- Mean AAL Contribution
-                    ( (l_start + l_end) / 2.0 ) * (p_start - p_end) as aal_contribution_mean,
-                    
-                    -- Std Dev AAL Contribution (Assuming Perfect Correlation)
-                    ( (s_start + s_end) / 2.0 ) * (p_start - p_end) as aal_contribution_std,
-                    
-                    -- Max AAL Contribution
-                    ( (lmax_start + lmax_end) / 2.0 ) * (p_start - p_end) as aal_contribution_max
-                FROM segments
-                -- We filter out the last row (highest return period) because it has no "next" point to connect to
-                WHERE p_end IS NOT NULL
-            )
-
-            -- 4. Sum Segments to get Total AAL
+            -- 5. Final Aggregation
             SELECT 
                 ID,
                 SUM(aal_contribution_min) as aal_min,
