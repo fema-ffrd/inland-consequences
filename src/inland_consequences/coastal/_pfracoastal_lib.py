@@ -816,11 +816,12 @@ class _PFRACoastal_Lib:
     #	adjust_Loss_DEDLIM1()
     #	buildSampledLoss2()
     # 	Calc_Nrp_AnnLoss4()
-    def runMC_AALU_x4(self, in_tab: pd.DataFrame, pvals: pd.DataFrame, in_building: int, inputs) -> pd.DataFrame:
-        this_bldg_attr = in_tab.query(f"BID = {in_building}")
+    def runMC_AALU_x4(self, in_tab: pd.DataFrame, pvals: pd.DataFrame, in_building: int, inputs, prep_atr_map: pd.DataFrame) -> pd.DataFrame:
+        this_bldg_attr = in_tab[in_tab.BID==in_building]
         
         # Build the loss table by building flood depth
-        FBtab0 = self.buildBldgFloodDepthTable6(this_bldg_attr, inputs.use_waves)
+        bldg_ddf_df = pd.read_csv(inputs.bddf_lut_path)
+        FBtab0 = self.buildBldgFloodDepthTable6(this_bldg_attr, inputs.use_waves, prep_atr_map, bldg_ddf_df)
         
         #check for truncated output
         if not np.any(FBtab0.columns.isin(["rLOSSLw"])):
@@ -869,8 +870,10 @@ class _PFRACoastal_Lib:
         #####
         
         # # write the table
-        if inputs.use_outCSV:
-            FBtab0.to_csv('') #PLACEHOLER
+        if inputs.use_outcsv:
+            out_csv_dir = os.path.join(inputs.out_shp_path,"TAB")
+            out_csv_name = f"BID_{'0'*(6-len(str(in_building)))}{in_building}.csv"
+            FBtab0.to_csv(os.path.join(out_csv_dir,out_csv_name))
         
         # sample the loss curve probabilisticly
         MCLossTab = self.buildSampledLoss2(FBtab0, pvals)
