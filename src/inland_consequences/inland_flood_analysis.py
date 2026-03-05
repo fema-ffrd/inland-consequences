@@ -80,6 +80,7 @@ class InlandFloodAnalysis:
         vulnerability: AbstractVulnerabilityFunction,
         calculate_aal: bool = True,
         aal_rate_limits: Optional[Tuple[float, float]] = None,
+        aal_truncation: int = 0,
         wildcard_fields: Optional[List[str]] = None,
     ) -> None:
         # Must be a RasterCollection instance (validated by its constructor)
@@ -91,6 +92,7 @@ class InlandFloodAnalysis:
         self.vulnerability: AbstractVulnerabilityFunction = vulnerability
         self.calculate_aal = calculate_aal
         self.aal_rate_limits = aal_rate_limits
+        self.aal_truncation = aal_truncation
         self.wildcard_fields = wildcard_fields or []  # Fields to ignore in matching even when values present
 
         # Since the vulnerability needs the buildings right now we need to think about how to choose them and apply to keep the buildings in sync.
@@ -219,7 +221,8 @@ class InlandFloodAnalysis:
                 wildcard_fields JSON,
                 calculate_aal BOOLEAN,
                 aal_rate_limit_low DOUBLE,
-                aal_rate_limit_high DOUBLE
+                aal_rate_limit_high DOUBLE,
+                aal_truncation INTEGER
             )
         """)
 
@@ -270,8 +273,9 @@ class InlandFloodAnalysis:
         conn.execute(
             """INSERT INTO run_metadata
                (package_version, buildings_type, raster_info, return_periods,
-                wildcard_fields, calculate_aal, aal_rate_limit_low, aal_rate_limit_high)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                wildcard_fields, calculate_aal, aal_rate_limit_low, aal_rate_limit_high,
+                aal_truncation)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             [
                 pkg_ver,
                 buildings_type,
@@ -281,6 +285,7 @@ class InlandFloodAnalysis:
                 self.calculate_aal,
                 aal_low,
                 aal_high,
+                self.aal_truncation,
             ],
         )
 
@@ -1717,7 +1722,7 @@ class InlandFloodAnalysis:
             WITH settings AS (
                 -- 0 = Non-Truncated (Hazus default): Averages $0 modeled losses with the next period.
                 -- 1 = Truncated (GoConsequences): Excludes $0 modeled loss periods from the summation entirely.
-                SELECT 0 as truncation_option
+                SELECT {self.aal_truncation} as truncation_option
             ),
 
             -- 0b. Full return period list from RasterCollection (all RPs, including those with no losses)
