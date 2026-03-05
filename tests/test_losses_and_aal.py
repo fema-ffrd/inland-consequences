@@ -660,3 +660,146 @@ class TestDamageStatistics:
         assert actual_d_mean == pytest.approx(exp_d_mean, rel=1e-6)
         assert actual_d_min == pytest.approx(exp_d_min, rel=1e-6)
         assert actual_d_max == pytest.approx(exp_d_max, rel=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# Fixtures and helpers for single-RP non-truncated AAL test
+# ---------------------------------------------------------------------------
+
+# RasterCollection returns [1000, 2000] but only 2000 RP has depth > 0.
+# Building 1 and 2 both get SINGLE_RP_DEPTH at 2000 RP; 1000 RP depth = 0.0.
+SINGLE_RP_DEPTH = 4.0   # ft at 2000 RP
+SINGLE_RP = 2000
+SINGLE_RP_NEXT_LOWER = 1000
+
+
+@pytest.fixture(scope="module")
+def mock_rasters_single_rp():
+    """RasterCollection with [1000, 2000] RPs; only 2000 RP has depth > 0."""
+    mock_collection = MagicMock(spec=RasterCollection)
+    mock_collection.return_periods.return_value = [SINGLE_RP_NEXT_LOWER, SINGLE_RP]
+
+    def _sample_for_rp(rp, geometries):
+        n = len(geometries)
+        idx = pd.Index(range(n))
+        depth = SINGLE_RP_DEPTH if rp == SINGLE_RP else 0.0
+        return {
+            "depth": pd.Series([depth] * n, index=idx),
+            "uncertainty": pd.Series([STD_DEV] * n, index=idx),
+            "velocity": pd.Series([np.nan] * n, index=idx),
+            "duration": pd.Series([np.nan] * n, index=idx),
+        }
+
+    mock_collection.sample_for_rp.side_effect = _sample_for_rp
+
+    def _get(rp):
+        return {
+            "depth": None,
+            "uncertainty": float(STD_DEV),
+            "velocity": None,
+            "duration": None,
+        }
+
+    mock_collection.get.side_effect = _get
+    return mock_collection
+
+
+@pytest.fixture(scope="class")
+def pipeline_results_single_rp(
+    mock_buildings_for_losses, mock_rasters_single_rp, mock_vulnerability_noop, tmp_path_factory
+):
+    """Run full pipeline with only the 2000-RP producing losses."""
+    tmp_path = tmp_path_factory.mktemp("losses_aal_single_rp")
+    db_path = str(tmp_path / "test_losses_single_rp.duckdb")
+
+    with patch.object(
+        InlandFloodAnalysis,
+        "_create_vulnerability_tables",
+        _inject_linear_ddf,
+    ), patch(
+        "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
+        return_value=db_path,
+    ):
+        analysis = InlandFloodAnalysis(
+            raster_collection=mock_rasters_single_rp,
+            buildings=mock_buildings_for_losses,
+            vulnerability=mock_vulnerability_noop,
+            calculate_aal=True,
+        )
+        with analysis:
+            analysis.calculate_losses()
+            yield analysis
+
+
+def _expected_aal_single_rp_nontruncated(loss: float, rp: int, next_lower_rp: int) -> float:
+    """Non-truncated AAL when only one RP has losses.
+
+    A $0 anchor is inserted at ``next_lower_rp``, producing two active segments:
+      1. next_lower_rp ($0) → rp: trapezoidal = loss/2 * (p_next - p_rp)
+      2. rp → P=0 tail:          = loss * p_rp
+    """
+    p_rp = 1.0 / rp
+    p_next = 1.0 / next_lower_rp
+    seg1 = (loss / 2.0) * (p_next - p_rp)
+    seg2 = loss * p_rp
+    return seg1 + seg2
+
+
+# ===================================================================
+# Test Group 3: AAL — single return period (non-truncated)
+# ===================================================================
+
+class TestAalSingleReturnPeriod:
+    """AAL when only the highest RP (2000) has losses (non-truncated mode).
+
+    RasterCollection exposes [1000, 2000]; 1000 RP depth=0 is filtered out of
+    the losses table.  Non-truncated AAL must insert a $0 anchor at 1000 RP so
+    the trapezoid is correctly bounded, giving:
+        aal = loss * (p_1000 - p_2000)/2 + loss * p_2000
+            = loss * 0.00025 + loss * 0.0005
+            = loss * 0.00075
+    """
+
+    def test_losses_table_has_only_2000rp_rows(self, pipeline_results_single_rp):
+        """1000 RP depth=0 must be absent from the losses table."""
+        conn = pipeline_results_single_rp.conn
+        rps = conn.execute(
+            "SELECT DISTINCT return_period FROM losses ORDER BY return_period"
+        ).fetchall()
+        assert rps == [(SINGLE_RP,)]
+
+    def test_aal_mean_building1_single_rp(self, pipeline_results_single_rp):
+        conn = pipeline_results_single_rp.conn
+        stats = _expected_damage_stats(SINGLE_RP_DEPTH, STD_DEV)
+        loss_mean = BUILDING_COST_1 * stats["damage_percent_mean"] / 100.0
+        expected = _expected_aal_single_rp_nontruncated(loss_mean, SINGLE_RP, SINGLE_RP_NEXT_LOWER)
+        row = conn.execute("SELECT aal_mean FROM aal_losses WHERE ID = 1").fetchone()
+        assert row is not None
+        assert row[0] == pytest.approx(expected, rel=1e-6)
+
+    def test_aal_mean_building2_single_rp(self, pipeline_results_single_rp):
+        conn = pipeline_results_single_rp.conn
+        stats = _expected_damage_stats(SINGLE_RP_DEPTH, STD_DEV)
+        loss_mean = BUILDING_COST_2 * stats["damage_percent_mean"] / 100.0
+        expected = _expected_aal_single_rp_nontruncated(loss_mean, SINGLE_RP, SINGLE_RP_NEXT_LOWER)
+        row = conn.execute("SELECT aal_mean FROM aal_losses WHERE ID = 2").fetchone()
+        assert row is not None
+        assert row[0] == pytest.approx(expected, rel=1e-6)
+
+    def test_aal_min_building1_single_rp(self, pipeline_results_single_rp):
+        conn = pipeline_results_single_rp.conn
+        stats = _expected_damage_stats(SINGLE_RP_DEPTH, STD_DEV)
+        loss_min = BUILDING_COST_1 * stats["d_min"] / 100.0
+        expected = _expected_aal_single_rp_nontruncated(loss_min, SINGLE_RP, SINGLE_RP_NEXT_LOWER)
+        row = conn.execute("SELECT aal_min FROM aal_losses WHERE ID = 1").fetchone()
+        assert row is not None
+        assert row[0] == pytest.approx(expected, rel=1e-6)
+
+    def test_aal_max_building1_single_rp(self, pipeline_results_single_rp):
+        conn = pipeline_results_single_rp.conn
+        stats = _expected_damage_stats(SINGLE_RP_DEPTH, STD_DEV)
+        loss_max = BUILDING_COST_1 * stats["d_max"] / 100.0
+        expected = _expected_aal_single_rp_nontruncated(loss_max, SINGLE_RP, SINGLE_RP_NEXT_LOWER)
+        row = conn.execute("SELECT aal_max FROM aal_losses WHERE ID = 1").fetchone()
+        assert row is not None
+        assert row[0] == pytest.approx(expected, rel=1e-6)

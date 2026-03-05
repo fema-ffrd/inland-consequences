@@ -1707,7 +1707,10 @@ class InlandFloodAnalysis:
 
     def _calculate_aal(self, connection: duckdb.DuckDBPyConnection) -> None:
         # Calculate AAL using trapezoidal rule, including min, mean, and max values
-        sql_statement = '''
+        all_rps = self.raster_collection.return_periods()
+        all_rps_literal = str(all_rps)
+
+        sql_statement = f'''
             CREATE OR REPLACE TABLE aal_losses AS
 
             -- 0. Define Global Toggles
@@ -1715,6 +1718,11 @@ class InlandFloodAnalysis:
                 -- 0 = Non-Truncated (Hazus default): Averages $0 modeled losses with the next period.
                 -- 1 = Truncated (GoConsequences): Excludes $0 modeled loss periods from the summation entirely.
                 SELECT 0 as truncation_option
+            ),
+
+            -- 0b. Full return period list from RasterCollection (all RPs, including those with no losses)
+            global_rp_list AS (
+                SELECT UNNEST({all_rps_literal}::INT[]) AS rp_val
             ),
 
             -- 1. Base Probabilities
@@ -1727,6 +1735,23 @@ class InlandFloodAnalysis:
                     loss_std,
                     loss_max
                 FROM losses
+            ),
+
+            -- 1b. Non-truncated zero anchor: for each building, the next lower RP in the full set
+            --     below its minimum modeled RP gets a $0 loss entry to properly bound the trapezoid.
+            next_lower_zero AS (
+                SELECT
+                    l.ID,
+                    1.0 / MAX(g.rp_val) AS prob,
+                    0.0 AS loss_min,
+                    0.0 AS loss_mean,
+                    0.0 AS loss_std,
+                    0.0 AS loss_max
+                FROM (SELECT ID, MIN(return_period) AS min_rp FROM losses GROUP BY ID) l
+                CROSS JOIN global_rp_list g
+                WHERE g.rp_val < l.min_rp
+                GROUP BY l.ID
+                HAVING MAX(g.rp_val) IS NOT NULL
             ),
 
             -- 2. Add Anchor Points to close the curve at P=1 and P=0
@@ -1757,6 +1782,14 @@ class InlandFloodAnalysis:
                     FIRST_VALUE(loss_std) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_std,
                     FIRST_VALUE(loss_max) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_max
                 FROM probabilities
+
+                UNION ALL
+
+                -- Non-truncated: add $0 at the next lower RP to properly bound the trapezoid
+                SELECT nlz.ID, nlz.prob, nlz.loss_min, nlz.loss_mean, nlz.loss_std, nlz.loss_max
+                FROM next_lower_zero nlz
+                CROSS JOIN settings
+                WHERE settings.truncation_option = 0
             ),
 
             -- 3. Create Trapezoidal Segments
