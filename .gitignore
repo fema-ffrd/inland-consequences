@@ -210,3 +210,5 @@ venv-inland/
 
 outputs/
 inland_flood_analysis*.duckdb
+inland_flood_analysis*.*.wal
+*.parquet
