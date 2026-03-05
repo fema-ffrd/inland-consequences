@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/buildings_schema.json",
+  "title": "Base Buildings Schema",
+  "version": "0.1.0",
+  "description": "Base schema defining standardized target fields for building inventories. The base Buildings class performs field mapping only. Specific implementations (NsiBuildings, MillimanBuildings) extend the base class with schema validation and field imputation. The 'required' attribute indicates whether a field must be present for consequence analysis, not whether the base class validates it.",
+  "target fields": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the building",
+      "required": true,
+      "nullable": false,
+      "used_in": ["inland", "coastal"],
+      "aliases": ["id", "building_id", "bldg_id", "fd_id"]
+    },
+    "occupancy_type": {
+      "type": "string",
+      "description": "Occupancy type code following HAZUS classification (e.g., RES1, COM1, IND2)",
+      "required": true,
+      "nullable": false,
+      "used_in": ["inland", "coastal"],
+      "aliases": ["occupancy_type", "occtype", "occupancy", "occ_type", "building_type"]
+    },
+    "first_floor_height": {
+      "type": "number",
+      "description": "First floor height above ground elevation (feet)",
+      "required": true,
+      "nullable": false,
+      "used_in": ["inland", "coastal"],
+      "aliases": ["first_floor_height", "found_ht", "first_floor_ht", "ffh", "floor_height"]
+    },
+    "foundation_type": {
+      "type": "string",
+      "description": "Foundation type code for inland flood modeling (I=Pile, P=Pier, W=Solid Wall, B=Basement, C=Crawl, F=Fill, S=Slab)",
+      "required": true,
+      "nullable": false,
+      "used_in": ["inland", "coastal"],
+      "enum": ["I", "P", "W", "B", "C", "F", "S"],
+      "aliases": ["foundation_type", "fndtype", "found_type", "fnd_type"]
+    },
+    "number_stories": {
+      "type": "number",
+      "description": "Number of stories (floors) in the building",
+      "required": true,
+      "nullable": false,
+      "used_in": ["inland", "coastal"],
+      "aliases": ["number_stories", "num_story", "numstories", "stories", "num_floors", "floors"]
+    },
+    "area": {
+      "type": "number",
+      "description": "Building floor area in square feet",
+      "required": true,
+      "nullable": false,
+      "used_in": ["inland", "coastal"],
+      "aliases": ["area", "sqft", "building_area", "floor_area"]
+    },
+    "building_cost": {
+      "type": "number",
+      "description": "Building structural replacement cost in US dollars",
+      "required": true,
+      "nullable": false,
+      "used_in": ["inland", "coastal"],
+      "aliases": ["buildingcostusd", "building_cost", "val_struct", "cost", "replacement_cost", "building_value"]
+    },
+    "content_cost": {
+      "type": "number",
+      "description": "Contents replacement cost in US dollars",
+      "required": true,
+      "nullable": false,
+      "used_in": ["inland", "coastal"],
+      "aliases": ["contentcostusd", "content_cost", "val_cont", "contents_cost"]
+    },
+    "inventory_cost": {
+      "type": "number",
+      "description": "Business inventory replacement cost in US dollars",
+      "required": true,
+      "nullable": false,
+      "used_in": ["inland", "coastal"],
+      "aliases": ["inventorycostusd", "inventory_cost", "val_inv", "inv_cost"]
+    },
+    "general_building_type": {
+      "type": "string",
+      "description": "General construction type code (W=Wood, M=Masonry, C=Concrete, S=Steel, MH=Manufactured Housing)",
+      "required": true,
+      "nullable": false,
+      "used_in": ["inland"],
+      "enum": ["W", "M", "C", "S", "MH"],
+      "aliases": ["general_building_type", "bldgtype", "generalbuildingtype"]
+    },
+    "eq_building_type": {
+      "type": "string",
+      "description": "Earthquake-specific building type classification",
+      "required": true,
+      "nullable": false,
+      "used_in": ["earthquake"],
+      "aliases": ["eqbldgtypeid", "eq_building_type", "earthquake_building_type"]
+    },
+    "eq_design_level": {
+      "type": "string",
+      "description": "Earthquake design level classification",
+      "required": true,
+      "nullable": false,
+      "used_in": ["earthquake"],
+      "aliases": ["eqdesignlevelid", "eq_design_level", "design_level"]
+    }
+  }
+}
