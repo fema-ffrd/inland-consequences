@@ -6,7 +6,7 @@ ______________________________________________________________________
 
 ## Inventory Dataset Format
 
-The **Consequences Solution** currently accepts input inventory datasets in **point geometry** format, representing the location of each structure to be analyzed. Supported input formats include **Comma-Separated Values (.csv)**, **Esri Shapefile (.shp)**, **File Geodatabase (.gdb)**, and **GeoPackage (.gpkg)**. Each record should include the **required attribute fields** used in the loss calculations, and all spatial data should be stored in a **projected coordinate system** appropriate for the analysis extent. Using point-based inputs ensures compatibility with the **consequence modeling workflow** and enables efficient spatial joins with hazard and inventory datasets.
+The **Consequences Solution** currently accepts input inventory datasets in **point geometry** format, representing the location of each structure to be analyzed. Supported input formats include **Comma-Separated Values (.csv)**, **Esri Shapefile (.shp)**, and **GeoPackage (.gpkg)**. Each record should include the **required attribute fields** used in the loss calculations, and all spatial data should be stored in a **projected coordinate system** appropriate for the analysis extent. Using point-based inputs ensures compatibility with the **consequence modeling workflow** and enables efficient spatial joins with hazard and inventory datasets.
 
 ______________________________________________________________________
 

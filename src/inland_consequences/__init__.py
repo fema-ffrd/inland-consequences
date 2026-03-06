@@ -5,5 +5,10 @@ This package exists so the distribution has a canonical import name
 `src/sphere/` and will be included in the wheel.
 """
 
+from .results_aggregation import FloodResultsAggregator
+
+__all__ = ["FloodResultsAggregator"]
+
+
 def main() -> None:
     print("Hello from niyamit_sphere meta package")

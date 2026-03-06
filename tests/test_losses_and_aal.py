@@ -81,7 +81,7 @@ def mock_buildings_for_losses():
         "target_fid": [1, 2],
         "occtype": ["RES1", "RES1"],
         "bldgtype": ["W", "W"],
-        "found_ht": [1.0, 1.0],
+        "found_ht": [0.0, 0.0],
         "found_type": ["S", "S"],
         "num_story": [1, 1],
         "sqft": [1000, 1500],
@@ -293,16 +293,22 @@ def _expected_damage_stats(depth: float, std_dev: float):
 
 
 def _expected_aal(losses_100, losses_500):
-    """Trapezoidal AAL between two return periods (100, 500).
+    """Hazus Riemann sum AAL matching the SQL implementation.
 
-    p_100 = 1/100 = 0.01
-    p_500 = 1/500 = 0.002
-    Sorted DESC by probability → p_start = 0.01, p_end = 0.002
-    Width = 0.01 - 0.002 = 0.008
-    AAL = ((loss_100 + loss_500) / 2) * 0.008
+    Adapted from calc_aal() in docs/AAL_tech_implementation.md.  Return periods
+    are processed in ascending order [RP100, RP500]:
+
+      - RP100 (not last): trapezoidal = (prob_100 - prob_500) * (loss_100 + loss_500) / 2
+      - RP500 (last):     tail rectangle  = prob_500 * loss_500
+
+    No P=1.0 anchor is added; the tail is closed by a right-Riemann rectangle
+    at the highest return period, consistent with the Hazus Technical Manual.
     """
-    p_width = (1.0 / 100) - (1.0 / 500)  # 0.008
-    return ((losses_100 + losses_500) / 2.0) * p_width
+    p_100 = 1.0 / 100   # 0.01
+    p_500 = 1.0 / 500   # 0.002
+    seg1 = ((losses_100 + losses_500) / 2.0) * (p_100 - p_500)
+    seg2 = losses_500 * p_500
+    return seg1 + seg2
 
 
 # ===================================================================
@@ -325,7 +331,7 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         depth_min = DEPTHS[100][0] - STD_DEV  # 2.0 - 1.0 = 1.0
         expected_d_min = _expected_damage(depth_min)  # 1.0 * 5 = 5.0 (percentage points)
-        expected = BUILDING_COST_1 * expected_d_min  # 100_000 * 5.0 = 500_000
+        expected = BUILDING_COST_1 * expected_d_min / 100.0  # 100_000 * 5.0 = 500_000
         row = conn.execute(
             "SELECT loss_min FROM losses WHERE ID = 1 AND return_period = 100"
         ).fetchone()
@@ -336,7 +342,7 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         depth_min = DEPTHS[500][1] - STD_DEV  # 5.0 - 1.0 = 4.0
         expected_d_min = _expected_damage(depth_min)  # 4.0 * 5 = 20.0 (percentage points)
-        expected = BUILDING_COST_2 * expected_d_min  # 200_000 * 20.0 = 4_000_000
+        expected = BUILDING_COST_2 * expected_d_min / 100.0  # 200_000 * 20.0 = 4_000_000
         row = conn.execute(
             "SELECT loss_min FROM losses WHERE ID = 2 AND return_period = 500"
         ).fetchone()
@@ -349,7 +355,7 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         depth_max = DEPTHS[100][0] + STD_DEV  # 2.0 + 1.0 = 3.0
         expected_d_max = _expected_damage(depth_max)  # 3.0 * 5 = 15.0
-        expected = BUILDING_COST_1 * expected_d_max  # 100_000 * 15.0 = 1_500_000
+        expected = BUILDING_COST_1 * expected_d_max / 100.0 # 100_000 * 15.0 = 1_500_000
         row = conn.execute(
             "SELECT loss_max FROM losses WHERE ID = 1 AND return_period = 100"
         ).fetchone()
@@ -360,7 +366,7 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         depth_max = DEPTHS[500][1] + STD_DEV  # 5.0 + 1.0 = 6.0
         expected_d_max = _expected_damage(depth_max)  # 6.0 * 5 = 30.0
-        expected = BUILDING_COST_2 * expected_d_max  # 200_000 * 30.0 = 6_000_000
+        expected = BUILDING_COST_2 * expected_d_max / 100.0  # 200_000 * 30.0 = 6_000_000
         row = conn.execute(
             "SELECT loss_max FROM losses WHERE ID = 2 AND return_period = 500"
         ).fetchone()
@@ -372,7 +378,7 @@ class TestLossesMinMeanMax:
     def test_loss_mean_building1_rp100(self, pipeline_results):
         conn = pipeline_results.conn
         stats = _expected_damage_stats(DEPTHS[100][0], STD_DEV)
-        expected = BUILDING_COST_1 * stats["damage_percent_mean"]
+        expected = BUILDING_COST_1 * stats["damage_percent_mean"] / 100.0
         row = conn.execute(
             "SELECT loss_mean FROM losses WHERE ID = 1 AND return_period = 100"
         ).fetchone()
@@ -382,7 +388,7 @@ class TestLossesMinMeanMax:
     def test_loss_mean_building2_rp500(self, pipeline_results):
         conn = pipeline_results.conn
         stats = _expected_damage_stats(DEPTHS[500][1], STD_DEV)
-        expected = BUILDING_COST_2 * stats["damage_percent_mean"]
+        expected = BUILDING_COST_2 * stats["damage_percent_mean"] / 100.0
         row = conn.execute(
             "SELECT loss_mean FROM losses WHERE ID = 2 AND return_period = 500"
         ).fetchone()
@@ -394,7 +400,7 @@ class TestLossesMinMeanMax:
     def test_loss_std_building1_rp100(self, pipeline_results):
         conn = pipeline_results.conn
         stats = _expected_damage_stats(DEPTHS[100][0], STD_DEV)
-        expected = BUILDING_COST_1 * stats["damage_percent_std"]
+        expected = BUILDING_COST_1 * stats["damage_percent_std"] / 100.0
         row = conn.execute(
             "SELECT loss_std FROM losses WHERE ID = 1 AND return_period = 100"
         ).fetchone()
@@ -413,8 +419,8 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         stats_100 = _expected_damage_stats(DEPTHS[100][0], STD_DEV)
         stats_500 = _expected_damage_stats(DEPTHS[500][0], STD_DEV)
-        loss_min_100 = BUILDING_COST_1 * stats_100["d_min"]
-        loss_min_500 = BUILDING_COST_1 * stats_500["d_min"]
+        loss_min_100 = BUILDING_COST_1 * stats_100["d_min"] / 100.0
+        loss_min_500 = BUILDING_COST_1 * stats_500["d_min"] / 100.0
         expected = _expected_aal(loss_min_100, loss_min_500)
         row = conn.execute(
             "SELECT aal_min FROM aal_losses WHERE ID = 1"
@@ -426,8 +432,8 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         stats_100 = _expected_damage_stats(DEPTHS[100][0], STD_DEV)
         stats_500 = _expected_damage_stats(DEPTHS[500][0], STD_DEV)
-        loss_mean_100 = BUILDING_COST_1 * stats_100["damage_percent_mean"]
-        loss_mean_500 = BUILDING_COST_1 * stats_500["damage_percent_mean"]
+        loss_mean_100 = BUILDING_COST_1 * stats_100["damage_percent_mean"] / 100.0
+        loss_mean_500 = BUILDING_COST_1 * stats_500["damage_percent_mean"] / 100.0
         expected = _expected_aal(loss_mean_100, loss_mean_500)
         row = conn.execute(
             "SELECT aal_mean FROM aal_losses WHERE ID = 1"
@@ -439,8 +445,8 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         stats_100 = _expected_damage_stats(DEPTHS[100][0], STD_DEV)
         stats_500 = _expected_damage_stats(DEPTHS[500][0], STD_DEV)
-        loss_max_100 = BUILDING_COST_1 * stats_100["d_max"]
-        loss_max_500 = BUILDING_COST_1 * stats_500["d_max"]
+        loss_max_100 = BUILDING_COST_1 * stats_100["d_max"] / 100.0
+        loss_max_500 = BUILDING_COST_1 * stats_500["d_max"] / 100.0
         expected = _expected_aal(loss_max_100, loss_max_500)
         row = conn.execute(
             "SELECT aal_max FROM aal_losses WHERE ID = 1"
@@ -452,8 +458,8 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         stats_100 = _expected_damage_stats(DEPTHS[100][1], STD_DEV)
         stats_500 = _expected_damage_stats(DEPTHS[500][1], STD_DEV)
-        loss_min_100 = BUILDING_COST_2 * stats_100["d_min"]
-        loss_min_500 = BUILDING_COST_2 * stats_500["d_min"]
+        loss_min_100 = BUILDING_COST_2 * stats_100["d_min"] / 100.0
+        loss_min_500 = BUILDING_COST_2 * stats_500["d_min"] / 100.0
         expected = _expected_aal(loss_min_100, loss_min_500)
         row = conn.execute(
             "SELECT aal_min FROM aal_losses WHERE ID = 2"
@@ -465,8 +471,8 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         stats_100 = _expected_damage_stats(DEPTHS[100][1], STD_DEV)
         stats_500 = _expected_damage_stats(DEPTHS[500][1], STD_DEV)
-        loss_mean_100 = BUILDING_COST_2 * stats_100["damage_percent_mean"]
-        loss_mean_500 = BUILDING_COST_2 * stats_500["damage_percent_mean"]
+        loss_mean_100 = BUILDING_COST_2 * stats_100["damage_percent_mean"] / 100.0
+        loss_mean_500 = BUILDING_COST_2 * stats_500["damage_percent_mean"] / 100.0
         expected = _expected_aal(loss_mean_100, loss_mean_500)
         row = conn.execute(
             "SELECT aal_mean FROM aal_losses WHERE ID = 2"
@@ -478,8 +484,8 @@ class TestLossesMinMeanMax:
         conn = pipeline_results.conn
         stats_100 = _expected_damage_stats(DEPTHS[100][1], STD_DEV)
         stats_500 = _expected_damage_stats(DEPTHS[500][1], STD_DEV)
-        loss_max_100 = BUILDING_COST_2 * stats_100["d_max"]
-        loss_max_500 = BUILDING_COST_2 * stats_500["d_max"]
+        loss_max_100 = BUILDING_COST_2 * stats_100["d_max"] / 100.0
+        loss_max_500 = BUILDING_COST_2 * stats_500["d_max"] / 100.0
         expected = _expected_aal(loss_max_100, loss_max_500)
         row = conn.execute(
             "SELECT aal_max FROM aal_losses WHERE ID = 2"
@@ -497,6 +503,40 @@ class TestLossesMinMeanMax:
             bld_id, aal_min, aal_mean, aal_max = row
             assert aal_min <= aal_mean, f"Building {bld_id}: aal_min > aal_mean"
             assert aal_mean <= aal_max, f"Building {bld_id}: aal_mean > aal_max"
+
+    def test_each_building_has_exactly_one_damage_function(self, pipeline_results):
+        """Every building should have exactly one damage function assigned.
+
+        With the injected xref_structures containing a single matching entry
+        (W + RES1 + story_min=1 + story_max=3 + SLAB), each building should
+        produce exactly one row in structure_damage_functions with weight=1.0.
+        This guards against duplicate assignments that would distort loss calculations.
+        """
+        conn = pipeline_results.conn
+
+        building_ids = conn.execute(
+            "SELECT ID FROM buildings ORDER BY ID"
+        ).fetchdf()
+
+        counts = conn.execute("""
+            SELECT building_id, COUNT(*) as func_count
+            FROM structure_damage_functions
+            GROUP BY building_id
+            ORDER BY building_id
+        """).fetchdf()
+
+        # Every building must appear in structure_damage_functions
+        assert len(counts) == len(building_ids), (
+            f"Expected {len(building_ids)} buildings in structure_damage_functions, "
+            f"got {len(counts)}"
+        )
+
+        # Each building must have exactly one damage function row
+        for _, row in counts.iterrows():
+            assert row['func_count'] == 1, (
+                f"Building {int(row['building_id'])} has {int(row['func_count'])} damage "
+                f"function(s) assigned; expected exactly 1"
+            )
 
 
 # ===================================================================
@@ -620,3 +660,146 @@ class TestDamageStatistics:
         assert actual_d_mean == pytest.approx(exp_d_mean, rel=1e-6)
         assert actual_d_min == pytest.approx(exp_d_min, rel=1e-6)
         assert actual_d_max == pytest.approx(exp_d_max, rel=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# Fixtures and helpers for single-RP non-truncated AAL test
+# ---------------------------------------------------------------------------
+
+# RasterCollection returns [1000, 2000] but only 2000 RP has depth > 0.
+# Building 1 and 2 both get SINGLE_RP_DEPTH at 2000 RP; 1000 RP depth = 0.0.
+SINGLE_RP_DEPTH = 4.0   # ft at 2000 RP
+SINGLE_RP = 2000
+SINGLE_RP_NEXT_LOWER = 1000
+
+
+@pytest.fixture(scope="module")
+def mock_rasters_single_rp():
+    """RasterCollection with [1000, 2000] RPs; only 2000 RP has depth > 0."""
+    mock_collection = MagicMock(spec=RasterCollection)
+    mock_collection.return_periods.return_value = [SINGLE_RP_NEXT_LOWER, SINGLE_RP]
+
+    def _sample_for_rp(rp, geometries):
+        n = len(geometries)
+        idx = pd.Index(range(n))
+        depth = SINGLE_RP_DEPTH if rp == SINGLE_RP else 0.0
+        return {
+            "depth": pd.Series([depth] * n, index=idx),
+            "uncertainty": pd.Series([STD_DEV] * n, index=idx),
+            "velocity": pd.Series([np.nan] * n, index=idx),
+            "duration": pd.Series([np.nan] * n, index=idx),
+        }
+
+    mock_collection.sample_for_rp.side_effect = _sample_for_rp
+
+    def _get(rp):
+        return {
+            "depth": None,
+            "uncertainty": float(STD_DEV),
+            "velocity": None,
+            "duration": None,
+        }
+
+    mock_collection.get.side_effect = _get
+    return mock_collection
+
+
+@pytest.fixture(scope="class")
+def pipeline_results_single_rp(
+    mock_buildings_for_losses, mock_rasters_single_rp, mock_vulnerability_noop, tmp_path_factory
+):
+    """Run full pipeline with only the 2000-RP producing losses."""
+    tmp_path = tmp_path_factory.mktemp("losses_aal_single_rp")
+    db_path = str(tmp_path / "test_losses_single_rp.duckdb")
+
+    with patch.object(
+        InlandFloodAnalysis,
+        "_create_vulnerability_tables",
+        _inject_linear_ddf,
+    ), patch(
+        "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
+        return_value=db_path,
+    ):
+        analysis = InlandFloodAnalysis(
+            raster_collection=mock_rasters_single_rp,
+            buildings=mock_buildings_for_losses,
+            vulnerability=mock_vulnerability_noop,
+            calculate_aal=True,
+        )
+        with analysis:
+            analysis.calculate_losses()
+            yield analysis
+
+
+def _expected_aal_single_rp_nontruncated(loss: float, rp: int, next_lower_rp: int) -> float:
+    """Non-truncated AAL when only one RP has losses.
+
+    A $0 anchor is inserted at ``next_lower_rp``, producing two active segments:
+      1. next_lower_rp ($0) → rp: trapezoidal = loss/2 * (p_next - p_rp)
+      2. rp → P=0 tail:          = loss * p_rp
+    """
+    p_rp = 1.0 / rp
+    p_next = 1.0 / next_lower_rp
+    seg1 = (loss / 2.0) * (p_next - p_rp)
+    seg2 = loss * p_rp
+    return seg1 + seg2
+
+
+# ===================================================================
+# Test Group 3: AAL — single return period (non-truncated)
+# ===================================================================
+
+class TestAalSingleReturnPeriod:
+    """AAL when only the highest RP (2000) has losses (non-truncated mode).
+
+    RasterCollection exposes [1000, 2000]; 1000 RP depth=0 is filtered out of
+    the losses table.  Non-truncated AAL must insert a $0 anchor at 1000 RP so
+    the trapezoid is correctly bounded, giving:
+        aal = loss * (p_1000 - p_2000)/2 + loss * p_2000
+            = loss * 0.00025 + loss * 0.0005
+            = loss * 0.00075
+    """
+
+    def test_losses_table_has_only_2000rp_rows(self, pipeline_results_single_rp):
+        """1000 RP depth=0 must be absent from the losses table."""
+        conn = pipeline_results_single_rp.conn
+        rps = conn.execute(
+            "SELECT DISTINCT return_period FROM losses ORDER BY return_period"
+        ).fetchall()
+        assert rps == [(SINGLE_RP,)]
+
+    def test_aal_mean_building1_single_rp(self, pipeline_results_single_rp):
+        conn = pipeline_results_single_rp.conn
+        stats = _expected_damage_stats(SINGLE_RP_DEPTH, STD_DEV)
+        loss_mean = BUILDING_COST_1 * stats["damage_percent_mean"] / 100.0
+        expected = _expected_aal_single_rp_nontruncated(loss_mean, SINGLE_RP, SINGLE_RP_NEXT_LOWER)
+        row = conn.execute("SELECT aal_mean FROM aal_losses WHERE ID = 1").fetchone()
+        assert row is not None
+        assert row[0] == pytest.approx(expected, rel=1e-6)
+
+    def test_aal_mean_building2_single_rp(self, pipeline_results_single_rp):
+        conn = pipeline_results_single_rp.conn
+        stats = _expected_damage_stats(SINGLE_RP_DEPTH, STD_DEV)
+        loss_mean = BUILDING_COST_2 * stats["damage_percent_mean"] / 100.0
+        expected = _expected_aal_single_rp_nontruncated(loss_mean, SINGLE_RP, SINGLE_RP_NEXT_LOWER)
+        row = conn.execute("SELECT aal_mean FROM aal_losses WHERE ID = 2").fetchone()
+        assert row is not None
+        assert row[0] == pytest.approx(expected, rel=1e-6)
+
+    def test_aal_min_building1_single_rp(self, pipeline_results_single_rp):
+        conn = pipeline_results_single_rp.conn
+        stats = _expected_damage_stats(SINGLE_RP_DEPTH, STD_DEV)
+        loss_min = BUILDING_COST_1 * stats["d_min"] / 100.0
+        expected = _expected_aal_single_rp_nontruncated(loss_min, SINGLE_RP, SINGLE_RP_NEXT_LOWER)
+        row = conn.execute("SELECT aal_min FROM aal_losses WHERE ID = 1").fetchone()
+        assert row is not None
+        assert row[0] == pytest.approx(expected, rel=1e-6)
+
+    def test_aal_max_building1_single_rp(self, pipeline_results_single_rp):
+        conn = pipeline_results_single_rp.conn
+        stats = _expected_damage_stats(SINGLE_RP_DEPTH, STD_DEV)
+        loss_max = BUILDING_COST_1 * stats["d_max"] / 100.0
+        expected = _expected_aal_single_rp_nontruncated(loss_max, SINGLE_RP, SINGLE_RP_NEXT_LOWER)
+        row = conn.execute("SELECT aal_max FROM aal_losses WHERE ID = 1").fetchone()
+        assert row is not None
+        assert row[0] == pytest.approx(expected, rel=1e-6)

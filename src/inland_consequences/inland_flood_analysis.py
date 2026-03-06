@@ -3,6 +3,8 @@ from sphere.core.schemas.abstract_raster_reader import AbstractRasterReader
 from sphere.core.schemas.abstract_vulnerability_function import AbstractVulnerabilityFunction
 from .raster_collection import RasterCollection
 import inspect
+import logging
+import json
 import numpy as np
 import pandas as pd
 import geopandas as gpd
@@ -12,6 +14,12 @@ from pathlib import Path
 from datetime import datetime
 import time
 import secrets
+try:
+    from importlib.metadata import version as _pkg_version
+except ImportError:
+    from importlib_metadata import version as _pkg_version  # type: ignore
+
+logger = logging.getLogger(__name__)
 
 # Raster inputs are provided via a RasterCollection instance which
 # enforces labeled rasters per return period (depth required, optional
@@ -35,14 +43,16 @@ class InlandFloodAnalysis:
         - Default (wildcard_fields=None or []): Match on all available attributes
           * occupancy_type (if not NULL)
           * foundation_type (if not NULL)
-          * number_stories (if not NULL)
+          * number_stories (if not NULL, matched against story_min/story_max range)
+          * area (if not NULL, matched against sqft_min/sqft_max range; NULL bounds = open-ended)
           * general_building_type (if not NULL)
         
         - Selective wildcarding: Specify fields to ignore even when values present
           * wildcard_fields=['general_building_type'] - ignore construction material
           * wildcard_fields=['foundation_type', 'number_stories'] - match on occupancy + construction
           * wildcard_fields=['occupancy_type'] - match all curves regardless of occupancy type
-          * wildcard_fields=['occupancy_type', 'foundation_type', 'number_stories', 'general_building_type'] - 
+          * wildcard_fields=['area'] - ignore sqft range, match on all other attributes
+          * wildcard_fields=['occupancy_type', 'foundation_type', 'number_stories', 'area', 'general_building_type'] - 
             match ALL curves (no attribute filtering)
         
         Example:
@@ -70,6 +80,7 @@ class InlandFloodAnalysis:
         vulnerability: AbstractVulnerabilityFunction,
         calculate_aal: bool = True,
         aal_rate_limits: Optional[Tuple[float, float]] = None,
+        aal_truncation: int = 0,
         wildcard_fields: Optional[List[str]] = None,
     ) -> None:
         # Must be a RasterCollection instance (validated by its constructor)
@@ -82,6 +93,7 @@ class InlandFloodAnalysis:
         self.vulnerability: AbstractVulnerabilityFunction = vulnerability
         self.calculate_aal = calculate_aal
         self.aal_rate_limits = aal_rate_limits
+        self.aal_truncation = aal_truncation
         self.wildcard_fields = wildcard_fields or []  # Fields to ignore in matching even when values present
 
         # Since the vulnerability needs the buildings right now we need to think about how to choose them and apply to keep the buildings in sync.
@@ -111,6 +123,7 @@ class InlandFloodAnalysis:
             # Mode 2: Standalone (create, use, and close temporary connection)
             db_id = self._get_db_identifier()
             temp_conn = duckdb.connect(database=db_id)
+            self._setup_logging(db_id)
             return temp_conn, True # conn_is_temporary = True
 
     # ----------------------------------------------------
@@ -124,6 +137,7 @@ class InlandFloodAnalysis:
         db_id = self._get_db_identifier()
         self.db_path = db_id  # Store path for later reference
         self.conn = duckdb.connect(database=db_id)
+        self._setup_logging(db_id)
         return self
         
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -131,6 +145,198 @@ class InlandFloodAnalysis:
         if self.conn:
             self.conn.close()
         self.conn = None # Reset the connection attribute
+
+    # ----------------------------------------------------
+    # Logging Helpers
+    # ----------------------------------------------------
+
+    def _setup_logging(self, db_path: str) -> None:
+        """Configure console and file logging handlers for this analysis run.
+
+        The log file is co-located with the DuckDB database file using the same
+        stem but a `.log` extension. Handlers are only added once per logger
+        instance to avoid duplicate output across context-manager and standalone
+        modes.
+        """
+        if logger.handlers:
+            return  # Already configured for this process
+
+        log_path = Path(db_path).with_suffix(".log")
+        fmt = logging.Formatter("%(asctime)s [%(levelname)-8s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(fmt)
+
+        file_handler = logging.FileHandler(str(log_path), mode="a", encoding="utf-8")
+        file_handler.setFormatter(fmt)
+
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(console_handler)
+        logger.addHandler(file_handler)
+
+    def _create_run_log_table(self, conn: duckdb.DuckDBPyConnection) -> None:
+        """Create the run_log table to capture step-by-step execution messages."""
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS run_log (
+                id UUID PRIMARY KEY DEFAULT uuidv7(),
+                logged_at TIMESTAMP DEFAULT now(),
+                level VARCHAR,
+                step VARCHAR,
+                message VARCHAR,
+                elapsed_seconds DOUBLE
+            )
+        """)
+
+    def _log(
+        self,
+        conn: duckdb.DuckDBPyConnection,
+        level: str,
+        step: str,
+        message: str,
+        elapsed: Optional[float] = None,
+    ) -> None:
+        """Write a log entry to both the Python logger and the run_log DuckDB table."""
+        log_line = f"[{step}] {message}"
+        if elapsed is not None:
+            log_line += f" ({elapsed:.2f}s)"
+
+        getattr(logger, level.lower(), logger.info)(log_line)
+
+        try:
+            conn.execute(
+                "INSERT INTO run_log (level, step, message, elapsed_seconds) VALUES (?, ?, ?, ?)",
+                [level.upper(), step, message, elapsed],
+            )
+        except Exception:
+            pass  # Never let logging failure interrupt analysis
+
+    def _create_run_metadata_table(self, conn: duckdb.DuckDBPyConnection) -> None:
+        """Create the run_metadata table and insert one row for this analysis run."""
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS run_metadata (
+                id UUID PRIMARY KEY DEFAULT uuidv7(),
+                created_at TIMESTAMP DEFAULT now(),
+                package_version VARCHAR,
+                buildings_type VARCHAR,
+                raster_info JSON,
+                return_periods JSON,
+                wildcard_fields JSON,
+                calculate_aal BOOLEAN,
+                aal_rate_limit_low DOUBLE,
+                aal_rate_limit_high DOUBLE,
+                aal_truncation INTEGER
+            )
+        """)
+
+        try:
+            pkg_ver = _pkg_version("inland-consequences")
+        except Exception:
+            pkg_ver = "unknown"
+
+        buildings_type = type(self.buildings).__name__
+
+        def _safe_source(raster) -> str | None:
+            """Return data_source as string, or None if unavailable/not serializable."""
+            if raster is None:
+                return None
+            try:
+                src = raster.data_source
+                return str(src) if src is not None else None
+            except Exception:
+                return None
+
+        # Build raster_info: { rp: { data_source, depth_class, uncertainty_class, velocity_class, duration_class } }
+        raster_info: Dict[int, Any] = {}
+        for rp in self.raster_collection.return_periods():
+            spec = self.raster_collection.get(rp)
+            depth_r = spec.get("depth")
+            uncert_r = spec.get("uncertainty")
+            vel_r = spec.get("velocity")
+            dur_r = spec.get("duration")
+            raster_info[rp] = {
+                "depth_source": _safe_source(depth_r),
+                "depth_class": type(depth_r).__name__ if depth_r is not None else None,
+                "uncertainty_source": _safe_source(uncert_r) if isinstance(uncert_r, AbstractRasterReader) else (str(uncert_r) if uncert_r is not None else None),
+                "uncertainty_class": type(uncert_r).__name__ if uncert_r is not None else None,
+                "velocity_source": _safe_source(vel_r),
+                "velocity_class": type(vel_r).__name__ if vel_r is not None else None,
+                "duration_source": _safe_source(dur_r),
+                "duration_class": type(dur_r).__name__ if dur_r is not None else None,
+            }
+
+        return_periods = self.raster_collection.return_periods()
+        wildcard_fields = self.wildcard_fields
+
+        aal_low = None
+        aal_high = None
+        if self.aal_rate_limits is not None:
+            aal_low, aal_high = float(self.aal_rate_limits[0]), float(self.aal_rate_limits[1])
+
+        conn.execute(
+            """INSERT INTO run_metadata
+               (package_version, buildings_type, raster_info, return_periods,
+                wildcard_fields, calculate_aal, aal_rate_limit_low, aal_rate_limit_high,
+                aal_truncation)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            [
+                pkg_ver,
+                buildings_type,
+                json.dumps(raster_info),
+                json.dumps(return_periods),
+                json.dumps(wildcard_fields),
+                self.calculate_aal,
+                aal_low,
+                aal_high,
+                self.aal_truncation,
+            ],
+        )
+
+    def _log_validation_summary(self, conn: duckdb.DuckDBPyConnection) -> None:
+        """Query validation_log and log per-rule distinct building counts and percentages."""
+        try:
+            total_buildings = conn.execute("SELECT COUNT(*) FROM buildings").fetchone()[0]
+            if total_buildings == 0:
+                return
+
+            rows = conn.execute("""
+                SELECT
+                    severity,
+                    rule,
+                    COUNT(DISTINCT building_id) AS affected_buildings,
+                    ROUND(100.0 * COUNT(DISTINCT building_id) / ?, 1) AS pct
+                FROM validation_log
+                GROUP BY severity, rule
+                ORDER BY severity DESC, affected_buildings DESC
+            """, [total_buildings]).fetchall()
+
+            if not rows:
+                self._log(conn, "INFO", "validation_summary", "No validation warnings or errors.")
+                return
+
+            affected_ids = conn.execute(
+                "SELECT COUNT(DISTINCT building_id) FROM validation_log"
+            ).fetchone()[0]
+
+            header = (
+                f"Validation Summary — {len(rows)} rule(s) flagged across "
+                f"{affected_ids:,} building(s) (total: {total_buildings:,}):"
+            )
+            logger.warning(header)
+            conn.execute(
+                "INSERT INTO run_log (level, step, message) VALUES ('WARNING', 'validation_summary', ?)",
+                [header],
+            )
+
+            for severity, rule, count, pct in rows:
+                line = f"  [{severity:<7}] {rule:<45}: {count:>6,} buildings ({pct}%)"
+                log_level = "warning" if severity in ("WARNING", "ERROR") else "info"
+                getattr(logger, log_level)(line)
+                conn.execute(
+                    "INSERT INTO run_log (level, step, message) VALUES (?, 'validation_summary', ?)",
+                    [severity, line],
+                )
+        except Exception:
+            pass  # Never let summary failure interrupt analysis
 
     def _calculate_exposure(self) -> pd.DataFrame:
         """Vectorized sampling of all rasters for all building geometries.
@@ -296,49 +502,98 @@ class InlandFloodAnalysis:
         # 6. Unpivot the wide damage functions that were gathered to interpolate the damage ratios from the depth and uncertainty
         
         conn, close_after_use = self._get_or_create_connection()
+        run_start = time.perf_counter()
         
         try:
-            # Use the connection
+            # Create run_log and run_metadata tables first so all subsequent steps are recorded
+            self._create_run_log_table(conn)
+            self._create_run_metadata_table(conn)
+
+            n_buildings = len(self.buildings.gdf)
+            n_rps = len(self.raster_collection.return_periods())
+            self._log(conn, "INFO", "startup",
+                      f"Starting inland flood analysis — {n_buildings:,} buildings × {n_rps} return period(s)")
+
             # Enable GeoArrow extensions for spatial data support
+            t = time.perf_counter()
             conn.execute("INSTALL spatial;")
             conn.execute("LOAD spatial;")
             conn.execute("CALL register_geoarrow_extensions()")
+            self._log(conn, "INFO", "spatial_extensions", "Spatial extensions loaded", time.perf_counter() - t)
             
             # Ensure the shared validation table exists before running checks
             self._create_validation_table(conn)
             
             # Copy buildings to database
+            t = time.perf_counter()
             self._create_buildings_table(conn)
+            self._log(conn, "INFO", "buildings_table",
+                      f"Buildings table created ({n_buildings:,} rows)", time.perf_counter() - t)
             
             # Copy vulnerability tables to database
+            t = time.perf_counter()
             self._create_vulnerability_tables(conn)
+            self._log(conn, "INFO", "vulnerability_tables", "Vulnerability tables loaded", time.perf_counter() - t)
             
             # Copy hazard inputs to database
-            self._create_hazard_tables(conn)    
+            t = time.perf_counter()
+            self._create_hazard_tables(conn)
+            self._log(conn, "INFO", "hazard_tables",
+                      f"Hazard tables created ({n_rps} return period(s))", time.perf_counter() - t)
 
             # Assign peril type
+            t = time.perf_counter()
             self._assign_flood_peril_type(conn)
+            self._log(conn, "INFO", "flood_peril_type", "Flood peril types assigned", time.perf_counter() - t)
 
             # Run building-level validation logic (non-fatal)
+            t = time.perf_counter()
             self._run_building_logic(conn)
+            self._log(conn, "INFO", "building_validation", "Building validation checks complete", time.perf_counter() - t)
 
             # Run hazard-level validation logic (non-fatal)
+            t = time.perf_counter()
             self._run_hazard_logic(conn)
+            self._log(conn, "INFO", "hazard_validation", "Hazard validation checks complete", time.perf_counter() - t)
 
             # Gather damage functions from vulnerability function
+            t = time.perf_counter()
             self._gather_damage_functions(conn)
+            self._log(conn, "INFO", "damage_function_matching", "Damage function matching complete", time.perf_counter() - t)
+
+            # Gather damage functions for attributes outside
+            t = time.perf_counter()
+            self._gather_missing_functions(conn)
+            self._log(conn, "INFO", "missing_function_fallback",
+                      "Missing damage function fallback (clamping) complete", time.perf_counter() - t)
 
             # Compute the mean and std. deviation of the damage functions
+            t = time.perf_counter()
             self._compute_damage_function_statistics(conn)
+            self._log(conn, "INFO", "ddf_statistics",
+                      "Damage function statistics (triangular distribution) computed", time.perf_counter() - t)
 
             # Calculate damages
+            t = time.perf_counter()
             self._calculate_losses(conn)
+            self._log(conn, "INFO", "loss_calculation", "Return period losses calculated", time.perf_counter() - t)
 
             # Run AAL
+            t = time.perf_counter()
             self._calculate_aal(conn)
+            self._log(conn, "INFO", "aal_calculation", "AAL calculated (trapezoidal rule)", time.perf_counter() - t)
 
             # Run results-level validation logic (non-fatal)
+            t = time.perf_counter()
             self._run_results_logic(conn)
+            self._log(conn, "INFO", "results_validation", "Results validation checks complete", time.perf_counter() - t)
+
+            # Log validation summary (distinct building counts + % per rule)
+            self._log_validation_summary(conn)
+
+            total_elapsed = time.perf_counter() - run_start
+            self._log(conn, "INFO", "complete",
+                      f"Analysis complete — {n_buildings:,} buildings processed in {total_elapsed:.1f}s")
 
         finally:
             # Only close if we created it ourselves (Standalone Mode)
@@ -480,6 +735,9 @@ class InlandFloodAnalysis:
         # Concatenate all return period DataFrames
         hazard_df = pd.concat(rp_dataframes, ignore_index=True)
         
+        # Exclude rows where depth is 0
+        hazard_df = hazard_df[hazard_df["depth"] > 0]
+
         # Load into DuckDB using pyarrow (pa.Table.from_pandas works with pandas DataFrame)
         hazard_arrow = pa.Table.from_pandas(hazard_df)
         connection.register("hazard_arrow", hazard_arrow)
@@ -565,6 +823,17 @@ class InlandFloodAnalysis:
                 SELECT id, 'buildings', 'building_validation', 'OCCUPANCY_TYPE_MISSING', 'occupancy_type is null or empty', 'WARNING' 
                 FROM buildings 
                 WHERE occupancy_type IS NULL OR occupancy_type = '';
+
+                -- Occupancy type not present in damage function cross-reference lookup at all
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT id, 'buildings', 'building_validation', 'OCCUPANCY_NOT_IN_XREF',
+                    'Occupancy type ' || occupancy_type || ' is not present in the damage function cross-reference lookup; no damage function will be assigned',
+                    'WARNING'
+                FROM buildings
+                WHERE occupancy_type IS NOT NULL AND occupancy_type != ''
+                  AND occupancy_type NOT IN (
+                      SELECT DISTINCT occupancy_type FROM xref_structures WHERE occupancy_type IS NOT NULL
+                  );
 
                 -- Check for unusual area/valuation: > 5x the Hazus hzSqFtFactors table
                 INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
@@ -754,6 +1023,22 @@ class InlandFloodAnalysis:
                 FROM aal_losses a
                 JOIN buildings b ON a.ID = b.id
                 WHERE (a.aal_mean / NULLIF(b.building_cost, 0)) > 0.1;
+
+                -- Check for non-monotonic losses (loss decreases as return period increases)
+                -- This indicates non-monotonic hazard depth data which distorts AAL estimates
+                INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
+                SELECT DISTINCT
+                    l_short.ID,
+                    'losses',
+                    'results_validation',
+                    'NON_MONOTONIC_LOSSES',
+                    'Mean loss decreases from return period ' || l_short.return_period || ' to ' || l_long.return_period || '; non-monotonic hazard depths may distort AAL estimates',
+                    'WARNING'
+                FROM losses l_short
+                JOIN losses l_long ON l_short.ID = l_long.ID
+                WHERE l_short.return_period < l_long.return_period
+                  AND l_short.loss_mean > l_long.loss_mean
+                  AND l_short.loss_mean > 0;
             '''
 
             connection.sql(sql)
@@ -798,7 +1083,9 @@ class InlandFloodAnalysis:
         use_occupancy = 'occupancy_type' not in self.wildcard_fields
         use_foundation = 'foundation_type' not in self.wildcard_fields
         use_stories = 'number_stories' not in self.wildcard_fields
+        use_sqft = 'area' not in self.wildcard_fields
         use_construction = 'general_building_type' not in self.wildcard_fields
+        use_flood_peril_type = 'flood_peril_type' not in self.wildcard_fields
 
         structure_query = '''
         CREATE TABLE structure_damage_functions AS
@@ -835,11 +1122,27 @@ class InlandFloodAnalysis:
                     WHEN {use_stories} AND b.number_stories IS NOT NULL AND c.story_min IS NOT NULL AND c.story_max IS NOT NULL 
                         AND NOT (b.number_stories BETWEEN c.story_min AND c.story_max) THEN 0
                     
+                    -- Sqft (Area) Matching (conditionally enabled):
+                    -- Check whether the building's area falls within the curve's sqft range.
+                    -- A NULL sqft_min means no lower bound; a NULL sqft_max means no upper bound.
+                    -- Both NULL → curve applies to any area (wildcard).
+                    WHEN {use_sqft} AND b.area IS NOT NULL
+                        AND NOT (
+                            (c.sqft_min IS NULL OR b.area >= c.sqft_min)
+                            AND (c.sqft_max IS NULL OR b.area <= c.sqft_max)
+                        ) THEN 0
+                    
                     -- Construction Type Matching (conditionally enabled):
                     -- Direct comparison of construction material codes (W=Wood, M=Masonry, C=Concrete, S=Steel, MH=Manufactured Housing)
                     -- Preprocessed from numeric codes in Milliman data, direct field in NSI data
                     WHEN {use_construction} AND b.general_building_type IS NOT NULL 
                         AND b.general_building_type != c.construction_type THEN 0
+                    
+                    -- Flood Peril Type Matching (conditionally enabled):
+                    -- Direct comparison of flood peril type codes (RLS, RLL, RHS, RHL, CHW, CMV, CST)
+                    -- Assigned to each building by _assign_flood_peril_type based on velocity/duration
+                    WHEN {use_flood_peril_type} AND b.flood_peril_type IS NOT NULL AND c.flood_peril_type IS NOT NULL
+                        AND b.flood_peril_type != c.flood_peril_type THEN 0
                     
                     -- If none of the mismatch conditions triggered, it's a valid match
                     ELSE 1
@@ -889,7 +1192,9 @@ class InlandFloodAnalysis:
             use_occupancy=use_occupancy,
             use_foundation=use_foundation,
             use_stories=use_stories,
-            use_construction=use_construction
+            use_sqft=use_sqft,
+            use_construction=use_construction,
+            use_flood_peril_type=use_flood_peril_type
         )
         connection.execute("DROP TABLE IF EXISTS structure_damage_functions")
         connection.execute(structure_query)
@@ -1042,93 +1347,240 @@ class InlandFloodAnalysis:
         connection.execute("DROP TABLE IF EXISTS inventory_damage_functions")
         connection.execute(inventory_query)          
 
+    def _gather_missing_functions(self, connection: duckdb.DuckDBPyConnection) -> None:
+        """Add damage functions for buildings not matched by _gather_damage_functions.
+
+        Buildings may be unmatched when their ranged attributes (number_stories, area)
+        fall outside the min/max bounds defined in xref_structures. This method clamps
+        those values to the nearest available bound:
+        - Values that are NULL or below the minimum range: use the minimum bound curve
+        - Values above the maximum range: use the maximum bound curve
+
+        Matched records are inserted into structure_damage_functions with appropriate
+        probability weights. Validation log entries are recorded for each building
+        with a clamped attribute.
+        """
+
+        use_occupancy = 'occupancy_type' not in self.wildcard_fields
+        use_foundation = 'foundation_type' not in self.wildcard_fields
+        use_stories = 'number_stories' not in self.wildcard_fields
+        use_sqft = 'area' not in self.wildcard_fields
+        use_construction = 'general_building_type' not in self.wildcard_fields
+        use_flood_peril_type = 'flood_peril_type' not in self.wildcard_fields
+
+        # Build a temp table with clamped matches and clamp reasons so we can
+        # insert into both structure_damage_functions and validation_log.
+        create_sql = '''
+        CREATE OR REPLACE TEMP TABLE _clamped_matches AS
+        WITH
+        -- Identify buildings with no existing damage function match
+        missing_buildings AS (
+            SELECT b.*
+            FROM buildings b
+            LEFT JOIN structure_damage_functions sdf ON b.id = sdf.building_id
+            WHERE sdf.building_id IS NULL
+        ),
+
+        -- Match missing buildings on non-range attributes only (same attribute
+        -- logic as _gather_damage_functions but without story/sqft range checks)
+        non_range_candidates AS (
+            SELECT
+                b.id,
+                b.number_stories,
+                b.area,
+                b.first_floor_height,
+                c.damage_function_id,
+                c.story_min,
+                c.story_max,
+                c.sqft_min,
+                c.sqft_max
+            FROM missing_buildings b
+            CROSS JOIN xref_structures c
+            WHERE (
+                CASE
+                    WHEN {use_occupancy} AND b.occupancy_type IS NOT NULL AND c.occupancy_type IS NOT NULL
+                        AND b.occupancy_type != c.occupancy_type THEN 0
+
+                    WHEN {use_foundation} AND b.foundation_type IS NOT NULL AND c.foundation_type IS NOT NULL AND
+                        CASE
+                            WHEN b.foundation_type = 'I' THEN 'PILE'
+                            WHEN b.foundation_type = 'B' THEN 'BASE'
+                            WHEN b.foundation_type = 'S' THEN 'SLAB'
+                            WHEN b.foundation_type = 'P' THEN 'PILE'
+                            WHEN b.foundation_type = 'W' THEN 'BASE'
+                            WHEN b.foundation_type = 'C' THEN 'SHAL'
+                            WHEN b.foundation_type = 'F' THEN 'SHAL'
+                            ELSE NULL
+                        END != c.foundation_type THEN 0
+
+                    WHEN {use_construction} AND b.general_building_type IS NOT NULL
+                        AND b.general_building_type != c.construction_type THEN 0
+
+                    WHEN {use_flood_peril_type} AND b.flood_peril_type IS NOT NULL AND c.flood_peril_type IS NOT NULL
+                        AND b.flood_peril_type != c.flood_peril_type THEN 0
+
+                    ELSE 1
+                END = 1
+            )
+        ),
+
+        -- Compute global range bounds across all matching curves per building
+        with_bounds AS (
+            SELECT
+                nrc.*,
+                MIN(CASE WHEN story_min IS NOT NULL THEN story_min END) OVER (PARTITION BY id) AS global_story_min,
+                MAX(CASE WHEN story_max IS NOT NULL THEN story_max END) OVER (PARTITION BY id) AS global_story_max,
+                MIN(CASE WHEN sqft_min IS NOT NULL THEN sqft_min END) OVER (PARTITION BY id) AS global_sqft_min,
+                MAX(CASE WHEN sqft_max IS NOT NULL THEN sqft_max END) OVER (PARTITION BY id) AS global_sqft_max
+            FROM non_range_candidates nrc
+        ),
+
+        -- Calculate effective (clamped) values and clamp reasons
+        with_effective AS (
+            SELECT
+                wb.*,
+                -- Effective stories: clamp to [global_story_min, global_story_max]
+                CASE
+                    WHEN NOT {use_stories} THEN number_stories
+                    WHEN global_story_min IS NULL THEN number_stories
+                    WHEN number_stories IS NULL OR number_stories < global_story_min THEN global_story_min
+                    WHEN number_stories > global_story_max THEN global_story_max
+                    ELSE number_stories
+                END AS effective_stories,
+                -- Effective sqft: clamp to [global_sqft_min, global_sqft_max]
+                CASE
+                    WHEN NOT {use_sqft} THEN area
+                    WHEN global_sqft_min IS NULL THEN area
+                    WHEN area IS NULL OR area < global_sqft_min THEN global_sqft_min
+                    WHEN area > global_sqft_max THEN global_sqft_max
+                    ELSE area
+                END AS effective_sqft,
+                -- Story clamp reason
+                CASE
+                    WHEN NOT {use_stories} THEN NULL
+                    WHEN global_story_min IS NULL THEN NULL
+                    WHEN number_stories IS NULL THEN 'STORIES_NULL_CLAMPED_TO_MIN'
+                    WHEN number_stories < global_story_min THEN 'STORIES_BELOW_MIN'
+                    WHEN number_stories > global_story_max THEN 'STORIES_ABOVE_MAX'
+                    ELSE NULL
+                END AS story_clamp,
+                -- Sqft clamp reason
+                CASE
+                    WHEN NOT {use_sqft} THEN NULL
+                    WHEN global_sqft_min IS NULL THEN NULL
+                    WHEN area IS NULL THEN 'SQFT_NULL_CLAMPED_TO_MIN'
+                    WHEN area < global_sqft_min THEN 'SQFT_BELOW_MIN'
+                    WHEN area > global_sqft_max THEN 'SQFT_ABOVE_MAX'
+                    ELSE NULL
+                END AS sqft_clamp
+            FROM with_bounds wb
+        ),
+
+        -- Filter using effective (clamped) range values
+        range_matched AS (
+            SELECT *
+            FROM with_effective
+            WHERE
+                (NOT {use_stories} OR story_min IS NULL OR story_max IS NULL
+                 OR effective_stories BETWEEN story_min AND story_max)
+                AND (NOT {use_sqft}
+                     OR (sqft_min IS NULL OR effective_sqft >= sqft_min)
+                        AND (sqft_max IS NULL OR effective_sqft <= sqft_max))
+        ),
+
+        -- Calculate match frequencies for weight assignment
+        frequencies AS (
+            SELECT
+                id, damage_function_id, first_floor_height,
+                0 AS ffh_sig,
+                number_stories, area,
+                global_story_min, global_story_max,
+                global_sqft_min, global_sqft_max,
+                story_clamp, sqft_clamp,
+                COUNT(*) OVER (PARTITION BY id) AS total_matches,
+                COUNT(*) OVER (PARTITION BY id, damage_function_id) AS curve_count
+            FROM range_matched
+        )
+
+        SELECT DISTINCT
+            id AS building_id,
+            damage_function_id,
+            first_floor_height,
+            ffh_sig,
+            CAST(curve_count AS DOUBLE) / NULLIF(total_matches, 0) AS weight,
+            number_stories, area,
+            global_story_min, global_story_max,
+            global_sqft_min, global_sqft_max,
+            story_clamp, sqft_clamp
+        FROM frequencies;
+        '''.format(
+            use_occupancy=use_occupancy,
+            use_foundation=use_foundation,
+            use_stories=use_stories,
+            use_sqft=use_sqft,
+            use_construction=use_construction,
+            use_flood_peril_type=use_flood_peril_type
+        )
+
+        connection.execute(create_sql)
+
+        # Insert clamped matches into structure_damage_functions
+        connection.execute('''
+            INSERT INTO structure_damage_functions
+                (building_id, damage_function_id, first_floor_height, ffh_sig, weight)
+            SELECT building_id, damage_function_id, first_floor_height, ffh_sig, weight
+            FROM _clamped_matches
+        ''')
+
+        # Log validation entries for story clamping
+        connection.execute('''
+            INSERT INTO validation_log
+                (building_id, table_name, source, rule, message, severity)
+            SELECT DISTINCT
+                building_id,
+                'structure_damage_functions',
+                'gather_missing_functions',
+                story_clamp,
+                CASE story_clamp
+                    WHEN 'STORIES_NULL_CLAMPED_TO_MIN'
+                        THEN 'Building has no story count; damage function matched using minimum story range (' || global_story_min || ')'
+                    WHEN 'STORIES_BELOW_MIN'
+                        THEN 'Building story count (' || number_stories || ') below available curve range; clamped to minimum (' || global_story_min || ')'
+                    WHEN 'STORIES_ABOVE_MAX'
+                        THEN 'Building story count (' || number_stories || ') above available curve range; clamped to maximum (' || global_story_max || ')'
+                END,
+                'WARNING'
+            FROM _clamped_matches
+            WHERE story_clamp IS NOT NULL
+        ''')
+
+        # Log validation entries for sqft clamping
+        connection.execute('''
+            INSERT INTO validation_log
+                (building_id, table_name, source, rule, message, severity)
+            SELECT DISTINCT
+                building_id,
+                'structure_damage_functions',
+                'gather_missing_functions',
+                sqft_clamp,
+                CASE sqft_clamp
+                    WHEN 'SQFT_NULL_CLAMPED_TO_MIN'
+                        THEN 'Building has no area; damage function matched using minimum sqft range (' || global_sqft_min || ')'
+                    WHEN 'SQFT_BELOW_MIN'
+                        THEN 'Building area (' || CAST(ROUND(area, 0) AS INTEGER) || ') below available curve sqft range; clamped to minimum (' || global_sqft_min || ')'
+                    WHEN 'SQFT_ABOVE_MAX'
+                        THEN 'Building area (' || CAST(ROUND(area, 0) AS INTEGER) || ') above available curve sqft range; clamped to maximum (' || global_sqft_max || ')'
+                END,
+                'WARNING'
+            FROM _clamped_matches
+            WHERE sqft_clamp IS NOT NULL
+        ''')
+
+        # Cleanup
+        connection.execute("DROP TABLE IF EXISTS _clamped_matches")
+
     def _compute_damage_function_statistics(self, connection: duckdb.DuckDBPyConnection) -> None:
         # Compute the mean and std. deviation of the damage functions.
-
-        """
-        # Original SQL that we came up with prior to triangular distribution logic.
-
-        sql_statement = '''
-            CREATE OR REPLACE TABLE damage_function_statistics AS
-
-            WITH 
-            -- 1. Unpivot DDF Structure (Cleaned and Cast)
-            -- We filter out NULLs immediately to keep the index clean
-            ddf_points AS (
-                SELECT 
-                    ddf_id,
-                    CAST(REPLACE(REPLACE(REPLACE(variable_name, 'depth_', ''), 'm', '-'), '_', '.') AS DOUBLE) AS depth_ft,
-                    value_column as value
-                FROM ddf_structure 
-                UNPIVOT EXCLUDE NULLS (
-                    value_column FOR variable_name IN (COLUMNS('^depth_'))
-                )
-            ),
-
-            -- 2. Create Interpolation Segments
-            -- We look ahead to the next point to define the line segment (slope) for each interval.
-            ddf_segments AS (
-                SELECT 
-                    ddf_id,
-                    depth_ft as x1,
-                    value as y1,
-                    LEAD(depth_ft) OVER (PARTITION BY ddf_id ORDER BY depth_ft) as x2,
-                    LEAD(value) OVER (PARTITION BY ddf_id ORDER BY depth_ft) as y2
-                FROM ddf_points
-            ),
-
-            -- 3. Generate Hazard Evaluation Points
-            -- For every building, we create 3 rows: Mean, Mean + Std, Mean - Std
-            hazard_points AS (
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth as eval_depth
-                FROM hazard h
-                JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
-                
-                UNION ALL
-                
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth + h.std_dev as eval_depth
-                FROM hazard h
-                JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
-                
-                UNION ALL
-                
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth - h.std_dev as eval_depth
-                FROM hazard h
-                JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
-            ),
-
-            -- 4. Perform Linear Interpolation
-            interpolated_results AS (
-                SELECT 
-                    hp.id,
-                    hp.return_period,
-                    hp.eval_depth,
-                    -- Interpolation Logic
-                    CASE 
-                        -- Case A: Depth is below the lowest defined point on curve -> Assume 0 damage (or clamp to min)
-                        WHEN ds.x1 IS NULL THEN 0 
-                        -- Case B: Depth is above the highest defined point -> Clamp to max damage found
-                        WHEN ds.x2 IS NULL THEN ds.y1
-                        -- Case C: Standard Linear Interpolation: y = y1 + (x - x1) * slope
-                        ELSE ds.y1 + (hp.eval_depth - ds.x1) * (ds.y2 - ds.y1) / (ds.x2 - ds.x1)
-                    END as calc_damage
-                FROM hazard_points hp
-                -- ASOF JOIN allows us to find the specific segment where: segment_start <= current_depth
-                ASOF LEFT JOIN ddf_segments ds 
-                    ON hp.ddf_id = ds.ddf_id 
-                    AND hp.eval_depth >= ds.x1
-            )
-
-            -- 5. Final Aggregation
-            SELECT 
-                id as building_id,
-                return_period,
-                AVG(calc_damage) as damage_percent,
-                STDDEV(calc_damage) as damage_percent_std
-            FROM interpolated_damages
-            GROUP BY id, return_period;
-        '''
-        """
 
         sql_statement = '''
             CREATE OR REPLACE TABLE damage_function_statistics AS
@@ -1159,13 +1611,13 @@ class InlandFloodAnalysis:
 
             -- 3. Generate Hazard Evaluation Points (With Tagging)
             hazard_points AS (
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth as eval_depth, 'mean' as point_type
+                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth - sdf.first_floor_height as eval_depth, 'mean' as point_type
                 FROM hazard h JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
                 UNION ALL
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth + h.std_dev as eval_depth, 'max' as point_type
+                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth + h.std_dev - sdf.first_floor_height as eval_depth, 'max' as point_type
                 FROM hazard h JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
                 UNION ALL
-                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth - h.std_dev as eval_depth, 'min' as point_type
+                SELECT h.id, h.return_period, sdf.damage_function_id as ddf_id, h.depth - h.std_dev - sdf.first_floor_height as eval_depth, 'min' as point_type
                 FROM hazard h JOIN structure_damage_functions sdf ON h.ID = sdf.building_id
             ),
 
@@ -1248,10 +1700,12 @@ class InlandFloodAnalysis:
             SELECT
                 b.ID,
                 d.return_period,
-                b.building_cost * d.d_min AS loss_min,
-                b.building_cost * d.damage_percent_mean AS loss_mean,
-                b.building_cost * d.damage_percent_std AS loss_std,
-                b.building_cost * d.d_max AS loss_max
+                ROUND(b.building_cost * (d.d_min / 100.0), 2) AS loss_min,
+                ROUND(b.building_cost * (d.d_mode / 100.0), 2) AS loss_mode_clamped,
+                ROUND(b.building_cost * (d.damage_percent / 100.0), 2) AS loss_mean,
+                ROUND(b.building_cost * (d.damage_percent_mean / 100.0), 2) AS loss_mean_adjusted,
+                ROUND(b.building_cost * (d.damage_percent_std / 100.0), 2) AS loss_std,
+                ROUND(b.building_cost * (d.d_max / 100.0), 2) AS loss_max
             FROM buildings b
             JOIN damage_function_statistics d ON b.ID = d.building_id
         '''
@@ -1260,27 +1714,92 @@ class InlandFloodAnalysis:
 
     def _calculate_aal(self, connection: duckdb.DuckDBPyConnection) -> None:
         # Calculate AAL using trapezoidal rule, including min, mean, and max values
+        all_rps = self.raster_collection.return_periods()
+        all_rps_literal = str(all_rps)
 
-        sql_statement = '''
+        sql_statement = f'''
             CREATE OR REPLACE TABLE aal_losses AS
 
-            WITH 
-            -- 1. Convert Return Period to Annual Probability
+            -- 0. Define Global Toggles
+            WITH settings AS (
+                -- 0 = Non-Truncated (Hazus default): Averages $0 modeled losses with the next period.
+                -- 1 = Truncated (GoConsequences): Excludes $0 modeled loss periods from the summation entirely.
+                SELECT {self.aal_truncation} as truncation_option
+            ),
+
+            -- 0b. Full return period list from RasterCollection (all RPs, including those with no losses)
+            global_rp_list AS (
+                SELECT UNNEST({all_rps_literal}::INT[]) AS rp_val
+            ),
+
+            -- 1. Base Probabilities
             probabilities AS (
                 SELECT 
                     ID,
-                    return_period,
+                    1.0 / return_period as prob,
                     loss_min,
                     loss_mean,
                     loss_std,
-                    loss_max,
-                    1.0 / return_period as prob
+                    loss_max
                 FROM losses
             ),
 
-            -- 2. Create Trapezoidal Segments
-            -- We sort by Probability DESC (High Frequency -> Low Frequency)
-            -- Example: 10yr (0.1) -> 50yr (0.02) -> 100yr (0.01)
+            -- 1b. Non-truncated zero anchor: for each building, the next lower RP in the full set
+            --     below its minimum modeled RP gets a $0 loss entry to properly bound the trapezoid.
+            next_lower_zero AS (
+                SELECT
+                    l.ID,
+                    1.0 / MAX(g.rp_val) AS prob,
+                    0.0 AS loss_min,
+                    0.0 AS loss_mean,
+                    0.0 AS loss_std,
+                    0.0 AS loss_max
+                FROM (SELECT ID, MIN(return_period) AS min_rp FROM losses GROUP BY ID) l
+                CROSS JOIN global_rp_list g
+                WHERE g.rp_val < l.min_rp
+                GROUP BY l.ID
+                HAVING MAX(g.rp_val) IS NOT NULL
+            ),
+
+            -- 2. Add Anchor Points to close the curve at P=1 and P=0
+            anchored_points AS (
+                -- Original Data
+                SELECT * FROM probabilities
+                
+                UNION ALL
+                
+                -- Anchor: 1-year return (P=1.0). Assuming 0 loss for high frequency.
+                SELECT DISTINCT 
+                    ID, 
+                    1.0 as prob, 
+                    0.0 as loss_min, 
+                    0.0 as loss_mean, 
+                    0.0 as loss_std, 
+                    0.0 as loss_max 
+                FROM probabilities
+                
+                UNION ALL
+                
+                -- Anchor: Infinite return (P=0.0). 
+                SELECT 
+                    ID, 
+                    0.0 as prob,
+                    FIRST_VALUE(loss_min) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_min,
+                    FIRST_VALUE(loss_mean) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_mean,
+                    FIRST_VALUE(loss_std) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_std,
+                    FIRST_VALUE(loss_max) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_max
+                FROM probabilities
+
+                UNION ALL
+
+                -- Non-truncated: add $0 at the next lower RP to properly bound the trapezoid
+                SELECT nlz.ID, nlz.prob, nlz.loss_min, nlz.loss_mean, nlz.loss_std, nlz.loss_max
+                FROM next_lower_zero nlz
+                CROSS JOIN settings
+                WHERE settings.truncation_option = 0
+            ),
+
+            -- 3. Create Trapezoidal Segments
             segments AS (
                 SELECT 
                     ID,
@@ -1289,39 +1808,53 @@ class InlandFloodAnalysis:
                     loss_mean as l_start,
                     loss_std as s_start,
                     loss_max as lmax_start,
-                    -- Look ahead to the next probability point
                     LEAD(prob) OVER (PARTITION BY ID ORDER BY prob DESC) as p_end,
                     LEAD(loss_min) OVER (PARTITION BY ID ORDER BY prob DESC) as lmin_end,
                     LEAD(loss_mean) OVER (PARTITION BY ID ORDER BY prob DESC) as l_end,
                     LEAD(loss_std) OVER (PARTITION BY ID ORDER BY prob DESC) as s_end,
                     LEAD(loss_max) OVER (PARTITION BY ID ORDER BY prob DESC) as lmax_end
-                FROM probabilities
+                FROM (SELECT DISTINCT * FROM anchored_points)
             ),
 
-            -- 3. Calculate Area of Segments
+            -- 4. Calculate Area of Segments (Hazus vs GoConsequences Logic)
             segment_areas AS (
                 SELECT 
-                    ID,
-                    -- Trapezoid Area: Average Height * Width
-                    -- Width = (Start Prob - End Prob)
+                    s.ID,
                     
-                    -- Min AAL Contribution
-                    ( (lmin_start + lmin_end) / 2.0 ) * (p_start - p_end) as aal_contribution_min,
+                    -- MIN
+                    CASE 
+                        WHEN s.p_start = 1.0 THEN 0.0 -- ALWAYS prevent the P=1.0 anchor from blowing up AAL
+                        WHEN set.truncation_option = 1 AND s.lmin_start = 0 THEN 0.0 -- GoConsequences (Truncated)
+                        ELSE ( (s.lmin_start + s.lmin_end) / 2.0 ) * (s.p_start - s.p_end) -- Hazus (Non-Truncated)
+                    END as aal_contribution_min,
+
+                    -- MEAN
+                    CASE 
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.l_start = 0 THEN 0.0
+                        ELSE ( (s.l_start + s.l_end) / 2.0 ) * (s.p_start - s.p_end)
+                    END as aal_contribution_mean,
+
+                    -- STD
+                    CASE 
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.s_start = 0 THEN 0.0
+                        ELSE ( (s.s_start + s.s_end) / 2.0 ) * (s.p_start - s.p_end)
+                    END as aal_contribution_std,
+
+                    -- MAX
+                    CASE 
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.lmax_start = 0 THEN 0.0
+                        ELSE ( (s.lmax_start + s.lmax_end) / 2.0 ) * (s.p_start - s.p_end)
+                    END as aal_contribution_max
                     
-                    -- Mean AAL Contribution
-                    ( (l_start + l_end) / 2.0 ) * (p_start - p_end) as aal_contribution_mean,
-                    
-                    -- Std Dev AAL Contribution (Assuming Perfect Correlation)
-                    ( (s_start + s_end) / 2.0 ) * (p_start - p_end) as aal_contribution_std,
-                    
-                    -- Max AAL Contribution
-                    ( (lmax_start + lmax_end) / 2.0 ) * (p_start - p_end) as aal_contribution_max
-                FROM segments
-                -- We filter out the last row (highest return period) because it has no "next" point to connect to
-                WHERE p_end IS NOT NULL
+                FROM segments s
+                CROSS JOIN settings set
+                WHERE s.p_end IS NOT NULL
             )
 
-            -- 4. Sum Segments to get Total AAL
+            -- 5. Final Aggregation
             SELECT 
                 ID,
                 SUM(aal_contribution_min) as aal_min,
