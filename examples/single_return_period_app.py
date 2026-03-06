@@ -45,7 +45,7 @@ def _(mo):
     """App Header"""
     mo.md(
         """
-        # 🌊 Inland Flood Analysis Tool
+        # 🌊 Inland Consequences Solution
         
         Configure analysis parameters below, then click **Run Analysis** to calculate flood losses for your building inventory.
         
