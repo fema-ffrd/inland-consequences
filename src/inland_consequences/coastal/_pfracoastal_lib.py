@@ -556,7 +556,7 @@ class _PFRACoastal_Lib:
     #	removeNonNumeric()
     def getCurveByDDFid(self, in_lut: pd.DataFrame, in_ddf: int) -> pd.Series:
         sel = [in_lut.columns.get_loc(col) for col in in_lut.columns.to_list() if len(self.removeNonNumeric(col)) > 0]
-
+        
         if in_lut["BldgDmgFnID"].isin([in_ddf]).any():
             ddf_row = in_lut.query(f"BldgDmgFnID == {in_ddf}")
             ddf_curve = ddf_row.iloc[0,min(sel):max(sel)+1].div(100)
@@ -751,7 +751,7 @@ class _PFRACoastal_Lib:
     # calls:
     #	NULL
     def buildSampledLoss2(self, FBtab0: pd.DataFrame, pvals: pd.DataFrame) -> pd.DataFrame:
-        MC_prob = pd.to_numeric(pvals.iloc[:,0].sort_values(ascending=False))
+        MC_prob = pd.to_numeric(pvals.iloc[:,0].copy().sort_values(ascending=False))
         MC_rp = MC_prob.copy().apply(lambda x: 1/x)
         FBrp = FBtab0["RP"].copy()
         
@@ -821,8 +821,8 @@ class _PFRACoastal_Lib:
         
         # Build the loss table by building flood depth
         bldg_ddf_df = pd.read_csv(inputs.bddf_lut_path)
-        FBtab0 = self.buildBldgFloodDepthTable6(this_bldg_attr, inputs.use_waves, prep_atr_map, bldg_ddf_df)
-        
+        FBtab0 = self.buildBldgFloodDepthTable6(this_bldg_attr, inputs.use_waves, prep_atr_map, bldg_ddf_df) # fields df1402 & df1403 come back all nan
+
         #check for truncated output
         if not np.any(FBtab0.columns.isin(["rLOSSLw"])):
             newFields = pd.Index(inputs.guts_attr_map["OUT"].to_list()).difference(FBtab0.columns)
@@ -845,27 +845,27 @@ class _PFRACoastal_Lib:
         # then no damages, losses can occur
         # removes possibility of basements filling when ground is dry
         if inputs.use_eWet:
-            sel = FBtab0.query("WET < 0.158655")
-            if not sel.empty:
-                FBtab0.loc[sel.index.to_list(), "Loss_Lw"] = 0
-                FBtab0.loc[sel.index.to_list(), "Loss_BE"] = 0
-                FBtab0.loc[sel.index.to_list(), "Loss_Up"] = 0
+            sel = FBtab0["WET"].lt(0.158655).to_list()
+            if len(sel) > 0:
+                FBtab0.loc[sel, "Loss_Lw"] = 0
+                FBtab0.loc[sel, "Loss_BE"] = 0
+                FBtab0.loc[sel, "Loss_Up"] = 0
         
         # Adjust for Insurance delim and limit
         if inputs.use_insurance:
             # loss, deductible, limit
             ded = this_bldg_attr["BLDG_DED"]
             lim = this_bldg_attr["BLDG_LIM"]
-            FBtab0["Loss_Lw"] = self.adjust_Loss_DEDLIM1(FBtab0["Loss_Lw"], ded, lim)
-            FBtab0["Loss_BE"] = self.adjust_Loss_DEDLIM1(FBtab0["Loss_BE"], ded, lim)
-            FBtab0["Loss_Up"] = self.adjust_Loss_DEDLIM1(FBtab0["Loss_Up"], ded, lim)
+            FBtab0["Loss_Lw"] = self.adjust_Loss_DEDLIM1(FBtab0["rLOSSLw"], ded, lim)
+            FBtab0["Loss_BE"] = self.adjust_Loss_DEDLIM1(FBtab0["rLOSSBE"], ded, lim)
+            FBtab0["Loss_Up"] = self.adjust_Loss_DEDLIM1(FBtab0["rLOSSUp"], ded, lim)
         
         # cutoff10
         if inputs.use_cutoff10:
-            sel = FBtab0.query("RP < 10")
-            FBtab0.loc[sel.index.to_list(), "Loss_Lw"] = 0
-            FBtab0.loc[sel.index.to_list(), "Loss_BE"] = 0
-            FBtab0.loc[sel.index.to_list(), "Loss_Up"] = 0
+            sel = FBtab0["RP"].lt(10).to_list()
+            FBtab0.loc[sel, "Loss_Lw"] = 0
+            FBtab0.loc[sel, "Loss_BE"] = 0
+            FBtab0.loc[sel, "Loss_Up"] = 0
         # end adjustments
         #####
         
@@ -875,6 +875,9 @@ class _PFRACoastal_Lib:
             out_csv_name = f"BID_{'0'*(6-len(str(in_building)))}{in_building}.csv"
             FBtab0.to_csv(os.path.join(out_csv_dir,out_csv_name))
         
+        #print(in_building)
+        #print(FBtab0)
+
         # sample the loss curve probabilisticly
         MCLossTab = self.buildSampledLoss2(FBtab0, pvals)
         
@@ -950,21 +953,15 @@ class _PFRACoastal_Lib:
         b_DEM = this_bldg_attr.iloc[0, this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC=='ground elevation'")["OUT"].iat[0])]
         b_FFH = this_bldg_attr.iloc[0, this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC=='first floor height'")["OUT"].iat[0])]
         b_VAL = this_bldg_attr.iloc[0, this_bldg_attr.columns.get_loc(prep_attr_map.query("DESC=='building value'")["OUT"].iat[0])]
-        #b_DEM = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "ground elevation", "OUT"].iloc[0]]
-        #b_FFH = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "first floor height", "OUT"].iloc[0]]
-        #b_VAL = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "building value", "OUT"].iloc[0]]
         
         # get surge and surge errors attached to building
         b_SC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_indexer(prep_attr_map.query("DESC == 'surge elevation'")["OUT"].to_list())]
         b_SEC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_indexer(prep_attr_map.query("DESC == 'surge error'")["OUT"].to_list())]
-        #b_SC = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map['DESC'] == 'surge elevation', 'OUT']]
-        #b_SEC = this_bldg_attr.loc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "surge error", "OUT"]]
         
         # get wave and wave errors attached to building
         if use_waves:
             b_WC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_indexer(prep_attr_map.query("DESC == 'wave height'")["OUT"].to_list())]
             b_WEC = this_bldg_attr.iloc[0,this_bldg_attr.columns.get_indexer(prep_attr_map.query("DESC == 'wave error'")["OUT"].to_list())]
-            #b_WEC = this_bldg_attr.iloc[0,prep_attr_map.loc[prep_attr_map["DESC"] == "wave error", "OUT"]]
         else:
             b_WC = None
             b_WEC = None
@@ -987,7 +984,6 @@ class _PFRACoastal_Lib:
 
         # Build TWL values from SWEL and WAVEs
         TWLvals = [sw + (wv * 0.7) for sw, wv in zip(SWvals, WVvals)]
-        # TWLerrs = np.sqrt(np.asarray(SWerrs, float)**2 + (np.asarray(WVerrs, float) * 0.7)**2)
         TWLerrs = [math.sqrt((sw**2) + ((wv*0.7)**2)) for sw, wv in zip(SWerrs, WVerrs)]
 
         
@@ -1075,17 +1071,17 @@ class _PFRACoastal_Lib:
         
         
         if use_waves:
-            temp = self.getCurveByDDFid(bldg_ddf_lut, this_bldg_attr['DDF3'].iat[0])
+            temp = self.getCurveByDDFid(bldg_ddf_lut, int(this_bldg_attr['DDF3'].iat[0]))
             if temp.hasnans:
                 self.write_log(f"Bad DDF assigned to BID {FBtab['BID'].iat[0]}. Setting damages to zero.")
                 temp.fillna(0)
-
+            
             interp = np.interp(x=FBtab['BFD'].values, xp=temp.index.astype(int).tolist(), fp=temp.values.astype(float), left=np.nan, right=np.nan)
 
             # Assign to the column named by the SECOND element of dfnames (index 1 in Python)
             FBtab[dfnames[1]] = interp
             
-            temp = self.getCurveByDDFid(bldg_ddf_lut, this_bldg_attr['DDF4'].iat[0])
+            temp = self.getCurveByDDFid(bldg_ddf_lut, int(this_bldg_attr['DDF4'].iat[0]))
             if temp.hasnans:
                 self.write_log(f"Bad DDF assigned to BID {FBtab['BID'].iat[0]}. Setting damages to zero.")
                 temp.fillna(0)
