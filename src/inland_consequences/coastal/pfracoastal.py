@@ -267,7 +267,13 @@ class PFRACoastal:
         logger.addHandler(fh)
         logger.addHandler(ch)
         
-        # log inputs
+    	##############
+        #  	STEP 0 - initiate parallel processing
+        fullAnalysis_start = monotonic()
+        
+        lib.write_log("")
+        lib.write_log("**********")
+        lib.write_log("BEGIN STEP 0. Setup...")
         lib.write_log("")
         lib.write_log("Summary of inputs:")
         
@@ -292,13 +298,5 @@ class PFRACoastal:
         
         lib.write_log("")
         lib.write_log("Running Average Annualized Losses...")
-        
-    	##############
-        #  	STEP 0 - initiate parallel processing
-        fullAnalysis_start = monotonic()
-        
-        lib.write_log("")
-        lib.write_log("**********")
-        lib.write_log("BEGIN STEP 0. Setup...")
         lib.write_log("END STEP 0.")
         
