@@ -122,7 +122,7 @@ class InlandFloodAnalysis:
         else:
             # Mode 2: Standalone (create, use, and close temporary connection)
             db_id = self._get_db_identifier()
-            temp_conn = duckdb.connect(database=db_id)
+            temp_conn = duckdb.connect(database=db_id, config={'storage_compatibility_version': 'latest'})
             self._setup_logging(db_id)
             return temp_conn, True # conn_is_temporary = True
 
@@ -136,7 +136,7 @@ class InlandFloodAnalysis:
             
         db_id = self._get_db_identifier()
         self.db_path = db_id  # Store path for later reference
-        self.conn = duckdb.connect(database=db_id)
+        self.conn = duckdb.connect(database=db_id, config={'storage_compatibility_version': 'latest'})
         self._setup_logging(db_id)
         return self
         
@@ -614,7 +614,7 @@ class InlandFloodAnalysis:
         """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         db_path = Path.cwd() / f"inland_flood_analysis_{timestamp}.duckdb"
-        connection = duckdb.connect(str(db_path))
+        connection = duckdb.connect(str(db_path), config={'storage_compatibility_version': 'latest'})
         return connection
 
     def _create_buildings_table(self, connection: duckdb.DuckDBPyConnection) -> None:
