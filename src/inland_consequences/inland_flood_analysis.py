@@ -518,7 +518,11 @@ class InlandFloodAnalysis:
             t = time.perf_counter()
             conn.execute("INSTALL spatial;")
             conn.execute("LOAD spatial;")
-            conn.execute("CALL register_geoarrow_extensions()")
+            try:
+                conn.execute("CALL register_geoarrow_extensions()")
+            except duckdb.CatalogException:
+                # Function may not exist in older spatial extension versions
+                pass
             self._log(conn, "INFO", "spatial_extensions", "Spatial extensions loaded", time.perf_counter() - t)
             
             # Ensure the shared validation table exists before running checks
@@ -651,7 +655,11 @@ class InlandFloodAnalysis:
         standardized = gdf.rename(columns=rename_map)
 
         # Enable GeoArrow extensions for spatial data support
-        connection.execute("CALL register_geoarrow_extensions()")
+        try:
+            connection.execute("CALL register_geoarrow_extensions()")
+        except duckdb.CatalogException:
+            # Function may not exist in older spatial extension versions
+            pass
 
         # Register the standardized DataFrame as a DuckDB table (for Intellisense reasons since it can auto-register)
         standardized_arrow = standardized.to_arrow()
