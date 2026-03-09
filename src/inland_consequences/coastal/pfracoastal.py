@@ -7,6 +7,7 @@ import logging
 import typing
 import multiprocessing
 import os
+from time import monotonic
 from ._pfracoastal_lib import _PFRACoastal_Lib
 
 logger = logging.getLogger("pfraCoastal")
@@ -247,6 +248,8 @@ class PFRACoastal:
         pass
     
     def runPFRACoastal(self, inputs: Inputs) -> None:
+        lib = _PFRACoastal_Lib()
+        
         # configure logging
         logger.setLevel("INFO")
         if inputs.blabpath:
@@ -263,3 +266,37 @@ class PFRACoastal:
         
         logger.addHandler(fh)
         logger.addHandler(ch)
+        
+    	##############
+        #  	STEP 0 - initiate parallel processing
+        fullAnalysis_start = monotonic()
+        
+        lib.write_log("")
+        lib.write_log("**********")
+        lib.write_log("BEGIN STEP 0. Setup...")
+        lib.write_log("")
+        lib.write_log("Summary of inputs:")
+        
+        lib.write_log(f"Buildings: {inputs.bldg_path}")
+        lib.write_log("Input Building Attributes...")
+        lib.write_log(inputs.bldg_attr_map.iloc[1:12, bldg_attr_map.columns.get_indexer(["DESC", "IN"])])
+        lib.write_log(f"SWEL A: {inputs.swelA_path}")
+        lib.write_log(f"SWEL B: {inputs.swelB_path}")
+        lib.write_log(f"Use Waves: {inputs.use_waves}")
+        if inputs.use_waves:
+            lib.write_log(f"WAVES A: {inputs.waveA_path}")
+            lib.write_log(f"WAVES B: {inputs.waveB_path}")
+        lib.write_log(f"Project Prefix: {inputs.proj_prefix}")
+        lib.write_log(f"OUTPUT directory: {inputs.out_shp_path}")
+        lib.write_log(f"Use Uncertainty: {inputs.use_uncertainty}")
+        lib.write_log(f"Write internal tables: {inputs.use_outcsv}")
+        lib.write_log(f"Use Insurance: {inputs.use_insurance}")
+        lib.write_log(f"Use Contents: {inputs.use_contents}")
+        if inputs.use_contents:
+            lib.write_log(f"Contents DDF lut: {inputs.cddf_lut_path}")
+        lib.write_log(f"Building DDF lut: {inputs.bddf_lut_path}")
+        
+        lib.write_log("")
+        lib.write_log("Running Average Annualized Losses...")
+        lib.write_log("END STEP 0.")
+        
