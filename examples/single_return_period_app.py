@@ -164,7 +164,7 @@ def _(mo, num_return_periods, default_data_path):
             
             **⏱️ Duration Raster (optional):** {duration_raster}
             
-            **📊 Uncertainty Raster (optional):** {uncertainty_raster}
+            **📊 Depth Uncertainty Raster (optional):** {uncertainty_raster}
             """
         ).batch(
             return_period=mo.ui.number(
@@ -189,7 +189,7 @@ def _(mo, num_return_periods, default_data_path):
             uncertainty_raster=mo.ui.file_browser(
                 initial_path=default_data_path,
                 filetypes=[".tif", ".tiff"],
-                label="Uncertainty Raster"
+                label="Depth Uncertainty Raster"
             ),
         )
         _rp_configs.append(_config)
@@ -358,7 +358,7 @@ def _(mo, raster_config, return_periods_list, pd):
             "Depth": "✅",
             "Velocity": "✅" if "velocity" in _files else "⬜",
             "Duration": "✅" if "duration" in _files else "⬜",
-            "Uncertainty": "✅" if "uncertainty" in _files else "⬜"
+            "Depth Uncertainty": "✅" if "uncertainty" in _files else "⬜"
         })
     
     preview_df = pd.DataFrame(preview_data)

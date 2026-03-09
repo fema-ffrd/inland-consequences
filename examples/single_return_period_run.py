@@ -118,7 +118,7 @@ def _(mo):
     mo.md(r"""
     **Raster Collections**
 
-    A `RasterCollection` organizes and validates raster data (hazard inputs like flood depth, uncertainty, velocity, and duration) by return period.
+    A `RasterCollection` organizes and validates raster data (hazard inputs like flood depth, depth uncertainty, velocity, and duration) by return period.
 
     *What is a RasterCollection?*
 
@@ -137,7 +137,7 @@ def _(mo):
     raster_collection = RasterCollection({
         return_period: {
             "depth": depth_raster,              # Required: flood depth
-            "uncertainty": uncertainty_value,   # Optional: std dev or raster
+            "uncertainty": uncertainty_value,   # Optional: depth uncertainty (std dev or raster)
             "velocity": velocity_raster,        # Optional: flood velocity
             "duration": duration_raster         # Optional: flood duration
         }
@@ -146,12 +146,12 @@ def _(mo):
 
     - **return_period** (int): The flood return period (e.g., 100 for a 100-year event)
     - **depth** (required): A `SingleValueRaster` instance containing flood depths at each location
-    - **uncertainty** (optional): A single numeric value (e.g., 0.2) OR a `SingleValueRaster` instance
+    - **uncertainty** (optional): Depth uncertainty - a single numeric value (e.g., 0.2) OR a `SingleValueRaster` instance
     - **velocity, duration** (optional): `SingleValueRaster` instances if provided
 
     *How it's used*
 
-    The RasterCollection is passed to analysis functions that sample hazard values for buildings at specific locations. For each building, the analysis retrieves the corresponding depth, uncertainty, velocity, and duration values from the rasters at that building's coordinates for the specified return period.
+    The RasterCollection is passed to analysis functions that sample hazard values for buildings at specific locations. For each building, the analysis retrieves the corresponding depth, depth uncertainty, velocity, and duration values from the rasters at that building's coordinates for the specified return period.
     """)
     return
 
@@ -238,11 +238,11 @@ def _(mo):
 
     1. **Damage Function Matching**: Assigns appropriate damage curves (from vulnerability functions) to each building based on attributes like occupancy type, foundation type, story count, and construction material.
 
-    2. **Hazard Sampling**: Extracts flood depth, velocity, duration, and uncertainty values from the raster collection at each building's location for each return period.
+    2. **Hazard Sampling**: Extracts flood depth, velocity, duration, and depth uncertainty values from the raster collection at each building's location for each return period.
 
     3. **Flood Peril Assignment**: Classifies buildings into flood peril types (e.g., "RLS" for Riverine Low Velocity Short Duration) based on maximum velocity and duration across return periods.
 
-    4. **Interpolation & Uncertainty**: For each building, the damage function curves are interpolated at the flood depth, and adjusted for uncertainty (depth ± standard deviation) to estimate damage mean, min, and max.
+    4. **Interpolation & Uncertainty**: For each building, the damage function curves are interpolated at the flood depth, and adjusted for depth uncertainty (depth ± standard deviation) to estimate damage mean, min, and max.
 
     5. **Loss Calculation**: Multiplies the interpolated damage percentages by building replacement costs to estimate dollar losses at each return period.
 
