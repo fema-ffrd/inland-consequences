@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # Raster inputs are provided via a RasterCollection instance which
 # enforces labeled rasters per return period (depth required, optional
-# uncertainty, velocity, duration).
+# depth uncertainty, velocity, duration).
 
 
 class InlandFloodAnalysis:
