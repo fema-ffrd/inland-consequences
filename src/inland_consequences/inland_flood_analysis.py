@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # Raster inputs are provided via a RasterCollection instance which
 # enforces labeled rasters per return period (depth required, optional
-# uncertainty, velocity, duration).
+# depth uncertainty, velocity, duration).
 
 
 class InlandFloodAnalysis:
@@ -87,6 +87,7 @@ class InlandFloodAnalysis:
         if not isinstance(raster_collection, RasterCollection):
             raise TypeError("raster_collection must be a RasterCollection instance")
         self.conn = None  # type: duckdb.DuckDBPyConnection | None
+        self.db_path = None  # type: str | None
         self.raster_collection = raster_collection
         self.buildings = buildings
         self.vulnerability: AbstractVulnerabilityFunction = vulnerability
@@ -121,7 +122,7 @@ class InlandFloodAnalysis:
         else:
             # Mode 2: Standalone (create, use, and close temporary connection)
             db_id = self._get_db_identifier()
-            temp_conn = duckdb.connect(database=db_id)
+            temp_conn = duckdb.connect(database=db_id, config={'storage_compatibility_version': 'latest'})
             self._setup_logging(db_id)
             return temp_conn, True # conn_is_temporary = True
 
@@ -134,7 +135,8 @@ class InlandFloodAnalysis:
             raise RuntimeError("DataProcessor context manager is not re-entrant.")
             
         db_id = self._get_db_identifier()
-        self.conn = duckdb.connect(database=db_id)
+        self.db_path = db_id  # Store path for later reference
+        self.conn = duckdb.connect(database=db_id, config={'storage_compatibility_version': 'latest'})
         self._setup_logging(db_id)
         return self
         
@@ -516,7 +518,11 @@ class InlandFloodAnalysis:
             t = time.perf_counter()
             conn.execute("INSTALL spatial;")
             conn.execute("LOAD spatial;")
-            conn.execute("CALL register_geoarrow_extensions()")
+            try:
+                conn.execute("CALL register_geoarrow_extensions()")
+            except duckdb.CatalogException:
+                # Function may not exist in older spatial extension versions
+                pass
             self._log(conn, "INFO", "spatial_extensions", "Spatial extensions loaded", time.perf_counter() - t)
             
             # Ensure the shared validation table exists before running checks
@@ -608,7 +614,7 @@ class InlandFloodAnalysis:
         """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         db_path = Path.cwd() / f"inland_flood_analysis_{timestamp}.duckdb"
-        connection = duckdb.connect(str(db_path))
+        connection = duckdb.connect(str(db_path), config={'storage_compatibility_version': 'latest'})
         return connection
 
     def _create_buildings_table(self, connection: duckdb.DuckDBPyConnection) -> None:
@@ -649,7 +655,11 @@ class InlandFloodAnalysis:
         standardized = gdf.rename(columns=rename_map)
 
         # Enable GeoArrow extensions for spatial data support
-        connection.execute("CALL register_geoarrow_extensions()")
+        try:
+            connection.execute("CALL register_geoarrow_extensions()")
+        except duckdb.CatalogException:
+            # Function may not exist in older spatial extension versions
+            pass
 
         # Register the standardized DataFrame as a DuckDB table (for Intellisense reasons since it can auto-register)
         standardized_arrow = standardized.to_arrow()

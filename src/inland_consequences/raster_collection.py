@@ -10,7 +10,7 @@ class RasterCollection:
     The expected canonical form is a mapping:
       return_period (int) -> {
           "depth": AbstractRasterReader,            # required
-          "uncertainty": AbstractRasterReader|float|None,  # optional
+          "uncertainty": AbstractRasterReader|float|None,  # optional (depth uncertainty)
           "velocity": AbstractRasterReader|None,   # optional
           "duration": AbstractRasterReader|None,   # optional
       }
@@ -54,7 +54,7 @@ class RasterCollection:
                 isinstance(uncertainty, AbstractRasterReader) or isinstance(uncertainty, (int, float))
             ):
                 raise ValueError(
-                    f"Uncertainty for return period {rp} must be an AbstractRasterReader, numeric, or None"
+                    f"Depth uncertainty for return period {rp} must be an AbstractRasterReader, numeric, or None"
                 )
 
             for field_name, val in (("velocity", velocity), ("duration", duration)):
@@ -89,9 +89,10 @@ class RasterCollection:
         return list(self.rasters.items())
 
     def sample_for_rp(self, rp: int, geometries) -> Dict[str, pd.Series]:
-        """Sample depth/uncertainty/velocity/duration for a single return period.
+        """Sample depth/depth uncertainty/velocity/duration for a single return period.
 
         Returns a dict of pandas.Series with keys: 'depth', 'uncertainty', 'velocity', 'duration'.
+        The 'uncertainty' key contains depth uncertainty values.
         If an optional raster (velocity/duration) is not provided for the rp, the
         corresponding Series will be filled with NaN values of the appropriate length.
 
@@ -114,7 +115,7 @@ class RasterCollection:
         depth_vals = np.asarray(depth.get_value_vectorized(geom_arg))
         out["depth"] = pd.Series(depth_vals, index=idx)
 
-        # uncertainty
+        # depth uncertainty
         uncertainty = spec.get("uncertainty")
         if uncertainty is None:
             uvals = np.zeros(len(idx))

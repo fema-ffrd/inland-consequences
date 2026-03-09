@@ -83,19 +83,20 @@ class SingleValueRaster(AbstractRasterReader):
         # Time CRS reprojection if needed
         reproject_start = time.time()
 
-        # If raster has a CRS, reproject if necessary
-        if (geometry.crs != self.data.crs) and (self.data.crs is not None):
-            geometry = geometry.to_crs(self.data.crs)
-            print(f"CRS reprojection took {time.time() - reproject_start:.6f} seconds")
+        # If raster has a CRS, align geometry to it
+        if self.data.crs is not None:
+            if geometry.crs != self.data.crs:
+                geometry = geometry.to_crs(self.data.crs)
+                print(f"CRS reprojection took {time.time() - reproject_start:.6f} seconds")
+        # If raster has no CRS but we have a default, use it for reprojection
         elif self._default_crs:
-            # If raster has no CRS but we have a default, assume the raster is in that CRS
-            # and reproject geometry if needed
             if geometry.crs != self._default_crs:
                 geometry = geometry.to_crs(self._default_crs)
                 print(f"CRS reprojection took {time.time() - reproject_start:.6f} seconds (using default CRS)")
+        # Raster has no CRS and no default provided - geometry must have one (checked above)
+        # Proceed with assumption that raster is in same CRS as geometry (risky but allowed)
         else:
-            # No CRS anywhere - warn but proceed (risky)
-            print("Warning: Neither raster nor geometry has a defined CRS. Spatial operations may be incorrect.")
+            print(f"Warning: Raster has no CRS defined. Assuming coordinates match geometry CRS ({geometry.crs}). Results may be spatially incorrect if coordinate systems don't match.")
 
         # Time coordinate extraction
         coord_start = time.time()

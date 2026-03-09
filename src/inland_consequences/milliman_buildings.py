@@ -35,8 +35,8 @@ class MillimanBuildings(Buildings):
             "id": "location",
             "building_cost": "BLDG_VALUE",
             "content_cost": "CNT_VALUE",
-            "general_building_type": "general_building_type",  # created in preprocessing from CONSTR_CODE
-            "foundation_type": "foundation_type",  # created in preprocessing from FoundationType
+            "general_building_type": "general_building_type",  # created in preprocessing from CONSTR_CODE (imputed with "W" if missing)
+            "foundation_type": "foundation_type",  # created in preprocessing from foundationtype (imputed with "SLAB" if missing)
             "number_stories": "NUM_STORIES",
             "first_floor_height": "FIRST_FLOOR_ELEV",
         }
@@ -61,11 +61,14 @@ class MillimanBuildings(Buildings):
         super().__init__(gdf, final_overrides)
     
     def _preprocess_gdf(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        """Pre-process the GeoDataFrame by mapping numeric foundation and construction types to string codes."""
+        """Pre-process the GeoDataFrame by mapping numeric foundation and construction types to string codes.
+        
+        Imputes missing foundation_type values with "SLAB" and missing general_building_type values with "W".
+        """
         # Pre-process the foundation type field to map numeric values to string codes
         # Based on milliman_schema.json: 2=basement; 4=crawlspace; 6=pier; 7=fill or wall; 8=slab; 9=pile
         # This will match the approach used in the NSI buildings preprocessing
-        if "FoundationType" in gdf.columns and "foundation_type" not in gdf.columns:
+        if "foundationtype" in gdf.columns and "foundation_type" not in gdf.columns:
             foundation_type_map = {
                 2: "BASE",  # Basement
                 4: "SHAL",  # Crawlspace
@@ -76,12 +79,13 @@ class MillimanBuildings(Buildings):
             }
             
             # Using pandas categories can be more memory efficient for large datasets
-            gdf["foundation_type"] = pd.to_numeric(gdf["FoundationType"], errors='coerce') \
+            gdf["foundation_type"] = pd.to_numeric(gdf["foundationtype"], errors='coerce') \
                                            .map(foundation_type_map) \
-                                           .astype("category")
+                                           .fillna("SLAB") \
+                                           .astype(pd.CategoricalDtype(categories=["BASE", "SHAL", "SLAB", "PILE"]))
             
             # Drop the original column since we've converted it
-            gdf = gdf.drop(columns=["FoundationType"])
+            gdf = gdf.drop(columns=["foundationtype"])
         
         # Pre-process the construction type field to map numeric values to string codes
         # Based on milliman_schema.json: 1=Wood; 2=Masonry
@@ -94,7 +98,8 @@ class MillimanBuildings(Buildings):
             # Using pandas categories can be more memory efficient for large datasets
             gdf["general_building_type"] = pd.to_numeric(gdf["CONSTR_CODE"], errors='coerce') \
                                                   .map(construction_type_map) \
-                                                  .astype("category")
+                                                  .fillna("W") \
+                                                  .astype(pd.CategoricalDtype(categories=["W", "M"]))
             
             # Drop the original column since we've converted it
             gdf = gdf.drop(columns=["CONSTR_CODE"])
@@ -191,12 +196,19 @@ class MillimanBuildings(Buildings):
         else:
             gdf["area"] = gdf["area"].fillna(1800)
         
-        # Impute optional fields that exist in schema but may have missing values
-        # foundation_type and general_building_type are created during preprocessing
-        if "foundation_type" in gdf.columns:
-            gdf["foundation_type"] = gdf["foundation_type"].fillna("SLAB")  # Default to Slab (4-letter code)
-        
-        if "general_building_type" in gdf.columns:
-            gdf["general_building_type"] = gdf["general_building_type"].fillna("W")  # Default to Wood
+        # Note: foundation_type and general_building_type are imputed during preprocessing (see _preprocess_gdf)
         
         return gdf
+
+
+if __name__ == "__main__":
+    # Example usage
+    # gdf = gpd.read_parquet("examples/goldsmith_co_hazard_data/milliman_uniform.parquet")
+    gdf = gpd.read_parquet("examples/Duwamish/milliman_ucmb.parquet")
+    print(gdf.info())
+    print(gdf["CONSTR_CODE"].info())
+    print(gdf["CONSTR_CODE"].unique())
+    print(gdf["CONSTR_CODE"].value_counts())
+    milliman = MillimanBuildings(gdf)
+
+    print(milliman)
