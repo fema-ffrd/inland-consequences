@@ -11,7 +11,7 @@ def milliman_sample_gdf():
     Create a sample GeoDataFrame with Milliman-specific column names.
     
     Based on milliman uniform sample data from Maryland and typical columns:
-    BLDG_VALUE, CNT_VALUE, NUM_STORIES, FoundationType, FIRST_FLOOR_ELEV, CONSTR_CODE
+    BLDG_VALUE, CNT_VALUE, NUM_STORIES, foundationtype, FIRST_FLOOR_ELEV, CONSTR_CODE
     """
     df = pd.DataFrame({
         "location": ["MD00414640", "MD01230741", "MD00255922"],  # Can serve as "id" alias
@@ -24,7 +24,7 @@ def milliman_sample_gdf():
         "NUM_STORIES": [1, 1, 1],
         "BLDG_DED": [1500, 1500, 1500],
         "CNT_DED": [1500, 1500, 1500],
-        "FoundationType": [8, 8, 8],
+        "foundationtype": [8, 8, 8],
         "BasementFinishType": [0, 0, 0],
         "FIRST_FLOOR_ELEV": [1, 1, 1],
         "CONSTR_CODE": [1, 1, 2],
@@ -52,7 +52,7 @@ def milliman_sample_gdf_missing_values():
         "BLDG_VALUE": [200000, None, 250000],
         "CNT_VALUE": [50000, 60000, None],
         "NUM_STORIES": [1, None, 2],
-        "FoundationType": [8, 8, None],
+        "foundationtype": [8, 8, None],
         "BasementFinishType": [0, 0, 0],
         "FIRST_FLOOR_ELEV": [1, 1, 1],
         "CONSTR_CODE": [1, 1, 2],
@@ -83,7 +83,7 @@ def milliman_sample_gdf_missing_required_fields():
         "NUM_STORIES": [1, 1, 1],
         "BLDG_DED": [1500, 1500, 1500],
         "CNT_DED": [1500, 1500, 1500],
-        "FoundationType": [8, 8, 8],
+        "foundationtype": [8, 8, 8],
         "BasementFinishType": [0, 0, 0],
         "FIRST_FLOOR_ELEV": [1, 1, 1],
         "CONSTR_CODE": [1, 1, 2],
@@ -123,7 +123,7 @@ def test_milliman_field_mapping_visible(milliman_sample_gdf):
     """Test that we can see the field mapping based on Milliman defaults.
     
     Note: foundation_type and general_building_type are preprocessed from 
-    FoundationType and CONSTR_CODE respectively, so they appear as direct columns
+    foundationtype and CONSTR_CODE respectively, so they appear as direct columns
     rather than mapped fields.
     """
     mb = MillimanBuildings(milliman_sample_gdf)
