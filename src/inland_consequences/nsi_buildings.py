@@ -142,8 +142,8 @@ class NsiBuildings(Buildings):
         if "found_ht" in gdf.columns and "foundation_type" in gdf.columns:
             found_ht_defaults = {
                 "PILE": 8.0,  # Pile
-                "SHAL": 3.0,  # Shallow (Pier, Crawl, Solid Wall)
-                "BASE": 2.0,  # Basement
+                "SHALLOW": 3.0,  # Shallow (Pier, Crawl, Solid Wall)
+                "BASEMENT": 2.0,  # Basement
                 "SLAB": 1.0,  # Slab (includes Fill)
             }
             # Convert categorical to float before filling
@@ -203,12 +203,12 @@ class NsiBuildings(Buildings):
         
         Maps NSI single-letter foundation codes to 4-letter HAZUS codes per
         building_inventories.md Table 3 (NSI 2022 Public Foundation Type Mapping):
-        - C (Crawl) → SHAL
-        - B (Basement) → BASE
+        - C (Crawl) → SHALLOW
+        - B (Basement) → BASEMENT
         - S (Slab) → SLAB
-        - P (Pier) → SHAL
+        - P (Pier) → SHALLOW
         - F (Fill) → SLAB
-        - W (Solid Wall) → SHAL
+        - W (Solid Wall) → SHALLOW
         - I (Pile) → PILE
         
         Args:
@@ -227,12 +227,12 @@ class NsiBuildings(Buildings):
         # Map NSI single-letter codes to 4-letter HAZUS codes
         if "found_type" in gdf.columns and "foundation_type" not in gdf.columns:
             foundation_type_map = {
-                "C": "SHAL",  # Crawl → Shallow
-                "B": "BASE",  # Basement → Basement
+                "C": "SHALLOW",  # Crawl → Shallow
+                "B": "BASEMENT",  # Basement → Basement
                 "S": "SLAB",  # Slab → Slab
-                "P": "SHAL",  # Pier → Shallow
+                "P": "SHALLOW",  # Pier → Shallow
                 "F": "SLAB",  # Fill → Slab
-                "W": "SHAL",  # Solid Wall → Shallow
+                "W": "SHALLOW",  # Solid Wall → Shallow
                 "I": "PILE",  # Pile → Pile
             }
             

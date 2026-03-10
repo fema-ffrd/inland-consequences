@@ -70,9 +70,9 @@ class MillimanBuildings(Buildings):
         # This will match the approach used in the NSI buildings preprocessing
         if "foundationtype" in gdf.columns and "foundation_type" not in gdf.columns:
             foundation_type_map = {
-                2: "BASE",  # Basement
-                4: "SHAL",  # Crawlspace
-                6: "SHAL",  # Pier
+                2: "BASEMENT",  # Basement
+                4: "SHALLOW",  # Crawlspace
+                6: "SHALLOW",  # Pier
                 7: "SLAB",  # Fill or wall (Wall)
                 8: "SLAB",  # Slab
                 9: "PILE",  # Pile
@@ -82,7 +82,7 @@ class MillimanBuildings(Buildings):
             gdf["foundation_type"] = pd.to_numeric(gdf["foundationtype"], errors='coerce') \
                                            .map(foundation_type_map) \
                                            .fillna("SLAB") \
-                                           .astype(pd.CategoricalDtype(categories=["BASE", "SHAL", "SLAB", "PILE"]))
+                                           .astype(pd.CategoricalDtype(categories=["BASEMENT", "SHALLOW", "SLAB", "PILE"]))
             
             # Drop the original column since we've converted it
             gdf = gdf.drop(columns=["foundationtype"])
@@ -200,15 +200,3 @@ class MillimanBuildings(Buildings):
         
         return gdf
 
-
-if __name__ == "__main__":
-    # Example usage
-    # gdf = gpd.read_parquet("examples/goldsmith_co_hazard_data/milliman_uniform.parquet")
-    gdf = gpd.read_parquet("examples/Duwamish/milliman_ucmb.parquet")
-    print(gdf.info())
-    print(gdf["CONSTR_CODE"].info())
-    print(gdf["CONSTR_CODE"].unique())
-    print(gdf["CONSTR_CODE"].value_counts())
-    milliman = MillimanBuildings(gdf)
-
-    print(milliman)
