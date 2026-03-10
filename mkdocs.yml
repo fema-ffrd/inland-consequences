@@ -59,6 +59,20 @@ markdown_extensions:
   - admonition
   - toc:
       permalink: true
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src, packages/core/src]
+          options:
+            show_source: true
+            show_root_heading: true
+            members_order: source
+            heading_level: 2
+            show_if_no_docstring: false
+            docstring_style: google
+            show_signature_annotations: true
+            separate_signature: true
+            merge_init_into_class: true
 
 extra_css:
   - https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css
