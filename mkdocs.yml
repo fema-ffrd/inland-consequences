@@ -8,6 +8,15 @@ plugins:
   - search
   - include-markdown
   - macros
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src, packages/core/src]
+          options:
+            show_source: true
+            show_root_heading: true
+            members_order: source
+            heading_level: 2
 
 repo_url: https://github.com/fema-ffrd/inland-consequences
 
@@ -25,6 +34,24 @@ nav:
     - building_inventories.md
     - ddf_tech_implementation.md
     - AAL_tech_implementation.md
+
+  - API Reference:
+    - api/index.md
+    - inland_consequences:
+      - api/inland_consequences/inland_flood_analysis.md
+      - api/inland_consequences/inland_vulnerability.md
+      - api/inland_consequences/raster_collection.md
+      - api/inland_consequences/results_aggregation.md
+      - api/inland_consequences/nsi_buildings.md
+      - api/inland_consequences/milliman_buildings.md
+      - Coastal:
+        - api/inland_consequences/coastal/pfracoastal.md
+    - sphere.core.schemas:
+      - api/sphere_core/buildings.md
+      - api/sphere_core/field_mapping.md
+      - api/sphere_core/abstract_raster_reader.md
+      - api/sphere_core/abstract_vulnerability_function.md
+      - api/sphere_core/nsi_buildings.md
 
 markdown_extensions:
   - pymdownx.arithmatex:

@@ -5,6 +5,7 @@ description = "Inland Consequences Estimation Methodology"
 dependencies = [
   "mkdocs-macros-plugin",
   "mkdocs-include-markdown-plugin",
+  "mkdocstrings[python]",
   "mdformat",
   "mdformat-gfm",
   "mdformat-myst",
