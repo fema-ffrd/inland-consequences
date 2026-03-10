@@ -31,11 +31,11 @@
     },
     "foundation_type": {
       "type": "string",
-      "description": "Foundation type code for inland flood modeling (I=Pile, P=Pier, W=Solid Wall, B=Basement, C=Crawl, F=Fill, S=Slab)",
+      "description": "Foundation type code for inland flood modeling (PILE, SHALLOW, BASEMENT, SLAB)",
       "required": true,
       "nullable": false,
       "used_in": ["inland", "coastal"],
-      "enum": ["I", "P", "W", "B", "C", "F", "S"],
+      "enum": ["PILE", "SHALLOW", "BASEMENT", "SLAB"],
       "aliases": ["foundation_type", "fndtype", "found_type", "fnd_type"]
     },
     "number_stories": {

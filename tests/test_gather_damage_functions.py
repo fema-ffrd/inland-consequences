@@ -53,7 +53,7 @@ def milliman_buildings():
         'BLDG_VALUE': [100000.0, 200000.0, 300000.0],
         'CNT_VALUE': [50000.0, 60000.0, 70000.0],
         'NUM_STORIES': [1, 2, 1],
-        'FoundationType': [8, 8, 8],
+        'foundationtype': [8, 8, 8],
         'FIRST_FLOOR_ELEV': [2.5, 3.0, 2.0],
         'CONSTR_CODE': [1, 2, 1],
         'LON': [-76.27738, -76.49555, -76.93276],

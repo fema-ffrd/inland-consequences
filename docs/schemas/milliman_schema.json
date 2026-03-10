@@ -118,7 +118,7 @@
             "required": false,
             "nullable": true
         },
-        "FoundationType": {
+        "foundationtype": {
             "type": "number",
             "description": "Foundation type code (2=basement; 4=crawlspace; 6=pier; 7=fill or wall; 8=slab; 9=pile)",
             "default target field": "foundation_type",
