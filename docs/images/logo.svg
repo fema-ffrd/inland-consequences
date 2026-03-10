@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="waterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4FC3F7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0288D1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Water wave base -->
+  <path d="M4 28 Q12 24 20 28 T36 28 T48 28 V44 H4 Z" fill="url(#waterGrad)" opacity="0.8"/>
+  <path d="M4 32 Q10 28 16 32 T28 32 T40 32 T48 32 V44 H4 Z" fill="url(#waterGrad)" opacity="0.6"/>
+  <!-- Building silhouette -->
+  <rect x="18" y="8" width="12" height="24" fill="#fff" rx="1"/>
+  <rect x="20" y="10" width="3" height="4" fill="#0288D1" rx="0.5"/>
+  <rect x="25" y="10" width="3" height="4" fill="#0288D1" rx="0.5"/>
+  <rect x="20" y="16" width="3" height="4" fill="#0288D1" rx="0.5"/>
+  <rect x="25" y="16" width="3" height="4" fill="#0288D1" rx="0.5"/>
+  <rect x="20" y="22" width="3" height="4" fill="#0288D1" rx="0.5"/>
+  <rect x="25" y="22" width="3" height="4" fill="#0288D1" rx="0.5"/>
+  <!-- Roof -->
+  <polygon points="24,4 32,10 16,10" fill="#fff"/>
+</svg>
