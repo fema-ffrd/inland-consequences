@@ -183,7 +183,7 @@ def test_nsi_foundation_type_preprocessing(nsi_sample_gdf):
     # Foundation types should be mapped to 4-letter HAZUS codes
     found_types = nb.foundation_type
     assert found_types.iloc[0] == "SLAB"  # S -> SLAB
-    assert found_types.iloc[1] == "SHAL"  # C -> SHAL (Crawl)
+    assert found_types.iloc[1] == "SHALLOW"  # C -> SHALLOW (Crawl)
     assert found_types.iloc[2] == "PILE"  # I -> PILE
     
     # Original found_type column should be dropped after preprocessing
@@ -197,7 +197,7 @@ def test_nsi_foundation_type_string(nsi_sample_gdf_with_string_foundation):
     # Foundation types should be mapped to 4-letter HAZUS codes
     found_types = nb.foundation_type
     assert found_types.iloc[0] == "SLAB"  # S -> SLAB
-    assert found_types.iloc[1] == "SHAL"  # C -> SHAL
+    assert found_types.iloc[1] == "SHALLOW"  # C -> SHALLOW (Crawl)
     assert found_types.iloc[2] == "PILE"  # I -> PILE
 
 

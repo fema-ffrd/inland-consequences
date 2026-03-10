@@ -24,7 +24,7 @@ def sample_structures():
             'occupancy_type': 'RES4',
             'num_stories': 2,
             'sqft': None,
-            'foundation_type': 'BASE',  # 4-letter code
+            'foundation_type': 'BASEMENT',
             'flood_peril_type': 'RLL',
             'validated_building_damage_function_id': 669,
             'validated_contents_damage_function_id': 400,
@@ -36,7 +36,7 @@ def sample_structures():
             'occupancy_type': 'IND5',
             'num_stories': 2,
             'sqft': None,
-            'foundation_type': 'BASE',  # 4-letter code
+            'foundation_type': 'BASEMENT',
             'flood_peril_type': 'RLL',
             'validated_building_damage_function_id': 213,
             'validated_contents_damage_function_id': 884,
@@ -132,7 +132,7 @@ def sample_structures():
             'occupancy_type': 'EDU1',
             'num_stories': 3,
             'sqft': None,
-            'foundation_type': 'SHAL',  # 4-letter code
+            'foundation_type': 'SHALLOW',
             'flood_peril_type': 'CHW',
             'validated_building_damage_function_id': 214,
             'validated_contents_damage_function_id': 887,
@@ -144,7 +144,7 @@ def sample_structures():
             'occupancy_type': 'EDU1',
             'num_stories': 10,
             'sqft': None,
-            'foundation_type': 'SHAL',  # 4-letter code
+            'foundation_type': 'SHALLOW',
             'flood_peril_type': 'CHW',
             'validated_building_damage_function_id': 219,
             'validated_contents_damage_function_id': 887,
