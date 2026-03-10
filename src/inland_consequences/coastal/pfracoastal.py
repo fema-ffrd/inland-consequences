@@ -6,6 +6,7 @@ import scipy
 import logging
 import typing
 import multiprocessing
+from pathlib import Path
 import os
 from time import monotonic
 from ._pfracoastal_lib import _PFRACoastal_Lib
@@ -279,7 +280,7 @@ class PFRACoastal:
         
         lib.write_log(f"Buildings: {inputs.bldg_path}")
         lib.write_log("Input Building Attributes...")
-        lib.write_log(inputs.bldg_attr_map.iloc[1:12, bldg_attr_map.columns.get_indexer(["DESC", "IN"])])
+        lib.write_log(inputs.bldg_attr_map.iloc[1:12, inputs.bldg_attr_map.columns.get_indexer(["DESC", "IN"])])
         lib.write_log(f"SWEL A: {inputs.swelA_path}")
         lib.write_log(f"SWEL B: {inputs.swelB_path}")
         lib.write_log(f"Use Waves: {inputs.use_waves}")
@@ -299,4 +300,30 @@ class PFRACoastal:
         lib.write_log("")
         lib.write_log("Running Average Annualized Losses...")
         lib.write_log("END STEP 0.")
+        
+        
+        ##############
+        #  	STEP 1 - Get building points
+        #	Load shapefile, drop unrequired fields, rename required fields fields, validate data, export to shapefile
+        # 	RESULTS:
+        # 	BUILDING.SPDF = Spatial Points Data Frame _BUILDINGS.shp
+        # Start timer for step 1
+        step1_start = monotonic()
+        lib.write_log(' ')
+        lib.write_log(' BEGIN STEP 1. Building Data...')
+        BUILDING_SPDF = lib.formatBuildings(inputs.bldg_path)
+        lib.write_log('Bulding Sample:')
+        lib.write_log(str(BUILDING_SPDF.head()))
+        
+        # write resulting shapefile
+        out_shp_lay = fr'{inputs.proj_prefix}_BUILDINGS'
+        out_shp_dsn = os.path.join(inputs.out_shp_path, fr'{out_shp_lay}.shp')
+        lib.write_log(fr'Writing Buildingds to: {out_shp_dsn}')
+        BUILDING_SPDF.to_file(fr'{out_shp_dsn}\{out_shp_lay}.shp')
+        
+        lib.write_log('END STEP 1.')
+        # Calculate seconds elapsed for step 1
+        step1_elapsed = monotonic() - step1_start
+        lib.write_log(str(step1_elapsed))
+        ##############
         
