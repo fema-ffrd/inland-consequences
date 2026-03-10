@@ -34,7 +34,7 @@ repo_url: https://github.com/fema-ffrd/inland-consequences
 nav:
   - Overview:
     - index.md
-  - Methodlogy:
+  - Methodology:
     - inventory_methodology.md
     - buildingvalidation_techapproach.md
     - hazardvalidation_techapproach.md
