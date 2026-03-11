@@ -1187,6 +1187,7 @@ dependencies = [
     { name = "marimo" },
     { name = "matplotlib" },
     { name = "mdformat" },
+    { name = "mdformat-admon" },
     { name = "mdformat-gfm" },
     { name = "mdformat-myst" },
     { name = "mkdocs-include-markdown-plugin" },
@@ -1227,6 +1228,7 @@ requires-dist = [
     { name = "marimo", specifier = ">=0.20.3" },
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "mdformat" },
+    { name = "mdformat-admon" },
     { name = "mdformat-gfm" },
     { name = "mdformat-myst" },
     { name = "mkdocs-include-markdown-plugin" },
@@ -1936,6 +1938,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3f/05/32b5e14b192b0a8a309f32232c580aefedd9d06017cb8fe8fce34bec654c/mdformat-1.0.0.tar.gz", hash = "sha256:4954045fcae797c29f86d4ad879e43bb151fa55dbaf74ac6eaeacf1d45bb3928", size = 56953, upload-time = "2025-10-16T12:05:03.695Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/9a/8fe71b95985ca7a4001effbcc58e5a07a1f2a2884203f74dcf48a3b08315/mdformat-1.0.0-py3-none-any.whl", hash = "sha256:bca015d65a1d063a02e885a91daee303057bc7829c2cd37b2075a50dbb65944b", size = 53288, upload-time = "2025-10-16T12:05:02.607Z" },
+]
+
+[[package]]
+name = "mdformat-admon"
+version = "2.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mdformat" },
+    { name = "mdit-py-plugins" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cb/42/5188f91e20ef1c563b4feb687f300c9ff4d16b4105dd94aab61bda8e3cef/mdformat_admon-2.1.1.tar.gz", hash = "sha256:605df53bec06eba63f0ad510f7f67cdead9c328ec807bca1db76026a66a68d9e", size = 13317, upload-time = "2025-04-09T10:55:45.708Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9e/0d/1d9a3a59295ce2236bec57a90a32a81bb268aad03e1daa3b40db7e9f44a7/mdformat_admon-2.1.1-py3-none-any.whl", hash = "sha256:f2efae84da6d4eaa453a7cf0eca7437dc1c1e347a0780abfa5eecfdda03630c2", size = 10960, upload-time = "2025-04-09T10:55:44.356Z" },
 ]
 
 [[package]]

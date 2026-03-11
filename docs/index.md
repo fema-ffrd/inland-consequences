@@ -17,35 +17,35 @@ This solution introduces a **unified inland and coastal modeling framework** tha
 
 - :material-waves:{ .lg .middle } __Inland Methodology__
 
-  ______________________________________________________________________
+    ---
 
-  Depth-based hazard inputs supporting single-event loss and multi-return-period AAL analyses.
+    Depth-based hazard inputs supporting single-event loss and multi-return-period AAL analyses.
 
-  [:octicons-arrow-right-24: Learn more](inland_methodology.md)
+    [:octicons-arrow-right-24: Learn more](inland_methodology.md)
 
 - :material-beach:{ .lg .middle } __Coastal Methodology__
 
-  ______________________________________________________________________
+    ---
 
-  Migrated Coastal FFRD AAL Calculation Tool from R to Python with modular architecture.
+    Migrated Coastal FFRD AAL Calculation Tool from R to Python with modular architecture.
 
-  [:octicons-arrow-right-24: Learn more](coastal_methodology.md)
+    [:octicons-arrow-right-24: Learn more](coastal_methodology.md)
 
 - :material-cube-outline:{ .lg .middle } __Building Inventories__
 
-  ______________________________________________________________________
+    ---
 
-  Structure data handling for NSI and Milliman building datasets.
+    Structure data handling for NSI and Milliman building datasets.
 
-  [:octicons-arrow-right-24: Learn more](building_inventories.md)
+    [:octicons-arrow-right-24: Learn more](building_inventories.md)
 
 - :material-api:{ .lg .middle } __API Reference__
 
-  ______________________________________________________________________
+    ---
 
-  Complete API documentation for inland_consequences and sphere.core packages.
+    Complete API documentation for inland_consequences and sphere.core packages.
 
-  [:octicons-arrow-right-24: Explore API](api/index.md)
+    [:octicons-arrow-right-24: Explore API](api/index.md)
 
 </div>
 

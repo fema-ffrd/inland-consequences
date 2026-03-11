@@ -10,6 +10,7 @@ dependencies = [
   "mdformat",
   "mdformat-gfm",
   "mdformat-myst",
+  "mdformat-admon",
   "pymdown-extensions",
   "pre-commit",
   "sphere-core",

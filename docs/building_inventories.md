@@ -71,13 +71,13 @@ The following schema defines all target fields used by the Consequence Modeling 
 
 ??? abstract "View JSON Schema"
 
-````
-```json
-{%
-   include "schemas/buildings_schema.json"
-%}
-```
-````
+    ````
+    ```json
+    {%
+       include "schemas/buildings_schema.json"
+    %}
+    ```
+    ````
 
 ______________________________________________________________________
 
@@ -155,13 +155,13 @@ Although the current Coastal Consequences Solution is compatible only with the M
 
 ??? abstract "View JSON Schema"
 
-````
-```json
-{%
-   include "schemas/nsi_schema.json"
-%}
-```
-````
+    ````
+    ```json
+    {%
+       include "schemas/nsi_schema.json"
+    %}
+    ```
+    ````
 
 However, users may provide a crosswalk (a.k.a. override) from the target fields to the user's non-standard
 fields.
@@ -316,13 +316,13 @@ The original Coastal Future of Flood Risk Data Analysis Average Annualized Losse
 
 ??? abstract "View JSON Schema"
 
-````
-```json
-{%
-   include "schemas/milliman_schema.json"
-%}
-```
-````
+    ````
+    ```json
+    {%
+       include "schemas/milliman_schema.json"
+    %}
+    ```
+    ````
 
 However, users may provide a crosswalk (a.k.a. override) from the target fields to the user's non-standard
 fields.
