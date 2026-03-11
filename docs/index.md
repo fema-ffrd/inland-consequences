@@ -7,7 +7,7 @@ hide:
 
 **Consequence modeling** is essential for **actuarial assessments, scenario evaluations, and Benefit-Cost Analyses (BCAs)**. Accurate **Annualized Average Loss (AAL)** data supports setting insurance premiums, managing financial risks, planning for emergencies, and justifying investments in flood mitigation. FEMA requires rapid and reliable AAL estimates to improve flood damage assessments. The **Consequences Solution** is designed to deliver a flexible and transparent framework that meets FEMA's needs by leveraging established methodologies to produce trusted AAL data for both **coastal** and **inland** areas.
 
----
+______________________________________________________________________
 
 ## Unified Inland and Coastal Framework
 
@@ -15,68 +15,68 @@ This solution introduces a **unified inland and coastal modeling framework** tha
 
 <div class="grid cards" markdown>
 
--   :material-waves:{ .lg .middle } __Inland Methodology__
+- :material-waves:{ .lg .middle } __Inland Methodology__
 
-    ---
+  ______________________________________________________________________
 
-    Depth-based hazard inputs supporting single-event loss and multi-return-period AAL analyses.
+  Depth-based hazard inputs supporting single-event loss and multi-return-period AAL analyses.
 
-    [:octicons-arrow-right-24: Learn more](inland_methodology.md)
+  [:octicons-arrow-right-24: Learn more](inland_methodology.md)
 
--   :material-beach:{ .lg .middle } __Coastal Methodology__
+- :material-beach:{ .lg .middle } __Coastal Methodology__
 
-    ---
+  ______________________________________________________________________
 
-    Migrated Coastal FFRD AAL Calculation Tool from R to Python with modular architecture.
+  Migrated Coastal FFRD AAL Calculation Tool from R to Python with modular architecture.
 
-    [:octicons-arrow-right-24: Learn more](coastal_methodology.md)
+  [:octicons-arrow-right-24: Learn more](coastal_methodology.md)
 
--   :material-cube-outline:{ .lg .middle } __Building Inventories__
+- :material-cube-outline:{ .lg .middle } __Building Inventories__
 
-    ---
+  ______________________________________________________________________
 
-    Structure data handling for NSI and Milliman building datasets.
+  Structure data handling for NSI and Milliman building datasets.
 
-    [:octicons-arrow-right-24: Learn more](building_inventories.md)
+  [:octicons-arrow-right-24: Learn more](building_inventories.md)
 
--   :material-api:{ .lg .middle } __API Reference__
+- :material-api:{ .lg .middle } __API Reference__
 
-    ---
+  ______________________________________________________________________
 
-    Complete API documentation for inland_consequences and sphere.core packages.
+  Complete API documentation for inland_consequences and sphere.core packages.
 
-    [:octicons-arrow-right-24: Explore API](api/index.md)
+  [:octicons-arrow-right-24: Explore API](api/index.md)
 
 </div>
 
----
+______________________________________________________________________
 
 ## Integration with Coastal FFRD Methodology
 
 The **Consequences Solution** migrates the **Coastal Future of Flood Risk Data (FFRD) Average Annualized Loss Calculation Tool** from **R** to **Python**, integrating its core methodology into a modular, scalable architecture. This migration facilitates continued development and performance enhancements while ensuring methodological consistency with ongoing FEMA projects.
 
----
+______________________________________________________________________
 
 ## Phased Approach to Inland Consequence
 
 The Inland Consequences Solution enables inland flood loss modeling using depth-based hazard inputs, supporting both **single-event loss** calculations and **multi-return-period average annualized loss (AAL)** analyses. In the context of Future Flood Risk Data (FFRD), the current phase of development focuses on calculating AAL from **post-processed annual exceedance probability (AEP)** depth rasters and their associated velocity, duration, and uncertainty layers. A planned future enhancement is to leverage the full FFRD event catalog to support event-based loss calculations and a more comprehensive treatment of uncertainty.
 
----
+______________________________________________________________________
 
 ## Key Benefits
 
 <div class="grid" markdown>
 
 :material-sync:{ .lg } **Consistency**
-:   Unified inland and coastal methodologies ensure compatibility across FEMA risk products.
+: Unified inland and coastal methodologies ensure compatibility across FEMA risk products.
 
 :material-eye:{ .lg } **Transparency**
-:   Open, modular framework simplifies review and reproducibility.
+: Open, modular framework simplifies review and reproducibility.
 
 :material-puzzle:{ .lg } **Extensibility**
-:   Supports future enhancements, such as new hazard inputs or improved structure inventories.
+: Supports future enhancements, such as new hazard inputs or improved structure inventories.
 
 :material-lightning-bolt:{ .lg } **Efficiency**
-:   Modernized Python implementation reduces manual processing time and enables integration with cloud-based workflows.
+: Modernized Python implementation reduces manual processing time and enables integration with cloud-based workflows.
 
 </div>
