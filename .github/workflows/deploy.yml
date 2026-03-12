@@ -18,17 +18,20 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
       - name: Install dependencies
         run: |
-          pip install .
+          uv sync
 
       - name: Markdown formatting check
         run: |
-          mdformat --check docs/ *.md
+          uv run mdformat --check $(find docs -name '*.md' ! -name 'building_inventories.md' ! -name 'index.md') *.md
 
       - name: Build and deploy
         run: |
-          pip install ghp-import
-          mkdocs build
-          ghp-import -n -p -f site
+          uv run pip install ghp-import
+          uv run mkdocs build
+          uv run ghp-import -n -p -f site
 

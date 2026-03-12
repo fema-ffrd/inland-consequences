@@ -24,22 +24,21 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install dependencies
-        run: |
-          pip install .
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
 
       - name: Install dependencies
         run: |
-          pip install pytest pytest-cov
+          uv sync --group dev
 
       - name: Markdown formatting check
         run: |
-          mdformat --check $(find docs -name '*.md' ! -name 'building_inventories.md' ! -name 'index.md') *.md
+          uv run mdformat --check $(find docs -name '*.md' ! -name 'building_inventories.md' ! -name 'index.md') *.md
 
       - name: Check build
         run: |
-          mkdocs build
+          uv run mkdocs build
 
       - name: Run tests
         run: |
-          pytest
+          uv run pytest
