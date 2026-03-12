@@ -2,20 +2,30 @@
   function renderKaTeX() {
     if (!window.renderMathInElement) return;
 
-    renderMathInElement(document.body, {
+    // Target the main content area for better performance
+    const content = document.querySelector(".md-content");
+    if (!content) return;
+
+    renderMathInElement(content, {
       delimiters: [
         { left: "$$", right: "$$", display: true },
         { left: "\\[", right: "\\]", display: true },
         { left: "$", right: "$", display: false },
         { left: "\\(", right: "\\)", display: false }
       ],
-      throwOnError: false
+      throwOnError: false,
+      ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"]
     });
   }
 
   // Initial load
   document.addEventListener("DOMContentLoaded", renderKaTeX);
 
-  // Fallback for any dynamic injections (rare on RTD theme, but harmless)
-  window.addEventListener("load", renderKaTeX);
+  // Support Material theme instant loading (navigation without page reload)
+  document.addEventListener("DOMContentSwitch", renderKaTeX);
+
+  // Also handle any potential page lifecycle events
+  if (typeof document$ !== "undefined") {
+    document$.subscribe(renderKaTeX);
+  }
 })();
