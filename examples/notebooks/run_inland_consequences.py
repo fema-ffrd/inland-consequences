@@ -105,8 +105,8 @@ def _(mo):
 
 @app.cell
 def _(mo, os):
-    # Get default paths
-    default_data_path = os.path.dirname(os.path.abspath(__file__))
+    # Get default paths — data lives in examples/ (one level up from notebooks/)
+    default_data_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     default_output_path = os.path.join(os.path.dirname(default_data_path), 'outputs')
 
     # # Output directory (text input since it may not exist yet)
@@ -1023,7 +1023,7 @@ def _(
     if output_directory and len(output_directory) > 0:
         output_dir = str(output_directory[0].path)
     else:
-        output_dir = os.path.dirname(os.path.abspath(__file__))
+        output_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     # Perform export
     try:
@@ -1031,9 +1031,9 @@ def _(
         if export_wide_checkbox.value and export_table.value == "losses":
             # Import the export_wide utility (it manages its own connection)
             import sys
-            examples_dir = os.path.dirname(os.path.abspath(__file__))
-            if examples_dir not in sys.path:
-                sys.path.insert(0, examples_dir)
+            notebooks_dir = os.path.dirname(os.path.abspath(__file__))
+            if notebooks_dir not in sys.path:
+                sys.path.insert(0, notebooks_dir)
             from utils import export_wide as export_wide_util
 
             timestamp = time.strftime("%Y%m%d_%H%M%S")

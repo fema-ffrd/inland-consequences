@@ -14,7 +14,7 @@ def __():
     from pathlib import Path
     from typing import Optional, Tuple, List
     
-    from sql_builder import (
+    from utilities.sql_builder import (
         get_return_periods_from_db,
         build_export_wide_sql,
     )
@@ -36,7 +36,7 @@ def get_return_periods(db_path: str) -> list[int]:
         List of return periods sorted in ascending order
     """
     import duckdb
-    from sql_builder import get_return_periods_from_db
+    from utilities.sql_builder import get_return_periods_from_db
     
     return get_return_periods_from_db(db_path)
 
@@ -78,7 +78,7 @@ def export_wide(
     import duckdb
     import geopandas as gpd
     from pathlib import Path
-    from sql_builder import build_export_wide_sql
+    from utilities.sql_builder import build_export_wide_sql
     
     conn = duckdb.connect(db_path, read_only=True)
     
@@ -380,8 +380,8 @@ def _(mo):
     **Architecture:**
     - Functions use `@app.function` decorator for importability
     - Setup cell contains all shared imports
-    - `sql_builder.py` handles dynamic SQL generation
-    - `sql_templates/` contains reference documentation
+    - `utilities/sql_builder.py` handles dynamic SQL generation
+    - `utilities/sql_templates/` contains reference documentation
     """)
     return
 
