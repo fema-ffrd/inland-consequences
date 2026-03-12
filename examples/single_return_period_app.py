@@ -896,6 +896,52 @@ def _(
 
 
 @app.cell
+def _(aal_df, buildings_df, has_aal, losses_df, mo, validation_df):
+    """Data Preview Section"""
+    
+    # Build table options based on available data
+    preview_tables = {
+        "losses": losses_df,
+        "buildings": buildings_df,
+        "validation_log": validation_df,
+    }
+    if has_aal and aal_df is not None:
+        preview_tables["aal_losses"] = aal_df
+    
+    # Table selection dropdown
+    preview_table_dropdown = mo.ui.dropdown(
+        options=list(preview_tables.keys()),
+        value="losses",
+        label="Select Table"
+    )
+    
+    mo.vstack([
+        mo.md("## 🔍 Data Preview"),
+        mo.md("Explore the raw data tables before exporting:"),
+        preview_table_dropdown
+    ])
+    return preview_table_dropdown, preview_tables
+
+
+@app.cell
+def _(mo, preview_table_dropdown, preview_tables):
+    """Display Selected Table"""
+    
+    selected_table = preview_table_dropdown.value
+    selected_df = preview_tables[selected_table].copy()
+    
+    # Round numeric columns to 2 decimal places for cleaner display
+    numeric_cols = selected_df.select_dtypes(include=['float64', 'float32']).columns
+    selected_df[numeric_cols] = selected_df[numeric_cols].round(2)
+    
+    mo.vstack([
+        mo.md(f"**{selected_table}** - {len(selected_df):,} rows, {len(selected_df.columns)} columns"),
+        selected_df
+    ])
+    return
+
+
+@app.cell
 def _(has_aal, mo):
     """Export UI Configuration"""
 
