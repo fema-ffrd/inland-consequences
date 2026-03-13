@@ -327,3 +327,102 @@ class PFRACoastal:
         lib.write_log(str(step1_elapsed))
         ##############
         
+        ##############
+		#  	STEP 2a - Get surge points
+		#	load the surge points
+		#		if uncertainty, also load SWEL_cl84, make PSURGERR
+		# 	RESULTS:
+		# 		PSURGE.SPDF
+		# 		PSURGE84.SPDF, optional
+		# 		PSURGERR.SPDF, optional
+  
+        step2a_start = monotonic()
+        lib.write_log(' ')
+        lib.write_log('BEGIN STEP 2a. Import Surge Data...')
+        
+        # create extensible swel attribute map
+        lib.write_log('.creating SWEL attribute map.')
+        #open the dbf
+        temptab = gpd.read_file(inputs.swelA_path)
+        #get all names that begin with 'e'
+        tempcols = [col for col in temptab.columns if col.startswith('e')]
+        #get the numeric portion of those columns
+        rp_avail = [lib.removeNonNumeric(col) for col in tempcols]
+        
+        # add these to the attribute map
+        surge_attr_in = ['SID'] + list(temptab.columns[tempcols])
+        SWEL_attr_out = ['SID'] + [f's{x}' for x in rp_avail]
+        surge_attr_desc = ['node ID'] + ['surge elevation' for _ in range(len(SWEL_attr_out)-1)]
+        surge_attr_default = -99999 
+        surge_attr_check = [0] + [1 for _ in range(len(SWEL_attr_out)-1)]
+        surge_attr_type = ['numeric' for _ in range(len(SWEL_attr_out))]
+        surge_attr_ddc = [0] + [1 for _ in range(len(SWEL_attr_out)-1)]
+        SWEL_attr_map = pd.DataFrame({'IN':surge_attr_in,'OUT':SWEL_attr_out,'DESC':surge_attr_desc,'TYPE':surge_attr_type,'DEF':surge_attr_default,'CHECK':surge_attr_check,'DDC':surge_attr_ddc})
+        
+        # load SWEL BE
+        lib.write_log('Surge A (Best Estimate)')
+        PSURGE_SPDF = lib.formatSurge(inputs.swelA_path, SWEL_attr_map)
+        lib.write_log('Sample Surge A:')
+        lib.write_log(str(PSURGE_SPDF.head()))
+        
+        # if uncertainty, load swel cl84 and create surge SD
+        if inputs.use_uncertainty:
+            # load SWEL B
+            lib.write_log('Surge B (84CL Estimate)')
+            PSURGE84_SPDF = lib.formatSurge(inputs.swelB_path, SWEL_attr_map)
+            lib.write_log('Sample Surge B:')
+            lib.write_log(str(PSURGE84_SPDF.head()))
+            
+            # subtract A from B to get SD
+            SWERR_attr_map = SWEL_attr_map.copy()
+            sel = SWEL_attr_map.loc[SWEL_attr_map['DESC'] == 'surge elevation']
+            SWERR_attr_map.loc[sel, 'OUT'] = SWERR_attr_map.loc[sel, 'OUT'].str.replace('s','sx', regex=False)
+            SWERR_attr_map.loc[sel, 'DESC'] = 'surge error'
+            
+            PSURGERR_SPDF = PSURGE84_SPDF.copy()
+            PSURGERR_SPDF.drop(columns='geometry').columns = SWERR_attr_map["OUT"].tolist()
+            
+            minus_tab = PSURGERR_SPDF.columns.difference(['geometry'])
+            tempcols = [col for col in PSURGERR_SPDF.columns if col.startswith('sx')]
+            
+            # create a copy of PSURGE and PSURGE84 that converts -999 to NA for calculating 
+			# differences
+			# Erase copies with the trash collection
+            PSURGE_copy_SPDF = PSURGE_SPDF.copy()
+            PSURGE_copy_SPDF_mask = PSURGE_copy_SPDF.columns.difference(['geometry'])
+            PSURGE_copy_SPDF[PSURGE_copy_SPDF_mask] = PSURGE_copy_SPDF[PSURGE_copy_SPDF_mask].mask(PSURGE_copy_SPDF[PSURGE_copy_SPDF_mask] < -999, np.nan)
+            
+            PSURGE84_copy_SPDF = PSURGE84_SPDF.copy()
+            PSURGE84_copy_SPDF_mask = PSURGE84_copy_SPDF.columns.difference(['geometry'])
+            PSURGE84_copy_SPDF[PSURGE84_copy_SPDF_mask] = PSURGE84_copy_SPDF[PSURGE84_copy_SPDF_mask].mask(PSURGE84_copy_SPDF[PSURGE84_copy_SPDF_mask] < -999, np.nan)
+            
+            for i in tempcols:
+                minus_tab[i] = PSURGE84_copy_SPDF[i] - PSURGE_copy_SPDF[i]
+                                
+            minus_tab_num_cols = minus_tab.select_dtypes(include='number').columns
+            minus_tab[minus_tab_num_cols] = minus_tab[minus_tab_num_cols].clip(lower=0)
+            
+            PSURGERR_SPDF_mask = PSURGERR_SPDF.columns.difference(['geometry'])
+            PSURGERR_SPDF[PSURGERR_SPDF_mask] = minus_tab
+            
+            
+            fill_value = float(SWERR_attr_map['DEF'].iloc[-1])
+            num_cols = PSURGERR_SPDF.select_dtypes(include='number').columns
+            PSURGERR_SPDF[num_cols] = PSURGERR_SPDF[num_cols].fillna(fill_value)
+            lib.write_log('Sample Surge Error (B-A):')
+            lib.write_log(str(PSURGERR_SPDF.columns.difference('geometry').head()))
+            
+        # Find the fully NULL nodes in PSURGE .
+        # remove those features from each feature class
+        PSURGE_SPDF_mask = PSURGE_SPDF.columns.difference('geometry')
+        PSURGE_SPDF_filtered = PSURGE_SPDF[PSURGE_SPDF_mask]
+        badrows = PSURGE_SPDF_filtered[len(SWEL_attr_map)-1].eq(SWEL_attr_map.iloc[len(SWEL_attr_map)]['DEF'])
+        
+        if (~badrows).sum() > 0:
+            PSURGE_SPDF = PSURGE_SPDF[~badrows]
+            PSURGE84_SPDF = PSURGE84_SPDF[~badrows]
+            PSURGERR_SPDF = PSURGERR_SPDF[~badrows]
+        
+        lib.write_log('END STEP 2a.')
+        step2a_elapsed = monotonic() - step2a_start
+        lib.write_log(str(step2a_elapsed))
