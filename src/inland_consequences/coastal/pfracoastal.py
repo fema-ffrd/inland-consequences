@@ -14,6 +14,12 @@ from ._pfracoastal_lib import _PFRACoastal_Lib
 logger = logging.getLogger("pfraCoastal")
 
 class Inputs:
+    """
+    Represents all of the possible input parameters for the PFRA Coastal model. While the original R code inputs and processing variables were located in global scope,
+    this class is designed to encapsulate all of the user inputs for the model in a single object. This allows for passing the values around between functions without
+    polluting global scope.
+    """
+
     BLDG_ATTR_MAP_DATA = {
         "ORIG":["BID", "location", "BLDG_DED", "BLDG_LIMIT", "BLDG_VALUE", "CNT_DED", "CNT_LIMIT", "CNT_VALUE", "NUM_STORIE", "foundation", "BasementFi", "FIRST_FLOO", "DEMft"],
         "IN":["BID", "location", "BLDG_DED", "BLDG_LIMIT", "BLDG_VALUE", "CNT_DED", "CNT_LIM", "CNT_VALUE", "NUM_STORIE", "foundation", "BasementFi", "FIRST_FLOO", "DEMft"],
@@ -43,6 +49,61 @@ class Inputs:
         GCB_fid="location", GCB_Bded="BLDG_DED", GCB_Blim="BLDG_LIMIT", GCB_Bval="BLDG_VALUE", GCB_Cded="CNT_DED", 
         GCB_Clim="CNT_LIM", GCB_Cval="CNT_VALUE", GCB_Bsto="NUM_STORIE", GCB_Bfou="foundation", GCB_Bbfi="BasementFi", GCB_Bffh="FIRST_FLOO", GCB_Bdem="DEMft") -> object:
         
+        """
+        Initialize Inputs with relevant input parameters.
+        
+        Args:
+            blabber (bool): Whether to print log messages to console and disk.
+            use_heatmap (bool): Whether to generate a GeoTIF heatmap of building losses.
+            hm_bandwidth (int): Search radius for points used during heatmap generation.
+            hm_resolution (int): Raster resolution used during heatmap generation.
+            hm_name (str): Name for the heatmap output file (minus extension).
+            mc_n (int): Number of storms to use when generating the Monte Carlo storm suite.
+            nbounds (tuple): Upper and lower bounds for the probability distribution function used to generate a Monte Carlo storm suite.
+            storm_csv (str): Path to CSV file containing an existing Monte Carlo storm suite to use instead of generating a new one.
+            bldg_path (str): Path to building point shapefile.
+            bldg_lay (str): Not used.
+            swel_mpath (str): Not used.
+            swel_path (str): Not used.
+            swelA_path (str): Path to surge (Best Estimate) point shapefile.
+            swelB_path (str): Path to surge (84% Confidence Limit) point shapefile.
+            waveA_path (str): Path to wave height (Best Estimate) point shapefile.
+            waveB_path (str): Path to wave height (84% Confidence Limit) point shapefile.
+            use_uncertainty (bool): Whether to include uncertainty in the analysis. This value should always be set to "True" as the model always assumes uncertainty is applied.
+            use_cutoff (bool): Whether to apply a cutoff to the damage function. This value should always be set to "True" as the model always assumes a cutoff is applied.
+            use_cutoff10 (bool): Whether to apply a cutoff at 10% damage. This value should always be set to "False" as the model does not assume a 10% cutoff is applied.
+            use_eWet (bool): Whether to include minimum wetting in the analysis. This value should always be set to "True" as the model assumes no damage when ground is dry.
+            use_waves (bool): Whether to include wave shapefiles in the analysis. This value should always be set to "True" as the model always assumes wave data is present.
+            use_twl (bool): Whether to include total water level in the analysis. This value should always be set to "False" as the model always generates a TWL instead of assuming one is provided.
+            use_wavecut50 (bool): Whether to apply a wave cutoff at 50% damage. This value should always be set to "False" as the model does not assume a 50% wave cutoff is applied.
+            use_erosion (bool): Whether to include erosion effects in the analysis. This value should always be set to "False" as the model does not assume that erosion is included.
+            use_insurance (bool): Whether to adjust losses in the analysis based on insurance deductibles and limits. This value should always be set to "False" as the model does not currently support this feature.
+            use_contents (bool): Whether to include contents damage in the analysis. This value should always be set to "False" as the model does not currently support this feature.
+            use_netcdf (bool): Not used.
+            use_outcsv (bool): Whether to output intermediate loss tables for each building as CSV files.
+            bddf_lut_path (str): Path to building damage function CSV file.
+            bldg_ddf_lut (pd.DataFrame): Building damage function lookup table stored in a pandas DataFrame. This is set automatically by the bddf_lut_path setter and should not be set directly.
+            cddf_lut_path (str): Path to contents damage function CSV file. This value should always be set to "None" or an empty string as the model does not currently support contents damage.
+            cont_ddf_lut (pd.DataFrame): Contents damage function lookup table as a pandas DataFrame. This is set automatically by the cddf_lut_path setter and should not be set directly.
+            proj_prefix (str): A text prefix to prepend to the names of all output files.
+            out_shp_path (str): Path to a directory where all output files will be saved.
+            GCB_fid (str): Field name in the building shapefile that contains the unique building identifier. Required.
+            GCB_Bded (str): Field name for building insurance deductible in the building shapefile.
+            GCB_Blim (str): Field name for building insurance limit in the building shapefile.
+            GCB_Bval (str): Field name for building replacement cost in the building shapefile. Required.
+            GCB_Cded (str): Field name for contents insurance deductible in the building shapefile.
+            GCB_Clim (str): Field name for contents insurance limit in the building shapefile.
+            GCB_Cval (str): Field name for contents replacement cost in the building shapefile.
+            GCB_Bsto (str): Field name for number of stories in the building shapefile. Required.
+            GCB_Bfou (str): Field name for foundation type in the building shapefile. Required.
+            GCB_Bbfi (str): Field name for basement finish type in the building shapefile. Required.
+            GCB_Bffh (str): Field name for first floor height in the building shapefile. Required.
+            GCB_Bdem (str): Field name for ground elevation in the building shapefile. Required.
+
+        Returns:
+            An instance of the Inputs class with all input parameters set as attributes.
+        """
+
         self.blabber = blabber
         self.use_heatmap = use_heatmap
         self.hm_bandwidth = hm_bandwidth
@@ -105,7 +166,9 @@ class Inputs:
     
     @property
     def blabber(self) -> bool:
+        """True to print log messages to console and disk."""
         return self._blabber
+
     
     @blabber.setter
     def blabber(self, val: bool) -> None:
@@ -113,6 +176,8 @@ class Inputs:
     
     @property
     def use_stormsuite(self) -> bool:
+        """True if the user has provided a path to a CSV file in self.storm_csv to use for the Monte Carlo storm suite instead of generating a new one.
+        False if self.storm_csv does not point to a storm suite file (PFRACoastal will generate a new storm suite in this case)."""
         if self.storm_csv not in ('', None) and '.csv' in self.storm_csv and os.path.exists(self.storm_csv):
             return True
         else:
@@ -120,6 +185,7 @@ class Inputs:
     
     @property
     def bddf_lut_path(self) -> str:
+        """Path to the building damage function CSV file."""
         return self._bddf_lut_path
     
     @bddf_lut_path.setter
@@ -130,6 +196,7 @@ class Inputs:
     
     @property
     def blabfile(self) -> str:
+        """Path to the file where log messages will be written if self.blabber is True. The log file will be named using the project prefix and saved in the output file directory."""
         if self.out_shp_path not in (None, '') and os.path.exists(self.out_shp_path) and self.proj_prefix not in (None, ''):
             return os.path.join(self.out_shp_path, self.proj_prefix+"_run.log")
         else:
@@ -137,6 +204,7 @@ class Inputs:
     
     @property
     def GCB_fid(self) -> str:
+        """Field name in the building shapefile that contains the unique building identifier."""
         return self._GCB_fid
     
     @GCB_fid.setter
@@ -146,6 +214,7 @@ class Inputs:
     
     @property
     def GCB_Bded(self) -> str:
+        """Field name for building insurance deductible in the building shapefile."""
         return self._GCB_Bded
     
     @GCB_Bded.setter
@@ -155,6 +224,7 @@ class Inputs:
     
     @property
     def GCB_Blim(self) -> str:
+        """Field name for building insurance limit in the building shapefile."""
         return self._GCB_Blim
     
     @GCB_Blim.setter
@@ -164,6 +234,7 @@ class Inputs:
     
     @property
     def GCB_Bval(self) -> str:
+        """Field name for building replacement cost in the building shapefile."""
         return self._GCB_Bval
     
     @GCB_Bval.setter
@@ -173,6 +244,7 @@ class Inputs:
     
     @property
     def GCB_Cded(self) -> str:
+        """Field name for contents insurance deductible in the building shapefile."""
         return self._GCB_Cded
     
     @GCB_Cded.setter
@@ -182,6 +254,7 @@ class Inputs:
     
     @property
     def GCB_Clim(self) -> str:
+        """Field name for contents insurance limit in the building shapefile."""
         return self._GCB_Clim
     
     @GCB_Clim.setter
@@ -191,6 +264,7 @@ class Inputs:
     
     @property
     def GCB_Cval(self) -> str:
+        """Field name for contents replacement cost in the building shapefile."""
         return self._GCB_Cval
     
     @GCB_Cval.setter
@@ -200,6 +274,7 @@ class Inputs:
     
     @property
     def GCB_Bsto(self) -> str:
+        """Field name for number of stories in the building shapefile."""
         return self._GCB_Bsto
     
     @GCB_Bsto.setter
@@ -209,6 +284,7 @@ class Inputs:
     
     @property
     def GCB_Bfou(self) -> str:
+        """Field name for foundation type in the building shapefile."""
         return self._GCB_Bfou
     
     @GCB_Bfou.setter
@@ -218,6 +294,7 @@ class Inputs:
     
     @property
     def GCB_Bbfi(self) -> str:
+        """Field name for basement finish in the building shapefile."""
         return self._GCB_Bbfi
     
     @GCB_Bbfi.setter
@@ -227,6 +304,7 @@ class Inputs:
     
     @property
     def GCB_Bffh(self) -> str:
+        """Field name for first floor height in the building shapefile."""
         return self._GCB_Bffh
     
     @GCB_Bffh.setter
@@ -236,6 +314,7 @@ class Inputs:
     
     @property
     def GCB_Bdem(self) -> str:
+        """Field name for ground elevation in the building shapefile."""
         return self._GCB_Bdem
     
     @GCB_Bdem.setter
@@ -245,16 +324,30 @@ class Inputs:
 
 
 class PFRACoastal:
+    """
+    Class to run the PFRA Coastal model. This class is designed to encapsulate all of the functionality for running the model, including validating inputs, 
+    running the analysis, and generating outputs.
+    """
+
     def __init__(self) -> object:
         pass
     
     def runPFRACoastal(self, inputs: Inputs) -> None:
+        """
+        Run the PFRA Coastal model using the provided inputs.
+        
+        Args:
+            inputs (Inputs): An instance of the Inputs class containing all input parameters for the model.
+
+        Raises:
+            ValueError: If any of the required input parameters are missing or invalid.
+        """
         lib = _PFRACoastal_Lib()
         
         # configure logging
         logger.setLevel("INFO")
-        if inputs.blabpath:
-            fh = logging.FileHandler(inputs.blabpath, mode='a')
+        if inputs.blabfile:
+            fh = logging.FileHandler(inputs.blabfile, mode='a')
             fh.setLevel("INFO")
         else:
             fh = logging.NullHandler()
@@ -296,6 +389,8 @@ class PFRACoastal:
         if inputs.use_contents:
             lib.write_log(f"Contents DDF lut: {inputs.cddf_lut_path}")
         lib.write_log(f"Building DDF lut: {inputs.bddf_lut_path}")
+
+        # TODO: validate input parameters here and raise a ValueError if any required parameters are missing or invalid
         
         lib.write_log("")
         lib.write_log("Running Average Annualized Losses...")
