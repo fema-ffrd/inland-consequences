@@ -9,6 +9,7 @@ import multiprocessing
 from pathlib import Path
 import os
 from time import monotonic
+import math
 from ._pfracoastal_lib import _PFRACoastal_Lib
 
 logger = logging.getLogger("pfraCoastal")
@@ -642,10 +643,99 @@ class PFRACoastal:
         #		FULL.SPDF = wse + wav
         #		VAL.SPDF = reduced dataset
         #		PREP.SPDF, _PREP.SHP
-        ##############
-  
-  
-  
+        step3a_start = monotonic()
+        lib.write_log(" ")
+        lib.write_log("BEGIN STEP 3. Data Prep.")
+        
+        # BUILD the WSE Attribute map for tracking field names
+        lib.write_log(".creating WSE attribute map.")
+        wse_attr_out = inputs.bldg_attr_map.query("DESC == 'new building id'")["OUT"].to_list()+inputs.bldg_attr_map.query("DESC == 'ground elevation'")["OUT"].to_list()+["VALID","spt1","spt2","spt3"]+SWEL_attr_map.query("DDC == 1")["OUT"].to_list()+SWERR_attr_map.query("DDC == 1")["OUT"].to_list()+WV_attr_map.query("DDC == 1")["OUT"].to_list()+WVERR_attr_map.query("DDC == 1")["OUT"].to_list()
+        wse_attr_desc = ["new building id","ground elevation","valid for analysis","NNsurgeID","NNsurgeID","NNsurgeID"]+["surge elevation" for i in range(SWEL_attr_map.query("DDC == 1").shape[0])]+["surge error" for i in range(SWERR_attr_map.query("DDC == 1").shape[0])]+["wave height" for i in range(WV_attr_map.query("DDC == 1").shape[0])]+["wave error" for i in range(WVERR_attr_map.query("DDC == 1").shape[0])]
+        wse_attr_prep = [1,0,0,0,0,0]+[1 for i in range(SWEL_attr_map.query("DESC == 'surge elevation' and DDC==1").shape[0])]+[1 for i in range(SWERR_attr_map.query("DESC == 'surge error' and DDC==1").shape[0])]+[1 for i in range(WV_attr_map.query("DESC == 'wave height' and DDC==1"))]+[1 for i in range(WVERR_attr_map.query("DESC == 'wave error' and DDC==1"))]
+        wse_attr_join = [1,0,0,0,0,0]+[1 for i in range(SWEL_attr_map.query("DESC == 'surge elevation' and DDC==1").shape[0])]+[1 for i in range(SWERR_attr_map.query("DESC == 'surge error' and DDC==1").shape[0])]+[1 for i in range(WV_attr_map.query("DESC == 'wave height' and DDC==1"))]+[1 for i in range(WVERR_attr_map.query("DESC == 'wave error' and DDC==1"))]
+        wse_attr_map = pd.DataFrame({"OUT":wse_attr_out, "DESC":wse_attr_desc, "PREP":wse_attr_prep, "JOIN":wse_attr_join})
+        
+        # append wave data to swel data	
+        lib.write_log(".appending WAV to SWEL.")
+        WSE_tab = WSE_SPDF.drop('geometry', axis=1)
+        WAV_tab = WAV_SPDF.drop('geometry', axis=1).set_index("BID")
+        
+        full_tab = WSE_tab.join(WAV_tab.loc[:,["BID"]+WV_attr_map.query("DESC=='wave height'")["OUT"].to_list()+WVERR_attr_map.query("DESC=='wave error'")["OUT"].to_list()], on="BID", how='left')
+        full_tab.sort_values(by="BID", axis=0, inplace=True)
+        shp_geom = BUILDING_SPDF.geometry
+        shp_proj = BUILDING_SPDF.crs
+        FULL_SPDF = gpd.GeoDataFrame(data=full_tab, geometry=shp_geom, crs=shp_proj)
+        
+        lib.write_log(".filtering Buildings based on validity.")
+        # select previously identified valid points
+        sel = FULL_SPDF.query("VALID==1").index.to_list()
+        shp_geom = FULL_SPDF.iloc[FULL_SPDF.index.isin(sel).tolist(), FULL_SPDF.columns.get_loc('geometry')]
+        shp_proj = FULL_SPDF.crs
+        VAL_SPDF = gdf.GeoDataFrame(data=full_tab.iloc[full_tab.index.isin(sel).tolist(),:], geometry=shp_geom, crs=shp_proj)
+        lib.write_log(f"FULL BLDG: {FULL_SPDF.shape[0]}")
+        lib.write_log(f"Reduced BLDG: {VAL_SPDF.shape[0]}")
+        
+        write_log(".grabbing required building attributes.")
+        # because VAL.SPDF is filtered, need to similarly filter the building file
+        # get the IDs of the valid buildings
+        sel = BUILDING_SPDF["BID"].isin(VAL_SPDF['BID'].to_list()).to_list()
+        # grab the building attribute table and keep only the records corresponding to valid buildings
+        BUILDING_tab = BUILDING_SPDF.drop('geometry', axis=1)
+        bldgred_tab = BUILDING_tab.iloc[sel, BUILDING_SPDF.columns.get_indexer(inputs.bldg_attr_map.query("ANLYS==1")["OUT"].to_list())].copy()
+        # add sort field because bldg.tab and bldg.coords are 1:1 and .tab might get jumbled in future merges or joins
+        bldgred_tab["sort"] = [i for i in range(1:bldgred_tab.shape[0]+1)]
+        
+        # DDFS
+        # Assign DDFs to buildings
+        lib.write_log(".assigning coastal DDFs.")
+        # Select Four TASK4 DDFs, 1 for freshwater intrusion, 1 each for low-wave, med-wave, and
+        # high-wave conditions
+        DDF_tab = lib.assign_TASK4_DDFs(bldgred_tab)
+        bldgred_tab["DDF1"] = DDF_tab["DDF1"]
+		bldgred_tab["DDF2"] = DDF_tab["DDF2"]
+		bldgred_tab["DDF3"] = DDF_tab["DDF3"]
+		bldgred_tab["DDF4"] = DDF_tab["DDF4"]
+        
+        # placeholder for future Erosion DDFs
+        bldgred_tab["DDFE"] = pd.Series(data=[0 for i in range(bldgred_tab.shape[0])])
+        
+        lib.write_log(".creating PREP attribute map.")
+        # this attribute map will hold the field names and their descriptions for the PREP attribute table to be written in this section. 
+        prep_attr_out = inputs.bldg_attr_map.query("ANLYS==1")["OUT"].to_list()+["DDF1","DDF2","DDF3","DDF4","DDFE"]+SWEL_attr_map.query("DDC == 1")["OUT"].to_list()+SWERR_attr_map.query("DDC == 1")["OUT"].to_list()+WV_attr_map.query("DDC == 1")["OUT"].to_list()+WVERR_attr_map.query("DDC == 1")["OUT"].to_list()
+        prep_attr_desc = inputs.bldg_attr_map.query("ANLYS==1")["DESC"].to_list()+["DDF ID" for i in range(4)]+["DDF Erosion"]+["surge elevation" for i in range(SWEL_attr_map.query("DDC == 1").shape[0])]+["surge error" for i in range(SWERR_attr_map.query("DDC == 1").shape[0])]+["wave height" for i in range(WV_attr_map.query("DDC == 1").shape[0])]+["wave error" for i in range(WVERR_attr_map.query("DDC == 1").shape[0])]
+        prep_attr_map = pd.DataFrame("OUT":prep_attr_out, "DESC":prep_attr_desc)
+        
+        # merge wsels to bldg attributes and format
+        VAL_tab = VAL_SPDF.drop('geometry', axis=1).set_index("BID")
+        prep_tab = bldgred_tab.join(VAL_tab.loc[:,wse_attr_map.query("PREP==1")["OUT"].to_list()], on="BID", how='left')
+        
+        # sort to ensure proper order with VAL.SPDF@coords, then remove any extra field
+        prep_tab.sort_values("sort",inplace=True)
+        prep_tab.index = list(range(prep_tab.shape[0]))
+        prep_tab.drop(columns=["sort", "BID_prep", "BID_val"], inplace=True)
+        
+        # build output SPDF
+        lib.write_log("Sample PREP data:")
+        lib.write_log(prep_tab.head())
+        
+        # create a copy of PREP for writing output that converts NA to -99999 so ESRI SHP doesnt
+        # auto-convert NA to 0.
+        # Erase copy with the trash collection
+        shp_geom = VAL_SPDF.geometry
+        shp_proj = VAL_SPDF.crs
+        PREP_SPDF = gpd.GeoDataFrame(data=prep_tab, geometry=shp_geom, crs=shp_proj)
+        
+        # write output shapefile
+        PREP2_SPDF = PREP_SPDF.copy()
+        PREP2_SPDF.mask(PREP2_SPDF.isna, pd.to_numeric(SWEL_attr_map.iat[1,SWEL_attr_map.columns.get_loc("DEF")]), inplace=True)
+        out_shp_lay = inputs.proj_prefix + "_PREP"
+        out_shp_dsn = os.path.join(inputs.out_shp_path, out_shp_lay+".shp")
+        lib.write_log(f".writing Prep data to {out_shp_dsn}")
+        PREP2_SPDF.to_file(out_shp_dsn)
+        
+        lib.write_log("END STEP 3.")
+        step3_elapsed = math.ceil(monotonic()-step3a_start)
+        lib.write_log(f"STEP 3: {step3_elapsed} sec elapsed")
   
         ##############
         #  	STEP 4a
