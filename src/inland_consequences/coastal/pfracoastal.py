@@ -426,3 +426,158 @@ class PFRACoastal:
         lib.write_log('END STEP 2a.')
         step2a_elapsed = monotonic() - step2a_start
         lib.write_log(str(step2a_elapsed))
+
+		##############
+		#  	STEP 2b - Get waves
+		#	load the wave points
+		#		if uncertainty, load WAVE_cl84, make WAVE_SD
+		# 	RESULTS:
+		# 		PWAVE.SPDF, future optional
+		# 		PWAVE84.SPDF, optional
+		# 		PWAVERR.SPDF, optional
+        step2b_start = monotonic()
+        lib.write_log(' ')
+        lib.write_log('BEGIN STEP 2b. Import Wave Data...')
+        
+        if inputs.use_waves:
+            # Create extensible wave attribute map
+            lib.write_log('.creating WAV attribute map.')
+            WV_attr_map = SWEL_attr_map.copy()
+            sel = WV_attr_map['CHECK'] == 1
+            WV_attr_map.loc[sel, 'OUT'] = WV_attr_map.loc[sel, 'OUT'].str.replace('s','w', regex=False)
+            WV_attr_map.loc['surge' in WV_attr_map['DESC']]
+            WV_attr_map['DESC'] = WV_attr_map['DESC'].str.replace('surge','wave')
+            WV_attr_map['DESC'] = WV_attr_map['DESC'].str.replace('elevation','height')
+            sel = WV_attr_map['CHECK'] == 1
+            WV_attr_map.loc[sel,'DEF'] = -99999
+            
+            # load Wave BE
+            lib.write_log('Wave A (Best Estimate)')
+            PWAVE_SPDF = lib.formatSurge(inputs.waveA_path, WV_attr_map)
+            lib.write_log('Sample Wave A:')
+            lib.write_log(str(PWAVE_SPDF.head()))
+            
+            # if uncertainty, load waves cl84 and create surge SD
+            if inputs.use_uncertainty:
+                # load SWEL B
+                lib.write_log('Wave B (84CL Estimate)')
+                PWAVE84_SPDF = lib.formatSurge(inputs.waveB_path, WV_attr_map)
+                lib.write_log('Sample Wave B:')
+                lib.write_log(str(PWAVE84_SPDF.head()))
+                
+                # subtract A from B to get SD
+                WVERR_attr_map = WV_attr_map.copy()
+                sel = WV_attr_map['DESC'] == 'wave height'
+                WVERR_attr_map.loc[sel,'OUT'] = WV_attr_map['OUT'].str.replace('w','wx')
+                WVERR_attr_map.loc[sel,'DESC'] = 'wave error'
+                
+                PWAVERR_SPDF = PWAVE84_SPDF.copy()
+                current_cols = [c for c in PWAVERR_SPDF.columns if c != 'geometry']
+                new_cols = WVERR_attr_map['OUT'].tolist()
+                new_cols = {old: new for old, new in zip(current_cols, new_cols)}
+                PWAVERR_SPDF.rename(columns=new_cols)
+                
+                minus_tab = PWAVERR_SPDF.columns.difference('geometry')
+                tempcols = [i for i, col in enumerate(PWAVERR_SPDF.columns) if col.startswith("w")]
+
+				# create a copy of PSURGE and PSURGE84 that converts -99999 to NA for calculating 
+				# differences
+				# Erase copies with the trash collection
+                PWAVE_copy_SPDF = PWAVE_SPDF.copy()
+                PWAVE_copy_SPDF_mask = PWAVE_copy_SPDF.columns.difference(['geometry'])
+                PWAVE_copy_SPDF[PWAVE_copy_SPDF_mask] = PWAVE_copy_SPDF[PWAVE_copy_SPDF_mask].mask(PWAVE_copy_SPDF[PWAVE_copy_SPDF_mask] < -999, np.nan)
+                
+                
+                PWAVE84_copy_SPDF = PWAVE84_SPDF.copy()
+                PWAVE84_copy_SPDF_mask = PWAVE84_copy_SPDF.columns.difference(['geometry'])
+                PWAVE84_copy_SPDF[PWAVE84_copy_SPDF_mask] = PWAVE84_copy_SPDF[PWAVE84_copy_SPDF_mask].mask(PWAVE84_copy_SPDF[PWAVE84_copy_SPDF_mask] < -999, np.nan)
+    
+                for i in tempcols:
+                    minus_tab[i] = PWAVE84_copy_SPDF_mask[i] - PWAVE_copy_SPDF_mask[i]
+
+    
+                minus_tab_num_cols = minus_tab.select_dtypes(include='number').columns
+                minus_tab[minus_tab_num_cols] = minus_tab[minus_tab_num_cols].clip(lower=0)
+                
+                PWAVERR_SPDF_mask = PWAVERR_SPDF.columns.difference(['geometry'])
+                PWAVERR_SPDF[PWAVERR_SPDF_mask] = minus_tab
+                
+                
+                fill_value = float(WVERR_attr_map['DEF'].iloc[-1])
+                num_cols = PWAVERR_SPDF.select_dtypes(include='number').columns
+                PWAVERR_SPDF[num_cols] = PWAVERR_SPDF[num_cols].fillna(fill_value)
+                lib.write_log('Sample Surge Error (B-A):')
+                lib.write_log(str(PWAVERR_SPDF.columns.difference('geometry').head()))
+                
+                # Find the fully NULL nodes in PSURGE and get the SIDs.
+                # remove those features from each feature class
+                PWAVE_SPDF_mask = PWAVE_SPDF.columns.difference('geometry')
+                PWAVE_SPDF_filtered = PWAVE_SPDF[PWAVE_SPDF_mask]
+                badrows = PWAVE_SPDF_filtered[len(WV_attr_map)-1].eq(WV_attr_map.iloc[len(WV_attr_map)]['DEF'])
+                
+                if (~badrows).sum() > 0:
+                    PWAVE_SPDF = PWAVE_SPDF[~badrows]
+                    PWAVE84_SPDF = PWAVE84_SPDF[~badrows]
+                    PWAVERR_SPDF = PWAVERR_SPDF[~badrows]
+                
+                lib.write_log('END STEP 2b.')
+                step2b_elapsed = monotonic() - step2b_start
+                lib.write_log(str(step2b_elapsed))
+                
+		##############
+		#  	STEP 2c - Attach surge to buildings
+		# 	RESULTS:
+		#		WSE.SPDF, _WSE.SHP
+        
+            
+        
+        
+		##############
+		#  	STEP 2d - Attach waves to buildings
+		# 	RESULTS:
+		#		WAV.SPDF, _WAV.SHP
+  
+  
+  
+  
+        ##############
+        #  	STEP 3a
+        #		Prep data, reduce buildings, assign DDFs
+        # 	RESULTS:
+        #		FULL.SPDF = wse + wav
+        #		VAL.SPDF = reduced dataset
+        #		PREP.SPDF, _PREP.SHP
+        ##############
+  
+  
+  
+  
+        ##############
+        #  	STEP 4a
+        #	Run Monte Carlo simulations
+        # 	RESULTS:
+        #		pvals, pvals.csv
+        ##############
+  
+  
+  
+  
+        ##############
+        #  	STEP 5
+        #		create heatmap from RESULTS.SPDF.  Uses the best estimate Building AAL only.
+        #		grid value units = $ per acre
+        # 	RESULTS:
+        # 		kde.grid, _.tif
+        ##############
+  
+  
+  
+  
+        #################
+        # end parallel processing
+  
+  
+  
+##########################
+# End program
+##########################
