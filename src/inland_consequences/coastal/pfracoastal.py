@@ -9,6 +9,7 @@ import multiprocessing
 from pathlib import Path
 import os
 from time import monotonic
+import math
 from ._pfracoastal_lib import _PFRACoastal_Lib
 
 logger = logging.getLogger("pfraCoastal")
@@ -575,7 +576,12 @@ class PFRACoastal:
   
         #################
         # end parallel processing
-  
+        lib.write_log(" ")
+        lib.write_log("AAL computations complete.")
+        fullAnalysis_elapsed = math.ceil(monotonic()-fullAnalysis_start)
+        lib.write_log(f"Full Analysis: {fullAnalysis_elapsed} sec elapsed")
+        lib.write_log("**********")
+        logging.shutdown()
   
   
 ##########################
