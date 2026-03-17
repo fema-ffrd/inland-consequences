@@ -3,12 +3,14 @@ name = "inland-consequences"
 version = "0.0.1"
 description = "Inland Consequences Estimation Methodology"
 dependencies = [
+  "mkdocs-material",
   "mkdocs-macros-plugin",
   "mkdocs-include-markdown-plugin",
   "mkdocstrings[python]",
   "mdformat",
   "mdformat-gfm",
   "mdformat-myst",
+  "mdformat-admon",
   "pymdown-extensions",
   "pre-commit",
   "sphere-core",

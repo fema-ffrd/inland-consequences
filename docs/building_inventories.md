@@ -67,13 +67,17 @@ The following schema defines all target fields used by the Consequence Modeling 
 | **eq_building_type**      | String        | Earthquake-specific building type classification        | Earthquake  | eqbldgtypeid, eq_building_type, earthquake_building_type         |
 | **eq_design_level**       | String        | Earthquake design level classification                  | Earthquake  | eqdesignlevelid, eq_design_level, design_level                   |
 
-### *Base Buildings Data Schema:*
+### Base Buildings Data Schema
 
-```json
-{%
-   include "schemas/buildings_schema.json"
-%}
-```
+??? abstract "View JSON Schema"
+
+    ````
+    ```json
+    {%
+       include "schemas/buildings_schema.json"
+    %}
+    ```
+    ````
 
 ______________________________________________________________________
 
@@ -147,13 +151,17 @@ Although the current Coastal Consequences Solution is compatible only with the M
 | W              | Solid Wall      | 4                                    |
 | I              | Pile            | 9                                    |
 
-### *NSI Data Schema:*
+### NSI Data Schema
 
-```json
-{%
-   include "schemas/nsi_schema.json"
-%}
-```
+??? abstract "View JSON Schema"
+
+    ````
+    ```json
+    {%
+       include "schemas/nsi_schema.json"
+    %}
+    ```
+    ````
 
 However, users may provide a crosswalk (a.k.a. override) from the target fields to the user's non-standard
 fields.
@@ -304,13 +312,17 @@ For both the **Uniform Book** and **Uncorrelated Market Basket** datasets, the `
 
 The original Coastal Future of Flood Risk Data Analysis Average Annualized Losses Calculation Tool, on which the Coastal Consequences Solution is based, was designed to be compatible with the Milliman Market Baskets datasets by default; therefore, no additional mapping is required.
 
-### *Milliman Data Schema:*
+### Milliman Data Schema
 
-```json
-{%
-   include "schemas/milliman_schema.json"
-%}
-```
+??? abstract "View JSON Schema"
+
+    ````
+    ```json
+    {%
+       include "schemas/milliman_schema.json"
+    %}
+    ```
+    ````
 
 However, users may provide a crosswalk (a.k.a. override) from the target fields to the user's non-standard
 fields.
