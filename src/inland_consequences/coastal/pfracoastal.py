@@ -559,8 +559,18 @@ class PFRACoastal:
         #		pvals, pvals.csv
         ##############
   
+
   
   
+        ##############
+	    #  	STEP 4b
+	    #	run losses in parallel
+	    # 	RESULTS:
+	    # 		RESULTS.SPDF
+	    ##############
+
+
+
   
         ##############
         #  	STEP 5
