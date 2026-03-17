@@ -9,6 +9,7 @@ import multiprocessing
 from pathlib import Path
 import os
 from time import monotonic
+import math
 from ._pfracoastal_lib import _PFRACoastal_Lib
 
 logger = logging.getLogger("pfraCoastal")
