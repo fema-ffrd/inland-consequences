@@ -671,11 +671,11 @@ class PFRACoastal:
         sel = FULL_SPDF.query("VALID==1").index.to_list()
         shp_geom = FULL_SPDF.iloc[FULL_SPDF.index.isin(sel).tolist(), FULL_SPDF.columns.get_loc('geometry')]
         shp_proj = FULL_SPDF.crs
-        VAL_SPDF = gdf.GeoDataFrame(data=full_tab.iloc[full_tab.index.isin(sel).tolist(),:], geometry=shp_geom, crs=shp_proj)
+        VAL_SPDF = gpd.GeoDataFrame(data=full_tab.iloc[full_tab.index.isin(sel).tolist(),:], geometry=shp_geom, crs=shp_proj)
         lib.write_log(f"FULL BLDG: {FULL_SPDF.shape[0]}")
         lib.write_log(f"Reduced BLDG: {VAL_SPDF.shape[0]}")
         
-        write_log(".grabbing required building attributes.")
+        lib.write_log(".grabbing required building attributes.")
         # because VAL.SPDF is filtered, need to similarly filter the building file
         # get the IDs of the valid buildings
         sel = BUILDING_SPDF["BID"].isin(VAL_SPDF['BID'].to_list()).to_list()
@@ -683,7 +683,7 @@ class PFRACoastal:
         BUILDING_tab = BUILDING_SPDF.drop('geometry', axis=1)
         bldgred_tab = BUILDING_tab.iloc[sel, BUILDING_SPDF.columns.get_indexer(inputs.bldg_attr_map.query("ANLYS==1")["OUT"].to_list())].copy()
         # add sort field because bldg.tab and bldg.coords are 1:1 and .tab might get jumbled in future merges or joins
-        bldgred_tab["sort"] = [i for i in range(1:bldgred_tab.shape[0]+1)]
+        bldgred_tab["sort"] = [i for i in range(1,bldgred_tab.shape[0]+1)]
         
         # DDFS
         # Assign DDFs to buildings
@@ -692,9 +692,9 @@ class PFRACoastal:
         # high-wave conditions
         DDF_tab = lib.assign_TASK4_DDFs(bldgred_tab)
         bldgred_tab["DDF1"] = DDF_tab["DDF1"]
-		bldgred_tab["DDF2"] = DDF_tab["DDF2"]
-		bldgred_tab["DDF3"] = DDF_tab["DDF3"]
-		bldgred_tab["DDF4"] = DDF_tab["DDF4"]
+        bldgred_tab["DDF2"] = DDF_tab["DDF2"]
+        bldgred_tab["DDF3"] = DDF_tab["DDF3"]
+        bldgred_tab["DDF4"] = DDF_tab["DDF4"]
         
         # placeholder for future Erosion DDFs
         bldgred_tab["DDFE"] = pd.Series(data=[0 for i in range(bldgred_tab.shape[0])])
@@ -703,7 +703,7 @@ class PFRACoastal:
         # this attribute map will hold the field names and their descriptions for the PREP attribute table to be written in this section. 
         prep_attr_out = inputs.bldg_attr_map.query("ANLYS==1")["OUT"].to_list()+["DDF1","DDF2","DDF3","DDF4","DDFE"]+SWEL_attr_map.query("DDC == 1")["OUT"].to_list()+SWERR_attr_map.query("DDC == 1")["OUT"].to_list()+WV_attr_map.query("DDC == 1")["OUT"].to_list()+WVERR_attr_map.query("DDC == 1")["OUT"].to_list()
         prep_attr_desc = inputs.bldg_attr_map.query("ANLYS==1")["DESC"].to_list()+["DDF ID" for i in range(4)]+["DDF Erosion"]+["surge elevation" for i in range(SWEL_attr_map.query("DDC == 1").shape[0])]+["surge error" for i in range(SWERR_attr_map.query("DDC == 1").shape[0])]+["wave height" for i in range(WV_attr_map.query("DDC == 1").shape[0])]+["wave error" for i in range(WVERR_attr_map.query("DDC == 1").shape[0])]
-        prep_attr_map = pd.DataFrame("OUT":prep_attr_out, "DESC":prep_attr_desc)
+        prep_attr_map = pd.DataFrame({"OUT":prep_attr_out, "DESC":prep_attr_desc})
         
         # merge wsels to bldg attributes and format
         VAL_tab = VAL_SPDF.drop('geometry', axis=1).set_index("BID")
