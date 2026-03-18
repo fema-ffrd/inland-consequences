@@ -307,8 +307,9 @@ class PFRACoastal:
         if inputs.use_waves:
             in_req_shps.extend(in_opt_shps)
 
-        num_errs = 0
         # validate inputs
+        num_errs = 0
+
         # req shp files
         err_msgs = []
         crs_name_list = []
@@ -325,10 +326,10 @@ class PFRACoastal:
             elif len(ft_unit_axis) == 0:
                 err_msgs.append(f'CRS of file {path} does not use US feet as linear unit')
             else:
-                crs_name_list.append(cur_crs.name)
+                crs_name_list.append(cur_crs.to_epsg())
             
-        if len(set(crs_name_list)) > 1:
-            err_msgs.append("Input shapefiles' CRS do not all match")
+        if len(set(crs_name_list)) > 1 or len(set(crs_name_list)) == 0:
+            err_msgs.append("Input shapefiles' CRS do not match or do not have EPSG codes")
 
         # req csv files
         if not os.path.exists(inputs.bddf_lut_path):
@@ -336,17 +337,17 @@ class PFRACoastal:
         elif os.path.splitext(inputs.bddf_lut_path)[1] != 'csv':
             err_msgs.append(f'File format of {inputs.bddf_lut_path} is invalid. Must be a csv')
         
-        # other req inputs
+        # project dir (req)
         if inputs.out_shp_path in ('', None) or not os.path.isdir(inputs.out_shp_path):
             err_msgs.append("Output directory not set, is null, or does not exist")
         
+        # project prefix (req)
+        alphanum_proj_prefix = ''.join([char for char in inputs.proj_prefix if char.isalnum() or char=='_'])
         if inputs.proj_prefix in (None, ''):
-            err_msgs.append("Project prefix is required")
-
-        # print out error messages
-        for msg in err_msgs:
-            lib.write_log('\tERROR: {0}'.format(msg))
-            num_errs += 1
+            err_msgs.append("Project prefix not set, but is required")
+        elif alphanum_proj_prefix != inputs.proj_prefix:
+            lib.write_log("\tWARNING: Removing invalid characters from project prefix. Updated project prefix = '{0}'".format(alphanum_proj_prefix))
+            inputs.proj_prefix = alphanum_proj_prefix
 
         # check optional inputs and print out warnings
         if inputs.storm_csv not in ('', None):
@@ -354,6 +355,11 @@ class PFRACoastal:
                 lib.write_log("\tWARNING: File {0} not found. Use Stormsuite set to False".format(inputs.storm_csv))
             elif os.path.splitext(inputs.storm_csv)[1] != 'csv':
                 lib.write_log("\tWARNING: File format of {0} is invalid. Must be a csv. Use Stormsuite set to False")
+
+        # print out error messages
+        for msg in err_msgs:
+            lib.write_log('\tERROR: {0}'.format(msg))
+            num_errs += 1
 
         if num_errs > 0:
             lib.write_log("")
