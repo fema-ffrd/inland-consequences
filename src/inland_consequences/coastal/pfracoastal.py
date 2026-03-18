@@ -339,9 +339,6 @@ class PFRACoastal:
         
         Args:
             inputs (Inputs): An instance of the Inputs class containing all input parameters for the model.
-
-        Raises:
-            ValueError: If any of the required input parameters are missing or invalid.
         """
         lib = _PFRACoastal_Lib()
         
