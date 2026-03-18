@@ -35,7 +35,8 @@ def inputs_obj():
                              bddf_lut_path=in_bldg_ddf_lut,
                              storm_csv=in_storm_csv,
                              proj_prefix=test_proj_prefix,
-                             out_shp_path=output_dir
+                             out_shp_path=output_dir,
+                             blabber=False
                              )
     
     return ret
