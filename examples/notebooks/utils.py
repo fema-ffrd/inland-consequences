@@ -14,7 +14,7 @@ def __():
     from pathlib import Path
     from typing import Optional, Tuple, List
     
-    from sql_builder import (
+    from utilities.sql_builder import (
         get_return_periods_from_db,
         build_export_wide_sql,
     )
@@ -36,7 +36,7 @@ def get_return_periods(db_path: str) -> list[int]:
         List of return periods sorted in ascending order
     """
     import duckdb
-    from sql_builder import get_return_periods_from_db
+    from utilities.sql_builder import get_return_periods_from_db
     
     return get_return_periods_from_db(db_path)
 
@@ -78,7 +78,7 @@ def export_wide(
     import duckdb
     import geopandas as gpd
     from pathlib import Path
-    from sql_builder import build_export_wide_sql
+    from utilities.sql_builder import build_export_wide_sql
     
     conn = duckdb.connect(db_path, read_only=True)
     
@@ -119,16 +119,31 @@ def export_wide(
             # Create GeoDataFrame from coordinates
             if longitude_col in result_df.columns and latitude_col in result_df.columns:
                 print(f"Creating point geometries from {longitude_col}/{latitude_col} coordinates...")
-                result_gdf = gpd.GeoDataFrame(
-                    result_df,
-                    geometry=gpd.points_from_xy(result_df[longitude_col], result_df[latitude_col]),
-                    crs="EPSG:4326"
-                )
+                print("Note: Assuming coordinates are in WGS84 (EPSG:4326) - latitude/longitude in degrees.")
+                # Filter out rows with null coordinates
+                valid_coords = result_df[longitude_col].notna() & result_df[latitude_col].notna()
+                if valid_coords.sum() > 0:
+                    result_gdf = gpd.GeoDataFrame(
+                        result_df[valid_coords].copy(),
+                        geometry=gpd.points_from_xy(
+                            result_df.loc[valid_coords, longitude_col],
+                            result_df.loc[valid_coords, latitude_col]
+                        ),
+                        crs="EPSG:4326"
+                    )
+                    if valid_coords.sum() < len(result_df):
+                        print(f"Note: {len(result_df) - valid_coords.sum()} rows excluded due to missing coordinates")
+                else:
+                    print(f"Warning: No valid coordinates found in {longitude_col}/{latitude_col}")
+                    result_gdf = result_df
             else:
                 print(f"Warning: Could not find {longitude_col} and/or {latitude_col} columns in {geometry_table}")
                 result_gdf = result_df
         else:
             result_gdf = result_df
+        
+        # Track whether we have actual geometry
+        is_geodataframe = isinstance(result_gdf, gpd.GeoDataFrame) and 'geometry' in result_gdf.columns
         
         # Save if output path provided
         if output_path:
@@ -136,8 +151,21 @@ def export_wide(
             output_path.parent.mkdir(parents=True, exist_ok=True)
             
             if output_format.lower() in ['parquet', 'geoparquet']:
-                result_gdf.to_parquet(output_path, compression=compression)
-                print(f"Saved to {output_path}")
+                if is_geodataframe:
+                    # Use geopandas to write with geo metadata
+                    result_gdf.to_parquet(output_path, compression=compression)
+                    print(f"Saved geoparquet to {output_path}")
+                else:
+                    # Fall back to pandas parquet (no geo metadata)
+                    result_gdf.to_parquet(output_path, compression=compression, index=False)
+                    print(f"Warning: Saved as regular parquet (no geometry): {output_path}")
+            elif output_format.lower() in ['gpkg', 'geopackage']:
+                if is_geodataframe:
+                    result_gdf.to_file(output_path, driver='GPKG')
+                    print(f"Saved geopackage to {output_path}")
+                    print("Note: CRS set to WGS84 (EPSG:4326) - latitude/longitude in degrees.")
+                else:
+                    raise ValueError("Cannot export to geopackage without geometry. Set include_geometry=True.")
             elif output_format.lower() == 'csv':
                 df_for_csv = result_gdf.drop(columns=['geometry'], errors='ignore')
                 df_for_csv.to_csv(output_path, index=False)
@@ -352,8 +380,8 @@ def _(mo):
     **Architecture:**
     - Functions use `@app.function` decorator for importability
     - Setup cell contains all shared imports
-    - `sql_builder.py` handles dynamic SQL generation
-    - `sql_templates/` contains reference documentation
+    - `utilities/sql_builder.py` handles dynamic SQL generation
+    - `utilities/sql_templates/` contains reference documentation
     """)
     return
 

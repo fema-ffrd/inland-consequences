@@ -12,10 +12,10 @@ census geography levels to display:
   selects the building attribute dimension (occupancy type, damage category, etc.)
 
 Run with:
-    uv run marimo edit examples/flood_results_explorer.py
+    uv run marimo edit examples/notebooks/flood_results_explorer.py
 
 or as a read-only app:
-    uv run marimo run examples/flood_results_explorer.py
+    uv run marimo run examples/notebooks/flood_results_explorer.py
 """
 
 import marimo
@@ -39,7 +39,7 @@ def _imports():
     import pygris
     from great_tables import GT, loc, style
 
-    sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
     from inland_consequences.results_aggregation import FloodResultsAggregator
 
     return (
@@ -71,7 +71,7 @@ def _header(mo):
 
 @app.cell
 def _config(Path):
-    DB_PATH = Path(__file__).parent.parent / "inland_flood_analysis_20260303_221911.duckdb"
+    DB_PATH = Path(__file__).parent.parent.parent / "inland_flood_analysis_20260303_221911.duckdb"
     return (DB_PATH,)
 
 
