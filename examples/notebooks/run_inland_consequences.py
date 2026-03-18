@@ -23,6 +23,7 @@ def _():
     from inland_consequences.inland_flood_analysis import InlandFloodAnalysis
     from inland_consequences.raster_collection import RasterCollection
     from sphere.flood.single_value_reader import SingleValueRaster
+    from utils import get_database_summary
 
     # Import visualization libraries
     from lonboard import Map, ScatterplotLayer
@@ -44,6 +45,7 @@ def _():
         alt,
         apply_continuous_cmap,
         duckdb,
+        get_database_summary,
         gpd,
         mo,
         os,
@@ -109,14 +111,6 @@ def _(mo, os):
     default_data_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     default_output_path = os.path.join(os.path.dirname(default_data_path), 'outputs')
 
-    # # Output directory (text input since it may not exist yet)
-    # output_dir_input = mo.ui.text(
-    #     value=default_output_path,
-    #     label="💾 Output Directory",
-    #     placeholder="Path to output directory (will be created)",
-    #     full_width=True
-    # )
-
     output_dir_input = mo.ui.file_browser(
         initial_path = default_data_path,
         filetypes = None,
@@ -152,22 +146,10 @@ def _(default_data_path, mo):
     # Building inventory file selector
     building_file_selector = mo.ui.file_browser(
         initial_path=default_data_path,
-        filetypes=[".parquet", ".gpkg", ".geojson"],
+        filetypes=[".csv", ".parquet", ".gpkg", ".geojson"],
         label="📁 Building Inventory File (parquet, geopackage, or geojson)",
         multiple=False
     )
-
-    # # Advanced options
-    # calculate_aal_checkbox = mo.ui.checkbox(
-    #     value=False,
-    #     label="Calculate Annual Average Loss (AAL) - requires 3+ return periods"
-    # )
-
-    # wildcard_fields_select = mo.ui.multiselect(
-    #     options=["foundation_type", "num_stories", "construction_type"],
-    #     value=[],
-    #     label="Wildcard Fields (ignore in damage function matching)"
-    # )
 
     tip_markdown = mo.md(
         """
@@ -189,6 +171,28 @@ def _(default_data_path, mo):
         # wildcard_fields_select
     ])
     return building_file_selector, building_type_selector
+
+
+@app.cell
+def _(mo):
+    # mo.ui.multiselect(options=options)
+
+    inv_uncert_multiselect = mo.ui.multiselect(
+        options=['occupancy_type', 'foundation_type', 'number_stories', 'area', 'general_building_type'],
+        value=None,
+    )
+    return (inv_uncert_multiselect,)
+
+
+@app.cell
+def _(inv_uncert_multiselect, mo):
+
+    mo.vstack([
+        mo.md("### Advanced Options - Inventory Uncertainty Parameters:"),
+        mo.md("Inventory uncertainty is disabled by default. See the technical documentation to determine whether Inventory Uncertainty Parameters are appropriate for your analysis."),
+        mo.hstack([inv_uncert_multiselect, f"Selected wildcard fields: {inv_uncert_multiselect.value}"])
+    ])
+    return
 
 
 @app.cell
@@ -433,18 +437,29 @@ def _(
 
 
 @app.cell
-def _(building_file, building_type, calculate_aal, config_valid, mo, os, output_directory, pd, return_periods_list):
+def _(
+    building_file,
+    building_type,
+    calculate_aal,
+    config_valid,
+    inv_uncert_multiselect,
+    mo,
+    os,
+    output_directory,
+    pd,
+    return_periods_list,
+):
     """User Configuration Summary"""
-    
+
     # Only show summary if configuration is valid
     mo.stop(not config_valid, "")
-    
+
     # Extract output directory path from file browser value
     if output_directory and len(output_directory) > 0:
         output_dir_path = str(output_directory[0].path)
     else:
         output_dir_path = "Not selected"
-    
+
     # Build summary data
     summary_data = [
         {"Setting": "Building Dataset Type", "Value": building_type},
@@ -453,10 +468,11 @@ def _(building_file, building_type, calculate_aal, config_valid, mo, os, output_
         {"Setting": "Number of Return Periods", "Value": str(len(return_periods_list))},
         {"Setting": "Return Periods (years)", "Value": ", ".join(str(rp) for rp in return_periods_list)},
         {"Setting": "Calculate AAL", "Value": "Yes" if calculate_aal else "No"},
+        {"Setting": "Inventory Uncertainty Wildcard Fields", "Value": inv_uncert_multiselect.value},
     ]
-    
+
     summary_df = pd.DataFrame(summary_data)
-    
+
     mo.vstack([
         mo.md("## 📋 Configuration Summary"),
         mo.ui.table(summary_df, selection=None)
@@ -513,6 +529,7 @@ def _(
     calculate_aal,
     config_valid,
     gpd,
+    inv_uncert_multiselect,
     mo,
     os,
     raster_config,
@@ -533,7 +550,25 @@ def _(
     with mo.status.spinner(title="Loading building inventory..."):
         step_start = time.perf_counter()
 
-        gdf = gpd.read_parquet(building_file)
+        _ext = Path(building_file).suffix.lower()
+        if _ext == ".parquet":
+            gdf = gpd.read_parquet(building_file)
+        elif _ext == ".csv":
+            _df = pd.read_csv(building_file)
+            # Detect coordinate columns (case-insensitive)
+            _col_map = {c.upper(): c for c in _df.columns}
+            _lon_col = _col_map.get("LON") or _col_map.get("LONGITUDE") or _col_map.get("X")
+            _lat_col = _col_map.get("LAT") or _col_map.get("LATITUDE") or _col_map.get("Y")
+            if _lon_col and _lat_col:
+                gdf = gpd.GeoDataFrame(
+                    _df,
+                    geometry=gpd.points_from_xy(_df[_lon_col], _df[_lat_col]),
+                    crs="EPSG:4326",
+                )
+            else:
+                gdf = gpd.GeoDataFrame(_df)
+        else:
+            gdf = gpd.read_file(building_file)
 
         # Instantiate the appropriate building class based on selection
         if building_type == "Milliman":
@@ -584,7 +619,7 @@ def _(
             buildings=buildings,
             vulnerability=flood_function,
             calculate_aal=calculate_aal,
-            # wildcard_fields=wildcard_fields
+            wildcard_fields=inv_uncert_multiselect.value
         )
 
         with analysis:
@@ -612,7 +647,7 @@ def _(
 
 
 @app.cell
-def _(analysis_results, duckdb, mo):
+def _(analysis_results, duckdb):
     """Load Results from Database"""
 
     # Connect to results database
@@ -682,6 +717,7 @@ def _(analysis_results, duckdb, mo):
     )
     return (
         aal_df,
+        buildings_df,
         db_path,
         has_aal,
         losses_df,
@@ -691,14 +727,7 @@ def _(analysis_results, duckdb, mo):
 
 
 @app.cell
-def _(
-    aal_df,
-    analysis_results,
-    has_aal,
-    losses_df,
-    mo,
-    validation_df,
-):
+def _(aal_df, analysis_results, has_aal, losses_df, mo, validation_df):
     """Summary Statistics Cards"""
 
     # Calculate key metrics
@@ -896,10 +925,23 @@ def _(
 
 
 @app.cell
-def _(aal_df, buildings_df, has_aal, losses_df, mo, validation_df):
+def _(mo):
+    """DB Tables Level View"""
+
+    view_radiogroup = mo.ui.radio(
+        options={"Basic Tables": 1, "Full Table List": 2},
+        value="Basic Tables",
+        label="View the basic analysis results or full list of supporting tables?",
+    )
+
+    return (view_radiogroup,)
+
+
+@app.cell
+def _(aal_df, analysis_results, buildings_df, duckdb, get_database_summary, has_aal, losses_df, mo, validation_df, view_radiogroup):
     """Data Preview Section"""
-    
-    # Build table options based on available data
+
+    # Basic tables always available
     preview_tables = {
         "losses": losses_df,
         "buildings": buildings_df,
@@ -907,17 +949,36 @@ def _(aal_df, buildings_df, has_aal, losses_df, mo, validation_df):
     }
     if has_aal and aal_df is not None:
         preview_tables["aal_losses"] = aal_df
-    
+
+    # If full table list selected, add remaining tables from the database
+    if view_radiogroup.value == 2:
+        db_path2 = analysis_results["db_path"]
+        all_table_names = get_database_summary(db_path2)["tables"]
+        conn2 = duckdb.connect(db_path2, read_only=True)
+        try:
+            for tbl in all_table_names:
+                if tbl not in preview_tables:
+                    try:
+                        if tbl == "buildings":
+                            preview_tables[tbl] = conn2.execute(f"SELECT * EXCLUDE (geometry) FROM {tbl}").fetch_df()
+                        else:
+                            preview_tables[tbl] = conn2.execute(f"SELECT * FROM {tbl}").fetch_df()
+                    except Exception:
+                        pass
+        finally:
+            conn2.close()
+
     # Table selection dropdown
     preview_table_dropdown = mo.ui.dropdown(
         options=list(preview_tables.keys()),
         value="losses",
         label="Select Table"
     )
-    
+
     mo.vstack([
         mo.md("## 🔍 Data Preview"),
         mo.md("Explore the raw data tables before exporting:"),
+        view_radiogroup,
         preview_table_dropdown
     ])
     return preview_table_dropdown, preview_tables
@@ -926,14 +987,14 @@ def _(aal_df, buildings_df, has_aal, losses_df, mo, validation_df):
 @app.cell
 def _(mo, preview_table_dropdown, preview_tables):
     """Display Selected Table"""
-    
+
     selected_table = preview_table_dropdown.value
     selected_df = preview_tables[selected_table].copy()
-    
+
     # Round numeric columns to 2 decimal places for cleaner display
     numeric_cols = selected_df.select_dtypes(include=['float64', 'float32']).columns
     selected_df[numeric_cols] = selected_df[numeric_cols].round(2)
-    
+
     mo.vstack([
         mo.md(f"**{selected_table}** - {len(selected_df):,} rows, {len(selected_df.columns)} columns"),
         selected_df
@@ -942,13 +1003,11 @@ def _(mo, preview_table_dropdown, preview_tables):
 
 
 @app.cell
-def _(has_aal, mo):
+def _(mo, preview_tables):
     """Export UI Configuration"""
 
-    # Get available tables from database (this cell only runs after analysis completes)
-    available_tables = ["losses", "buildings", "validation_log"]
-    if has_aal:
-        available_tables.append("aal_losses")
+    # Use the same table list driven by the radio selection in Data Preview
+    available_tables = list(preview_tables.keys())
 
     # Table selection dropdown
     export_table = mo.ui.dropdown(
@@ -1015,6 +1074,7 @@ def _(
     time,
 ):
     """Execute Export"""
+    from utils import export_wide as export_wide_util
 
     # Wait for export button click
     mo.stop(not export_button.value, "")
@@ -1034,35 +1094,34 @@ def _(
             notebooks_dir = os.path.dirname(os.path.abspath(__file__))
             if notebooks_dir not in sys.path:
                 sys.path.insert(0, notebooks_dir)
-            from utils import export_wide as export_wide_util
 
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             os.makedirs(output_dir, exist_ok=True)
 
             # Determine extension based on format
             if export_format.value == "geoparquet" and include_geometry.value:
-                ext = "geoparquet"
+                _ext = "geoparquet"
             elif export_format.value == "geopackage" and include_geometry.value:
-                ext = "gpkg"
+                _ext = "gpkg"
             elif export_format.value in ["parquet", "geoparquet"]:
-                ext = "parquet"
+                _ext = "parquet"
             else:
-                ext = "csv"
+                _ext = "csv"
 
-            filename = f"losses_export_wide_{timestamp}.{ext}"
+            filename = f"losses_export_wide_{timestamp}.{_ext}"
             filepath = os.path.join(output_dir, filename)
 
             # Call export_wide utility
             result_gdf, export_path = export_wide_util(
                 db_path=db_path,
                 output_path=filepath,
-                output_format=ext,
+                output_format=_ext,
                 include_geometry=include_geometry.value
             )
 
             file_size = os.path.getsize(export_path)
             msg = f"✅ **Exported wide format**: `{filename}`\n\n- **Size**: {file_size/1024:.1f} KB\n- **Buildings**: {len(result_gdf):,}\n- **Location**: `{output_dir}`"
-            if include_geometry.value and ext in ["geoparquet", "gpkg"]:
+            if include_geometry.value and _ext in ["geoparquet", "gpkg"]:
                 msg += "\n- **CRS**: WGS84 (EPSG:4326) assumed for coordinates"
             _export_status = mo.callout(mo.md(msg), kind="success")
 
@@ -1070,7 +1129,7 @@ def _(
             # Standard table export (long format)
             # Open a fresh connection for this export
             export_conn = duckdb.connect(db_path, read_only=True)
-            
+
             try:
                 table_name = export_table.value
 
@@ -1079,7 +1138,7 @@ def _(
                     export_data = export_conn.execute(f"SELECT * EXCLUDE (geometry) FROM {table_name}").fetch_df()
                 else:
                     export_data = export_conn.execute(f"SELECT * FROM {table_name}").fetch_df()
-                
+
                 # For geoparquet/geopackage export, join with buildings table to get coordinates if needed
                 if export_format.value in ["geoparquet", "geopackage"] and include_geometry.value:
                     has_coords = any(col in export_data.columns for col in ["x", "y", "longitude", "latitude"])
