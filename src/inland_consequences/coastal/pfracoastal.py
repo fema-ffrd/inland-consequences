@@ -607,15 +607,73 @@ class PFRACoastal:
         WSE2_SPDF.to_file(fr'{out_shp_dsn}\{inputs.proj_prefix}_WSE.shp')
 
         lib.write_log('END STEP 2c.')
-        step2c_elapsed = monotonic() - step2c_start
+        step2c_elapsed = math.ceil(monotonic() - step2c_start)
         lib.write_log(f'Full Analysis: {step2c_elapsed} sec elapsed')
 
 		##############
 		#  	STEP 2d - Attach waves to buildings
 		# 	RESULTS:
 		#		WAV.SPDF, _WAV.SHP
-  
-  
+        step2d_start = monotonic()
+        lib.write_log(' ')
+        lib.write_log('BEGIN Step 2d. Attach Waves to Buildings')
+        surge_attr_map = WV_attr_map.copy()
+        out_tab = None
+        # Get 3NN PSURGE
+        lib.write_log('.run 3NN on surge nodes.')
+        dfs = []
+        for i in range(len(BUILDING_SPDF)):
+            row = BUILDING_SPDF.iloc[i]
+            # drop geometry column for attributes (mimics @data[this.row,])
+            attr_row = row.drop(labels=[BUILDING_SPDF.geometry.name])
+            # extract coordinates (mimics @coords[this.row,])
+            coord_xy = (row.geometry.x, row.geometry.y)
+            res = lib.attachWSELtoBUILDING3(attr_row, coord_xy, PWAVE_SPDF, surge_attr_map)
+            dfs.append(res)
+        out_tab = pd.concat(dfs, ignore_index=True)
+        
+        # format out.tab to remove factors and then make all columns numeric
+        lib.write_log('.formatting table.')
+        out_tab.apply(lambda col: col.astype(str) if col.dtype.name == "category" else col)
+        out_tab = out_tab.apply(pd.to_numeric, errors="raise")
+
+        if inputs.use_uncertainty:
+            lib.write_log('.get PWAVE ERR.')
+            surge_attr_map = WVERR_attr_map.copy()
+            out_tab2 = None
+            dfs = []
+            for i in range(len(BUILDING_SPDF)):
+                row = BUILDING_SPDF.iloc[i]
+                # drop geometry column for attributes (mimics @data[this.row,])
+                attr_row = row.drop(labels=[BUILDING_SPDF.geometry.name])
+                # extract coordinates (mimics @coords[this.row,])
+                coord_xy = (row.geometry.x, row.geometry.y)
+                res = lib.attachWSELtoBUILDING3(attr_row, coord_xy, PWAVERR_SPDF, surge_attr_map)
+                dfs.append(res)
+            out_tab2 = pd.concat(dfs, ignore_index=True)
+            
+            # format out.tab2 to remove factors and then make all columns numeric
+            lib.write_log('.formatting table.')
+            out_tab2.apply(lambda col: col.astype(str) if col.dtype.name == "category" else col)
+            out_tab2 = out_tab2.apply(pd.to_numeric, errors="raise")
+            
+        else:
+            out_tab2 = None
+            
+        wave_error_col = WVERR_attr_map.loc[WVERR_attr_map["DESC"] == "surge error", "OUT"].iloc[0]
+        out_tab3 = out_tab2[["BID", wave_error_col]]
+        out_tab1 = out_tab.merge(out_tab3, on="BID", how="left")
+        out_tab1 = out_tab1 = out_tab1.sort_values(by="BID").reset_index(drop=True)
+        
+        out_tab1['geometry'] = BUILDING_SPDF['geometry']
+        WV_SPDF = gpd.GeoDataFrame(out_tab1, geometry='geometry')
+        
+        # write output shapefile
+        WV_SPDF.to_file(fr'{out_shp_dsn}\{inputs.proj_prefix}_WAV.shp')
+        
+        lib.write_log('END STEP 2d.')
+        step2d_elapsed = math.ceil(monotonic() - step2d_start)
+        lib.write_log(f'Full Analysis: {step2d_elapsed} sec elapsed')
   
   
         ##############
