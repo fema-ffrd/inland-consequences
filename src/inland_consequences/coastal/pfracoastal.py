@@ -900,6 +900,75 @@ class PFRACoastal:
         lib.write_log("END STEP 4a.")
         step4a_elapsed = math.ceil(monotonic()-step4a_start)
         lib.write_log(f"Step 4a: {step4a_elapsed} sec elapsed")
+
+        ##############
+	    #  	STEP 4b
+	    #	run losses in parallel
+	    # 	RESULTS:
+	    # 		RESULTS.SPDF
+	    ##############
+        step4b_start = monotonic()
+        lib.write_log(" ")
+        lib.write_log("BEGIN STEP 4b. Determining Losses.")
+
+        # if writing output as CSV, create the /TAB folder if it doesnt already exist
+        if inputs.use_outcsv:
+            lib.write_log(".looking for CSV folder.")
+            out_csvtable_path = os.path.join(inputs.out_shp_path, "TAB")
+            if not os.path.exists(out_csvtable_path):
+                lib.write_log(".creating CSV folder.")
+                os.mkdir(out_csvtable_path)
+        
+        # grab all building IDs for analysis
+        allbldgs = PREP_SPDF["BID"].copy()
+        building_summary = pd.DataFrame()
+
+        lib.write_log(f"Calculating damage, losses, and annualized loss for {allbldgs.shape[0]} buildings...")
+        for this_building in allbldgs.to_list():
+            temp_tab = lib.runMC_AALU_x4(PREP_SPDF, pvals, int(this_building), inputs, prep_attr_map)
+            building_summary = pd.concat([building_summary, temp_tab], ignore_index=True)
+        building_summary.loc[:,"A"] = 1
+
+        lossTables_elapsed = math.ceil(monotonic-step4b_start)
+        lib.write_log(f"loss tables: {lossTables_elapsed} sec elapsed")
+
+        lib.write_log(".formatting AAL results.")
+        # create a base to which to add run results AAL results
+        base_tab = pd.DataFrame({"BID":BUILDING_SPDF["BID"], "ANLYS":[0 for i in range(BUILDING_SPDF.shape[0])]})
+
+        # join
+        # field names hard-coded in runMC_AALU_x
+        join_tab = base_tab.join(building_summary.set_index("BID"), on="BID", how="left").sort_values("ANYLS")
+        join_tab.loc[join_tab.query("A==1").index.to_list(), "ANLYS"] = 1
+        join_tab.drop(columns=join_tab.columns.to_list()[-1], inplace=True)
+
+        # replace NAs
+        join_tab.iloc[join_tab["BAAL"].isna().to_list(), join_tab.columns.get_loc("BAAL")] = 0
+        join_tab.iloc[join_tab["BAALmin"].isna().to_list(), join_tab.columns.get_loc("BAALmin")] = 0
+        join_tab.iloc[join_tab["BAALmax"].isna().to_list(), join_tab.columns.get_loc("BAALmax")] = 0
+        join_tab.iloc[join_tab["FLAG_DF16"].isna().to_list(), join_tab.columns.get_loc("FLAG_DF16")] = 0
+
+        # add run results to results table
+        building_tab = BUILDING_SPDF.drop(columns='geometry')
+        results_tab = building_tab.join(join_tab.set_index("BID"), on="BID", how="left").sort_values("BID")
+
+        # build output SPDF for heatmap
+        shp_geom = BUILDING_SPDF.geometry
+        shp_proj = BUILDING_SPDF.crs
+        RESULTS_SPDF = gpd.GeoDataFrame(data=results_tab, geometry=shp_geom, crs=shp_proj)
+
+        # write output shapefile
+        out_shp_lay = inputs.proj_prefix + "_RESULTS"
+        out_shp_dsn = os.path.join(inputs.out_shp_path, out_shp_lay+".shp")
+        RESULTS_SPDF.to_file(out_shp_dsn)
+
+        # print results
+        lib.finalReportAAL2(results_tab)
+        lib.write_log("END STEP 4b.")
+        step4b_elapsed = math.ceil(monotonic()-step4b_start)
+        lib.write_log(f"Step 4b: {step4b_elapsed} sec elapsed")
+
+        
   
         ##############
         #  	STEP 5
