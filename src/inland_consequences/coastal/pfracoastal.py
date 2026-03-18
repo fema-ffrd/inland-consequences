@@ -7,6 +7,7 @@ import logging
 import typing
 import multiprocessing
 from pathlib import Path
+from scipy.stats import norm
 import os
 from time import monotonic
 from ._pfracoastal_lib import _PFRACoastal_Lib
@@ -323,8 +324,8 @@ class PFRACoastal:
         
         lib.write_log('END STEP 1.')
         # Calculate seconds elapsed for step 1
-        step1_elapsed = monotonic() - step1_start
-        lib.write_log(str(step1_elapsed))
+        step1_elapsed = math.ceil(monotonic() - step1_start)
+        lib.write_log(f'Full Analysis: {step1_elapsed} sec elapsed')
         ##############
         
         ##############
@@ -424,8 +425,8 @@ class PFRACoastal:
             PSURGERR_SPDF = PSURGERR_SPDF[~badrows]
         
         lib.write_log('END STEP 2a.')
-        step2a_elapsed = monotonic() - step2a_start
-        lib.write_log(str(step2a_elapsed))
+        step2a_elapsed = math.ceil(monotonic() - step2a_start)
+        lib.write_log(f'Full Analysis: {step2a_elapsed} sec elapsed')
 
 		##############
 		#  	STEP 2b - Get waves
@@ -521,17 +522,94 @@ class PFRACoastal:
                     PWAVERR_SPDF = PWAVERR_SPDF[~badrows]
                 
                 lib.write_log('END STEP 2b.')
-                step2b_elapsed = monotonic() - step2b_start
-                lib.write_log(str(step2b_elapsed))
+                step2b_elapsed = math.ceil(monotonic() - step2b_start)
+                lib.write_log(f'Full Analysis: {step2b_elapsed} sec elapsed')
                 
 		##############
 		#  	STEP 2c - Attach surge to buildings
 		# 	RESULTS:
 		#		WSE.SPDF, _WSE.SHP
+        step2c_start = monotonic()
+        lib.write_log(' ')
+        lib.write_log('BEGIN Step 2c. Attach Surge to Buildings')
+        surge_attr_map = SWEL_attr_map.copy()
+        out_tab = None
+        # Get 3NN PSURGE
+        lib.write_log('.run 3NN on surge nodes.')
+        dfs = []
+        for i in range(len(BUILDING_SPDF)):
+            row = BUILDING_SPDF.iloc[i]
+            # drop geometry column for attributes (mimics @data[this.row,])
+            attr_row = row.drop(labels=[BUILDING_SPDF.geometry.name])
+            # extract coordinates (mimics @coords[this.row,])
+            coord_xy = (row.geometry.x, row.geometry.y)
+            res = lib.attachWSELtoBUILDING3(attr_row, coord_xy, PSURGE_SPDF, surge_attr_map)
+            dfs.append(res)
+        out_tab = pd.concat(dfs, ignore_index=True)
         
+        # format out.tab to remove factors and then make all columns numeric
+        lib.write_log('.formatting table.')
+        out_tab.apply(lambda col: col.astype(str) if col.dtype.name == "category" else col)
+        out_tab = out_tab.apply(pd.to_numeric, errors="raise")
+
+        if inputs.use_uncertainty:
+            lib.write_log('.get PSURGE ERR.')
+            surge_attr_map = SWEL_attr_map.copy()
+            out_tab2 = None
+            dfs = []
+            for i in range(len(BUILDING_SPDF)):
+                row = BUILDING_SPDF.iloc[i]
+                # drop geometry column for attributes (mimics @data[this.row,])
+                attr_row = row.drop(labels=[BUILDING_SPDF.geometry.name])
+                # extract coordinates (mimics @coords[this.row,])
+                coord_xy = (row.geometry.x, row.geometry.y)
+                res = lib.attachWSELtoBUILDING3(attr_row, coord_xy, PSURGERR_SPDF, SWERR_attr_map)
+                dfs.append(res)
+            out_tab2 = pd.concat(dfs, ignore_index=True)
             
+            # format out.tab2 to remove factors and then make all columns numeric
+            lib.write_log('.formatting table.')
+            out_tab2.apply(lambda col: col.astype(str) if col.dtype.name == "category" else col)
+            out_tab2 = out_tab2.apply(pd.to_numeric, errors="raise")
+            
+        else:
+            out_tab2 = None
+            
+        surge_error_col = SWERR_attr_map.loc[SWERR_attr_map["DESC"] == "surge error", "OUT"].iloc[0]
+        out_tab3 = out_tab2[["BID", surge_error_col]]
+        out_tab1 = out_tab.merge(out_tab3, on="BID", how="left")
+        out_tab1 = out_tab1 = out_tab1.sort_values(by="BID").reset_index(drop=True)
+            
+        # set building validity
+        lib.write_log(".attributing building validity.")
+		# find which buildings have good probability of being affected by max event
+        tabWET = out_tab1.apply(lambda row: 1 - norm.cdf(lib.getZscore(row["DEMFT"], row["s10000"], row["sx10000"])),axis=1)
+        sel = tabWET.index[tabWET >= 0.05].tolist()
+        out_tab1.loc[sel, 'VALID'] = 1
+
+        # set building validity
+        # find building elevations = -9999
+        sel = out_tab1.index[out_tab1["DEMft"] <= -999].tolist()
+        out_tab1.loc[sel, 'VALID'] = 0
         
+        # build output shapefile
+		# no record filtering and no joining, so out points geometry = in points geometry
+        out_tab1['geometry'] = BUILDING_SPDF['geometry']
+        WSE_SPDF = gpd.GeoDataFrame(out_tab1, geometry='geometry')
+
+        # create a copy of WSE for writing output that converts NA to -99999 so ESRI SHP doesnt 
+		# auto-convert NA to 0.
+		# Erase copy with the trash collection
+        WSE2_SPDF = WSE_SPDF.copy()
+        WSE2_SPDF = WSE2_SPDF.fillna(float(SWEL_attr_map.loc[1, "DEF"]))
         
+        # write output shapefile
+        WSE2_SPDF.to_file(fr'{out_shp_dsn}\{inputs.proj_prefix}_WSE.shp')
+
+        lib.write_log('END STEP 2c.')
+        step2c_elapsed = monotonic() - step2c_start
+        lib.write_log(f'Full Analysis: {step2c_elapsed} sec elapsed')
+
 		##############
 		#  	STEP 2d - Attach waves to buildings
 		# 	RESULTS:
