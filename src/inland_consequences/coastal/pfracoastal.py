@@ -7,6 +7,7 @@ import logging
 import typing
 import multiprocessing
 from pathlib import Path
+from scipy.stats import norm
 import os
 from time import monotonic
 import math
@@ -15,6 +16,12 @@ from ._pfracoastal_lib import _PFRACoastal_Lib
 logger = logging.getLogger("pfraCoastal")
 
 class Inputs:
+    """
+    Represents all of the possible input parameters for the PFRA Coastal model. While the original R code inputs and processing variables were located in global scope,
+    this class is designed to encapsulate all of the user inputs for the model in a single object. This allows for passing the values around between functions without
+    polluting global scope.
+    """
+
     BLDG_ATTR_MAP_DATA = {
         "ORIG":["BID", "location", "BLDG_DED", "BLDG_LIMIT", "BLDG_VALUE", "CNT_DED", "CNT_LIMIT", "CNT_VALUE", "NUM_STORIE", "foundation", "BasementFi", "FIRST_FLOO", "DEMft"],
         "IN":["BID", "location", "BLDG_DED", "BLDG_LIMIT", "BLDG_VALUE", "CNT_DED", "CNT_LIM", "CNT_VALUE", "NUM_STORIE", "foundation", "BasementFi", "FIRST_FLOO", "DEMft"],
@@ -44,6 +51,61 @@ class Inputs:
         GCB_fid="location", GCB_Bded="BLDG_DED", GCB_Blim="BLDG_LIMIT", GCB_Bval="BLDG_VALUE", GCB_Cded="CNT_DED", 
         GCB_Clim="CNT_LIM", GCB_Cval="CNT_VALUE", GCB_Bsto="NUM_STORIE", GCB_Bfou="foundation", GCB_Bbfi="BasementFi", GCB_Bffh="FIRST_FLOO", GCB_Bdem="DEMft") -> object:
         
+        """
+        Initialize Inputs with relevant input parameters.
+        
+        Args:
+            blabber (bool): Whether to print log messages to console and disk.
+            use_heatmap (bool): Whether to generate a GeoTIF heatmap of building losses.
+            hm_bandwidth (int): Search radius for points used during heatmap generation.
+            hm_resolution (int): Raster resolution used during heatmap generation.
+            hm_name (str): Name for the heatmap output file (minus extension).
+            mc_n (int): Number of storms to use when generating the Monte Carlo storm suite.
+            nbounds (tuple): Upper and lower bounds for the probability distribution function used to generate a Monte Carlo storm suite.
+            storm_csv (str): Path to CSV file containing an existing Monte Carlo storm suite to use instead of generating a new one.
+            bldg_path (str): Path to building point shapefile.
+            bldg_lay (str): Not used.
+            swel_mpath (str): Not used.
+            swel_path (str): Not used.
+            swelA_path (str): Path to surge (Best Estimate) point shapefile.
+            swelB_path (str): Path to surge (84% Confidence Limit) point shapefile.
+            waveA_path (str): Path to wave height (Best Estimate) point shapefile.
+            waveB_path (str): Path to wave height (84% Confidence Limit) point shapefile.
+            use_uncertainty (bool): Whether to include uncertainty in the analysis. This value should always be set to "True" as the model always assumes uncertainty is applied.
+            use_cutoff (bool): Whether to apply a cutoff to the damage function. This value should always be set to "True" as the model always assumes a cutoff is applied.
+            use_cutoff10 (bool): Whether to apply a cutoff at 10% damage. This value should always be set to "False" as the model does not assume a 10% cutoff is applied.
+            use_eWet (bool): Whether to include minimum wetting in the analysis. This value should always be set to "True" as the model assumes no damage when ground is dry.
+            use_waves (bool): Whether to include wave shapefiles in the analysis. This value should always be set to "True" as the model always assumes wave data is present.
+            use_twl (bool): Whether to include total water level in the analysis. This value should always be set to "False" as the model always generates a TWL instead of assuming one is provided.
+            use_wavecut50 (bool): Whether to apply a wave cutoff at 50% damage. This value should always be set to "False" as the model does not assume a 50% wave cutoff is applied.
+            use_erosion (bool): Whether to include erosion effects in the analysis. This value should always be set to "False" as the model does not assume that erosion is included.
+            use_insurance (bool): Whether to adjust losses in the analysis based on insurance deductibles and limits. This value should always be set to "False" as the model does not currently support this feature.
+            use_contents (bool): Whether to include contents damage in the analysis. This value should always be set to "False" as the model does not currently support this feature.
+            use_netcdf (bool): Not used.
+            use_outcsv (bool): Whether to output intermediate loss tables for each building as CSV files.
+            bddf_lut_path (str): Path to building damage function CSV file.
+            bldg_ddf_lut (pd.DataFrame): Building damage function lookup table stored in a pandas DataFrame. This is set automatically by the bddf_lut_path setter and should not be set directly.
+            cddf_lut_path (str): Path to contents damage function CSV file. This value should always be set to "None" or an empty string as the model does not currently support contents damage.
+            cont_ddf_lut (pd.DataFrame): Contents damage function lookup table as a pandas DataFrame. This is set automatically by the cddf_lut_path setter and should not be set directly.
+            proj_prefix (str): A text prefix to prepend to the names of all output files.
+            out_shp_path (str): Path to a directory where all output files will be saved.
+            GCB_fid (str): Field name in the building shapefile that contains the unique building identifier. Required.
+            GCB_Bded (str): Field name for building insurance deductible in the building shapefile.
+            GCB_Blim (str): Field name for building insurance limit in the building shapefile.
+            GCB_Bval (str): Field name for building replacement cost in the building shapefile. Required.
+            GCB_Cded (str): Field name for contents insurance deductible in the building shapefile.
+            GCB_Clim (str): Field name for contents insurance limit in the building shapefile.
+            GCB_Cval (str): Field name for contents replacement cost in the building shapefile.
+            GCB_Bsto (str): Field name for number of stories in the building shapefile. Required.
+            GCB_Bfou (str): Field name for foundation type in the building shapefile. Required.
+            GCB_Bbfi (str): Field name for basement finish type in the building shapefile. Required.
+            GCB_Bffh (str): Field name for first floor height in the building shapefile. Required.
+            GCB_Bdem (str): Field name for ground elevation in the building shapefile. Required.
+
+        Returns:
+            An instance of the Inputs class with all input parameters set as attributes.
+        """
+
         self.blabber = blabber
         self.use_heatmap = use_heatmap
         self.hm_bandwidth = hm_bandwidth
@@ -106,7 +168,9 @@ class Inputs:
     
     @property
     def blabber(self) -> bool:
+        """True to print log messages to console and disk."""
         return self._blabber
+
     
     @blabber.setter
     def blabber(self, val: bool) -> None:
@@ -114,6 +178,8 @@ class Inputs:
     
     @property
     def use_stormsuite(self) -> bool:
+        """True if the user has provided a path to a CSV file in self.storm_csv to use for the Monte Carlo storm suite instead of generating a new one.
+        False if self.storm_csv does not point to a storm suite file (PFRACoastal will generate a new storm suite in this case)."""
         if self.storm_csv not in ('', None) and '.csv' in self.storm_csv and os.path.exists(self.storm_csv):
             return True
         else:
@@ -121,6 +187,7 @@ class Inputs:
     
     @property
     def bddf_lut_path(self) -> str:
+        """Path to the building damage function CSV file."""
         return self._bddf_lut_path
     
     @bddf_lut_path.setter
@@ -131,6 +198,7 @@ class Inputs:
     
     @property
     def blabfile(self) -> str:
+        """Path to the file where log messages will be written if self.blabber is True. The log file will be named using the project prefix and saved in the output file directory."""
         if self.out_shp_path not in (None, '') and os.path.exists(self.out_shp_path) and self.proj_prefix not in (None, ''):
             return os.path.join(self.out_shp_path, self.proj_prefix+"_run.log")
         else:
@@ -138,6 +206,7 @@ class Inputs:
     
     @property
     def GCB_fid(self) -> str:
+        """Field name in the building shapefile that contains the unique building identifier."""
         return self._GCB_fid
     
     @GCB_fid.setter
@@ -147,6 +216,7 @@ class Inputs:
     
     @property
     def GCB_Bded(self) -> str:
+        """Field name for building insurance deductible in the building shapefile."""
         return self._GCB_Bded
     
     @GCB_Bded.setter
@@ -156,6 +226,7 @@ class Inputs:
     
     @property
     def GCB_Blim(self) -> str:
+        """Field name for building insurance limit in the building shapefile."""
         return self._GCB_Blim
     
     @GCB_Blim.setter
@@ -165,6 +236,7 @@ class Inputs:
     
     @property
     def GCB_Bval(self) -> str:
+        """Field name for building replacement cost in the building shapefile."""
         return self._GCB_Bval
     
     @GCB_Bval.setter
@@ -174,6 +246,7 @@ class Inputs:
     
     @property
     def GCB_Cded(self) -> str:
+        """Field name for contents insurance deductible in the building shapefile."""
         return self._GCB_Cded
     
     @GCB_Cded.setter
@@ -183,6 +256,7 @@ class Inputs:
     
     @property
     def GCB_Clim(self) -> str:
+        """Field name for contents insurance limit in the building shapefile."""
         return self._GCB_Clim
     
     @GCB_Clim.setter
@@ -192,6 +266,7 @@ class Inputs:
     
     @property
     def GCB_Cval(self) -> str:
+        """Field name for contents replacement cost in the building shapefile."""
         return self._GCB_Cval
     
     @GCB_Cval.setter
@@ -201,6 +276,7 @@ class Inputs:
     
     @property
     def GCB_Bsto(self) -> str:
+        """Field name for number of stories in the building shapefile."""
         return self._GCB_Bsto
     
     @GCB_Bsto.setter
@@ -210,6 +286,7 @@ class Inputs:
     
     @property
     def GCB_Bfou(self) -> str:
+        """Field name for foundation type in the building shapefile."""
         return self._GCB_Bfou
     
     @GCB_Bfou.setter
@@ -219,6 +296,7 @@ class Inputs:
     
     @property
     def GCB_Bbfi(self) -> str:
+        """Field name for basement finish in the building shapefile."""
         return self._GCB_Bbfi
     
     @GCB_Bbfi.setter
@@ -228,6 +306,7 @@ class Inputs:
     
     @property
     def GCB_Bffh(self) -> str:
+        """Field name for first floor height in the building shapefile."""
         return self._GCB_Bffh
     
     @GCB_Bffh.setter
@@ -237,6 +316,7 @@ class Inputs:
     
     @property
     def GCB_Bdem(self) -> str:
+        """Field name for ground elevation in the building shapefile."""
         return self._GCB_Bdem
     
     @GCB_Bdem.setter
@@ -246,16 +326,27 @@ class Inputs:
 
 
 class PFRACoastal:
+    """
+    Class to run the PFRA Coastal model. This class is designed to encapsulate all of the functionality for running the model, including validating inputs, 
+    running the analysis, and generating outputs.
+    """
+
     def __init__(self) -> object:
         pass
     
     def runPFRACoastal(self, inputs: Inputs) -> None:
+        """
+        Run the PFRA Coastal model using the provided inputs.
+        
+        Args:
+            inputs (Inputs): An instance of the Inputs class containing all input parameters for the model.
+        """
         lib = _PFRACoastal_Lib()
         
         # configure logging
         logger.setLevel("INFO")
-        if inputs.blabpath:
-            fh = logging.FileHandler(inputs.blabpath, mode='a')
+        if inputs.blabfile:
+            fh = logging.FileHandler(inputs.blabfile, mode='a')
             fh.setLevel("INFO")
         else:
             fh = logging.NullHandler()
@@ -297,6 +388,8 @@ class PFRACoastal:
         if inputs.use_contents:
             lib.write_log(f"Contents DDF lut: {inputs.cddf_lut_path}")
         lib.write_log(f"Building DDF lut: {inputs.bddf_lut_path}")
+
+        # TODO: validate input parameters here and raise a ValueError if any required parameters are missing or invalid
         
         lib.write_log("")
         lib.write_log("Running Average Annualized Losses...")
@@ -324,8 +417,8 @@ class PFRACoastal:
         
         lib.write_log('END STEP 1.')
         # Calculate seconds elapsed for step 1
-        step1_elapsed = monotonic() - step1_start
-        lib.write_log(str(step1_elapsed))
+        step1_elapsed = math.ceil(monotonic() - step1_start)
+        lib.write_log(f'Full Analysis: {step1_elapsed} sec elapsed')
         ##############
         
         ##############
@@ -425,8 +518,8 @@ class PFRACoastal:
             PSURGERR_SPDF = PSURGERR_SPDF[~badrows]
         
         lib.write_log('END STEP 2a.')
-        step2a_elapsed = monotonic() - step2a_start
-        lib.write_log(str(step2a_elapsed))
+        step2a_elapsed = math.ceil(monotonic() - step2a_start)
+        lib.write_log(f'Full Analysis: {step2a_elapsed} sec elapsed')
 
 		##############
 		#  	STEP 2b - Get waves
@@ -522,23 +615,158 @@ class PFRACoastal:
                     PWAVERR_SPDF = PWAVERR_SPDF[~badrows]
                 
                 lib.write_log('END STEP 2b.')
-                step2b_elapsed = monotonic() - step2b_start
-                lib.write_log(str(step2b_elapsed))
+                step2b_elapsed = math.ceil(monotonic() - step2b_start)
+                lib.write_log(f'Full Analysis: {step2b_elapsed} sec elapsed')
                 
 		##############
 		#  	STEP 2c - Attach surge to buildings
 		# 	RESULTS:
 		#		WSE.SPDF, _WSE.SHP
+        step2c_start = monotonic()
+        lib.write_log(' ')
+        lib.write_log('BEGIN Step 2c. Attach Surge to Buildings')
+        surge_attr_map = SWEL_attr_map.copy()
+        out_tab = None
+        # Get 3NN PSURGE
+        lib.write_log('.run 3NN on surge nodes.')
+        dfs = []
+        for i in range(len(BUILDING_SPDF)):
+            row = BUILDING_SPDF.iloc[i]
+            # drop geometry column for attributes (mimics @data[this.row,])
+            attr_row = row.drop(labels=[BUILDING_SPDF.geometry.name])
+            # extract coordinates (mimics @coords[this.row,])
+            coord_xy = (row.geometry.x, row.geometry.y)
+            res = lib.attachWSELtoBUILDING3(attr_row, coord_xy, PSURGE_SPDF, surge_attr_map)
+            dfs.append(res)
+        out_tab = pd.concat(dfs, ignore_index=True)
         
+        # format out.tab to remove factors and then make all columns numeric
+        lib.write_log('.formatting table.')
+        out_tab.apply(lambda col: col.astype(str) if col.dtype.name == "category" else col)
+        out_tab = out_tab.apply(pd.to_numeric, errors="raise")
+
+        if inputs.use_uncertainty:
+            lib.write_log('.get PSURGE ERR.')
+            surge_attr_map = SWEL_attr_map.copy()
+            out_tab2 = None
+            dfs = []
+            for i in range(len(BUILDING_SPDF)):
+                row = BUILDING_SPDF.iloc[i]
+                # drop geometry column for attributes (mimics @data[this.row,])
+                attr_row = row.drop(labels=[BUILDING_SPDF.geometry.name])
+                # extract coordinates (mimics @coords[this.row,])
+                coord_xy = (row.geometry.x, row.geometry.y)
+                res = lib.attachWSELtoBUILDING3(attr_row, coord_xy, PSURGERR_SPDF, SWERR_attr_map)
+                dfs.append(res)
+            out_tab2 = pd.concat(dfs, ignore_index=True)
             
+            # format out.tab2 to remove factors and then make all columns numeric
+            lib.write_log('.formatting table.')
+            out_tab2.apply(lambda col: col.astype(str) if col.dtype.name == "category" else col)
+            out_tab2 = out_tab2.apply(pd.to_numeric, errors="raise")
+            
+        else:
+            out_tab2 = None
+            
+        surge_error_col = SWERR_attr_map.loc[SWERR_attr_map["DESC"] == "surge error", "OUT"].iloc[0]
+        out_tab3 = out_tab2[["BID", surge_error_col]]
+        out_tab1 = out_tab.merge(out_tab3, on="BID", how="left")
+        out_tab1 = out_tab1 = out_tab1.sort_values(by="BID").reset_index(drop=True)
+            
+        # set building validity
+        lib.write_log(".attributing building validity.")
+		# find which buildings have good probability of being affected by max event
+        tabWET = out_tab1.apply(lambda row: 1 - norm.cdf(lib.getZscore(row["DEMFT"], row["s10000"], row["sx10000"])),axis=1)
+        sel = tabWET.index[tabWET >= 0.05].tolist()
+        out_tab1.loc[sel, 'VALID'] = 1
+
+        # set building validity
+        # find building elevations = -9999
+        sel = out_tab1.index[out_tab1["DEMft"] <= -999].tolist()
+        out_tab1.loc[sel, 'VALID'] = 0
         
+        # build output shapefile
+		# no record filtering and no joining, so out points geometry = in points geometry
+        out_tab1['geometry'] = BUILDING_SPDF['geometry']
+        WSE_SPDF = gpd.GeoDataFrame(out_tab1, geometry='geometry')
+
+        # create a copy of WSE for writing output that converts NA to -99999 so ESRI SHP doesnt 
+		# auto-convert NA to 0.
+		# Erase copy with the trash collection
+        WSE2_SPDF = WSE_SPDF.copy()
+        WSE2_SPDF = WSE2_SPDF.fillna(float(SWEL_attr_map.loc[1, "DEF"]))
         
+        # write output shapefile
+        WSE2_SPDF.to_file(fr'{out_shp_dsn}\{inputs.proj_prefix}_WSE.shp')
+
+        lib.write_log('END STEP 2c.')
+        step2c_elapsed = math.ceil(monotonic() - step2c_start)
+        lib.write_log(f'Full Analysis: {step2c_elapsed} sec elapsed')
+
 		##############
 		#  	STEP 2d - Attach waves to buildings
 		# 	RESULTS:
 		#		WAV.SPDF, _WAV.SHP
-  
-  
+        step2d_start = monotonic()
+        lib.write_log(' ')
+        lib.write_log('BEGIN Step 2d. Attach Waves to Buildings')
+        surge_attr_map = WV_attr_map.copy()
+        out_tab = None
+        # Get 3NN PSURGE
+        lib.write_log('.run 3NN on surge nodes.')
+        dfs = []
+        for i in range(len(BUILDING_SPDF)):
+            row = BUILDING_SPDF.iloc[i]
+            # drop geometry column for attributes (mimics @data[this.row,])
+            attr_row = row.drop(labels=[BUILDING_SPDF.geometry.name])
+            # extract coordinates (mimics @coords[this.row,])
+            coord_xy = (row.geometry.x, row.geometry.y)
+            res = lib.attachWSELtoBUILDING3(attr_row, coord_xy, PWAVE_SPDF, surge_attr_map)
+            dfs.append(res)
+        out_tab = pd.concat(dfs, ignore_index=True)
+        
+        # format out.tab to remove factors and then make all columns numeric
+        lib.write_log('.formatting table.')
+        out_tab.apply(lambda col: col.astype(str) if col.dtype.name == "category" else col)
+        out_tab = out_tab.apply(pd.to_numeric, errors="raise")
+
+        if inputs.use_uncertainty:
+            lib.write_log('.get PWAVE ERR.')
+            surge_attr_map = WVERR_attr_map.copy()
+            out_tab2 = None
+            dfs = []
+            for i in range(len(BUILDING_SPDF)):
+                row = BUILDING_SPDF.iloc[i]
+                # drop geometry column for attributes (mimics @data[this.row,])
+                attr_row = row.drop(labels=[BUILDING_SPDF.geometry.name])
+                # extract coordinates (mimics @coords[this.row,])
+                coord_xy = (row.geometry.x, row.geometry.y)
+                res = lib.attachWSELtoBUILDING3(attr_row, coord_xy, PWAVERR_SPDF, surge_attr_map)
+                dfs.append(res)
+            out_tab2 = pd.concat(dfs, ignore_index=True)
+            
+            # format out.tab2 to remove factors and then make all columns numeric
+            lib.write_log('.formatting table.')
+            out_tab2.apply(lambda col: col.astype(str) if col.dtype.name == "category" else col)
+            out_tab2 = out_tab2.apply(pd.to_numeric, errors="raise")
+            
+        else:
+            out_tab2 = None
+            
+        wave_error_col = WVERR_attr_map.loc[WVERR_attr_map["DESC"] == "surge error", "OUT"].iloc[0]
+        out_tab3 = out_tab2[["BID", wave_error_col]]
+        out_tab1 = out_tab.merge(out_tab3, on="BID", how="left")
+        out_tab1 = out_tab1 = out_tab1.sort_values(by="BID").reset_index(drop=True)
+        
+        out_tab1['geometry'] = BUILDING_SPDF['geometry']
+        WV_SPDF = gpd.GeoDataFrame(out_tab1, geometry='geometry')
+        
+        # write output shapefile
+        WV_SPDF.to_file(fr'{out_shp_dsn}\{inputs.proj_prefix}_WAV.shp')
+        
+        lib.write_log('END STEP 2d.')
+        step2d_elapsed = math.ceil(monotonic() - step2d_start)
+        lib.write_log(f'Full Analysis: {step2d_elapsed} sec elapsed')
   
   
         ##############
@@ -548,10 +776,99 @@ class PFRACoastal:
         #		FULL.SPDF = wse + wav
         #		VAL.SPDF = reduced dataset
         #		PREP.SPDF, _PREP.SHP
-        ##############
-  
-  
-  
+        step3a_start = monotonic()
+        lib.write_log(" ")
+        lib.write_log("BEGIN STEP 3. Data Prep.")
+        
+        # BUILD the WSE Attribute map for tracking field names
+        lib.write_log(".creating WSE attribute map.")
+        wse_attr_out = inputs.bldg_attr_map.query("DESC == 'new building id'")["OUT"].to_list()+inputs.bldg_attr_map.query("DESC == 'ground elevation'")["OUT"].to_list()+["VALID","spt1","spt2","spt3"]+SWEL_attr_map.query("DDC == 1")["OUT"].to_list()+SWERR_attr_map.query("DDC == 1")["OUT"].to_list()+WV_attr_map.query("DDC == 1")["OUT"].to_list()+WVERR_attr_map.query("DDC == 1")["OUT"].to_list()
+        wse_attr_desc = ["new building id","ground elevation","valid for analysis","NNsurgeID","NNsurgeID","NNsurgeID"]+["surge elevation" for i in range(SWEL_attr_map.query("DDC == 1").shape[0])]+["surge error" for i in range(SWERR_attr_map.query("DDC == 1").shape[0])]+["wave height" for i in range(WV_attr_map.query("DDC == 1").shape[0])]+["wave error" for i in range(WVERR_attr_map.query("DDC == 1").shape[0])]
+        wse_attr_prep = [1,0,0,0,0,0]+[1 for i in range(SWEL_attr_map.query("DESC == 'surge elevation' and DDC==1").shape[0])]+[1 for i in range(SWERR_attr_map.query("DESC == 'surge error' and DDC==1").shape[0])]+[1 for i in range(WV_attr_map.query("DESC == 'wave height' and DDC==1"))]+[1 for i in range(WVERR_attr_map.query("DESC == 'wave error' and DDC==1"))]
+        wse_attr_join = [1,0,0,0,0,0]+[1 for i in range(SWEL_attr_map.query("DESC == 'surge elevation' and DDC==1").shape[0])]+[1 for i in range(SWERR_attr_map.query("DESC == 'surge error' and DDC==1").shape[0])]+[1 for i in range(WV_attr_map.query("DESC == 'wave height' and DDC==1"))]+[1 for i in range(WVERR_attr_map.query("DESC == 'wave error' and DDC==1"))]
+        wse_attr_map = pd.DataFrame({"OUT":wse_attr_out, "DESC":wse_attr_desc, "PREP":wse_attr_prep, "JOIN":wse_attr_join})
+        
+        # append wave data to swel data	
+        lib.write_log(".appending WAV to SWEL.")
+        WSE_tab = WSE_SPDF.drop('geometry', axis=1)
+        WAV_tab = WAV_SPDF.drop('geometry', axis=1).set_index("BID")
+        
+        full_tab = WSE_tab.join(WAV_tab.loc[:,["BID"]+WV_attr_map.query("DESC=='wave height'")["OUT"].to_list()+WVERR_attr_map.query("DESC=='wave error'")["OUT"].to_list()], on="BID", how='left')
+        full_tab.sort_values(by="BID", axis=0, inplace=True)
+        shp_geom = BUILDING_SPDF.geometry
+        shp_proj = BUILDING_SPDF.crs
+        FULL_SPDF = gpd.GeoDataFrame(data=full_tab, geometry=shp_geom, crs=shp_proj)
+        
+        lib.write_log(".filtering Buildings based on validity.")
+        # select previously identified valid points
+        sel = FULL_SPDF.query("VALID==1").index.to_list()
+        shp_geom = FULL_SPDF.iloc[FULL_SPDF.index.isin(sel).tolist(), FULL_SPDF.columns.get_loc('geometry')]
+        shp_proj = FULL_SPDF.crs
+        VAL_SPDF = gpd.GeoDataFrame(data=full_tab.iloc[full_tab.index.isin(sel).tolist(),:], geometry=shp_geom, crs=shp_proj)
+        lib.write_log(f"FULL BLDG: {FULL_SPDF.shape[0]}")
+        lib.write_log(f"Reduced BLDG: {VAL_SPDF.shape[0]}")
+        
+        lib.write_log(".grabbing required building attributes.")
+        # because VAL.SPDF is filtered, need to similarly filter the building file
+        # get the IDs of the valid buildings
+        sel = BUILDING_SPDF["BID"].isin(VAL_SPDF['BID'].to_list()).to_list()
+        # grab the building attribute table and keep only the records corresponding to valid buildings
+        BUILDING_tab = BUILDING_SPDF.drop('geometry', axis=1)
+        bldgred_tab = BUILDING_tab.iloc[sel, BUILDING_SPDF.columns.get_indexer(inputs.bldg_attr_map.query("ANLYS==1")["OUT"].to_list())].copy()
+        # add sort field because bldg.tab and bldg.coords are 1:1 and .tab might get jumbled in future merges or joins
+        bldgred_tab["sort"] = [i for i in range(1,bldgred_tab.shape[0]+1)]
+        
+        # DDFS
+        # Assign DDFs to buildings
+        lib.write_log(".assigning coastal DDFs.")
+        # Select Four TASK4 DDFs, 1 for freshwater intrusion, 1 each for low-wave, med-wave, and
+        # high-wave conditions
+        DDF_tab = lib.assign_TASK4_DDFs(bldgred_tab)
+        bldgred_tab["DDF1"] = DDF_tab["DDF1"]
+        bldgred_tab["DDF2"] = DDF_tab["DDF2"]
+        bldgred_tab["DDF3"] = DDF_tab["DDF3"]
+        bldgred_tab["DDF4"] = DDF_tab["DDF4"]
+        
+        # placeholder for future Erosion DDFs
+        bldgred_tab["DDFE"] = pd.Series(data=[0 for i in range(bldgred_tab.shape[0])])
+        
+        lib.write_log(".creating PREP attribute map.")
+        # this attribute map will hold the field names and their descriptions for the PREP attribute table to be written in this section. 
+        prep_attr_out = inputs.bldg_attr_map.query("ANLYS==1")["OUT"].to_list()+["DDF1","DDF2","DDF3","DDF4","DDFE"]+SWEL_attr_map.query("DDC == 1")["OUT"].to_list()+SWERR_attr_map.query("DDC == 1")["OUT"].to_list()+WV_attr_map.query("DDC == 1")["OUT"].to_list()+WVERR_attr_map.query("DDC == 1")["OUT"].to_list()
+        prep_attr_desc = inputs.bldg_attr_map.query("ANLYS==1")["DESC"].to_list()+["DDF ID" for i in range(4)]+["DDF Erosion"]+["surge elevation" for i in range(SWEL_attr_map.query("DDC == 1").shape[0])]+["surge error" for i in range(SWERR_attr_map.query("DDC == 1").shape[0])]+["wave height" for i in range(WV_attr_map.query("DDC == 1").shape[0])]+["wave error" for i in range(WVERR_attr_map.query("DDC == 1").shape[0])]
+        prep_attr_map = pd.DataFrame({"OUT":prep_attr_out, "DESC":prep_attr_desc})
+        
+        # merge wsels to bldg attributes and format
+        VAL_tab = VAL_SPDF.drop('geometry', axis=1).set_index("BID")
+        prep_tab = bldgred_tab.join(VAL_tab.loc[:,wse_attr_map.query("PREP==1")["OUT"].to_list()], on="BID", how='left')
+        
+        # sort to ensure proper order with VAL.SPDF@coords, then remove any extra field
+        prep_tab.sort_values("sort",inplace=True)
+        prep_tab.index = list(range(prep_tab.shape[0]))
+        prep_tab.drop(columns=["sort", "BID_prep", "BID_val"], inplace=True)
+        
+        # build output SPDF
+        lib.write_log("Sample PREP data:")
+        lib.write_log(prep_tab.head())
+        
+        # create a copy of PREP for writing output that converts NA to -99999 so ESRI SHP doesnt
+        # auto-convert NA to 0.
+        # Erase copy with the trash collection
+        shp_geom = VAL_SPDF.geometry
+        shp_proj = VAL_SPDF.crs
+        PREP_SPDF = gpd.GeoDataFrame(data=prep_tab, geometry=shp_geom, crs=shp_proj)
+        
+        # write output shapefile
+        PREP2_SPDF = PREP_SPDF.copy()
+        PREP2_SPDF.mask(PREP2_SPDF.isna, pd.to_numeric(SWEL_attr_map.iat[1,SWEL_attr_map.columns.get_loc("DEF")]), inplace=True)
+        out_shp_lay = inputs.proj_prefix + "_PREP"
+        out_shp_dsn = os.path.join(inputs.out_shp_path, out_shp_lay+".shp")
+        lib.write_log(f".writing Prep data to {out_shp_dsn}")
+        PREP2_SPDF.to_file(out_shp_dsn)
+        
+        lib.write_log("END STEP 3.")
+        step3_elapsed = math.ceil(monotonic()-step3a_start)
+        lib.write_log(f"STEP 3: {step3_elapsed} sec elapsed")
   
         ##############
         #  	STEP 4a
