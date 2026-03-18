@@ -10,6 +10,7 @@ from pathlib import Path
 import os
 from time import monotonic
 import math
+from pyproj.crs import CRS
 from ._pfracoastal_lib import _PFRACoastal_Lib
 
 logger = logging.getLogger("pfraCoastal")
@@ -277,6 +278,7 @@ class PFRACoastal:
         lib.write_log("**********")
         lib.write_log("BEGIN STEP 0. Setup...")
         lib.write_log("")
+
         lib.write_log("Summary of inputs:")
         
         lib.write_log(f"Buildings: {inputs.bldg_path}")
@@ -297,6 +299,61 @@ class PFRACoastal:
         if inputs.use_contents:
             lib.write_log(f"Contents DDF lut: {inputs.cddf_lut_path}")
         lib.write_log(f"Building DDF lut: {inputs.bddf_lut_path}")
+        
+        lib.write_log(" ")
+        lib.write_log("Validating Inputs...")
+        in_req_shps = [inputs.bldg_path, inputs.swelA_path, inputs.swelB_path]
+        in_opt_shps = [inputs.waveA_path, inputs.waveB_path]
+        if inputs.use_waves:
+            in_req_shps.extend(in_opt_shps)
+
+        num_errs = 0
+        # validate inputs
+        # input shp files
+        for path in in_req_shps:
+            cur_crs = CRS.from_user_input(gpd.read_file(path).crs)
+            ft_unit_axis = [axis.name for axis in cur_crs.axis_info if "feet" in axis.name.lower() or 'foot' in axis.name.lower() or 'ft' in axis.name.lower()]
+
+            err_msgs = []
+            if not os.path.exists(path):
+                err_msgs.append(f"File {path} not found")
+            elif os.path.splitext(path)[1] != '.shp':
+                err_msgs.append(f"File format of {path} is invalid. Must be an esri shapefile")
+            elif not cur_crs.is_projected():
+                err_msgs.append(f'CRS of file {path} is not projected')
+            elif len(ft_unit_axis) == 0:
+                err_msgs.append(f'CRS of file {path} does not use US feet as linear unit')
+            
+            for msg in err_msgs:
+                lib.write_log('\tERROR: {0}'.format(msg))
+                num_errs += 1
+
+        # input csv files
+        if not os.path.exists(inputs.bddf_lut_path):
+            lib.write_log('\tERROR: File {0} not found'.format(inputs.bddf_lut_path))
+            num_errs += 1
+        elif os.path.splitext(inputs.bddf_lut_path)[1] != 'csv':
+            lib.write_log('\tERROR: File format of {0} is invalid. Must be a csv'.format(inputs.bddf_lut_path))
+            num_errs += 1
+
+        if inputs.storm_csv not in ('', None):
+            if not os.path.exists(inputs.storm_csv):
+                lib.write_log("\tWARNING: File {0} not found. Use Stormsuite set to False".format(inputs.storm_csv))
+            elif os.path.splitext(inputs.storm_csv)[1] != 'csv':
+                lib.write_log("\tWARNING: File format of {0} is invalid. Must be a csv. Use Stormsuite set to False")
+        
+        # validate other inputs
+        if inputs.out_shp_path in ('', None) or not os.path.isdir(inputs.out_shp_path):
+            lib.write_log("\tERROR: Output directory not set, is null, or does not exist")
+            num_errs +=1
+        
+        if inputs.proj_prefix in (None, ''):
+            lib.write_log("\tERROR: Project prefix is required")
+            num_errs += 1
+        
+        if num_errs > 0:
+            lib.write_log("VALIDATION FAILED - See above error(s)")
+            lib.haltscript()
         
         lib.write_log("")
         lib.write_log("Running Average Annualized Losses...")
