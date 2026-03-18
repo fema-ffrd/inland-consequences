@@ -339,7 +339,9 @@ class PFRACoastal:
         
         # project dir (req)
         if inputs.out_shp_path in ('', None) or not os.path.isdir(inputs.out_shp_path):
-            err_msgs.append("Output directory not set, is null, or does not exist")
+            err_msgs.append("Output directory not set, is null, or is not a valid directory")
+        elif not os.path.exists(inputs.out_shp_path):
+            err_msgs.append("Output directory not found")
         
         # project prefix (req)
         alphanum_proj_prefix = ''.join([char for char in inputs.proj_prefix if char.isalnum() or char=='_'])
