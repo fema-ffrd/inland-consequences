@@ -876,9 +876,30 @@ class PFRACoastal:
         # 	RESULTS:
         #		pvals, pvals.csv
         ##############
-  
-  
-  
+        step4a_start = monotonic()
+        lib.write_log(" ")
+        lib.write_log("BEGIN STEP 4a. Create/Import Event Probabilities.")
+        
+        # load or create probabilities
+        if inputs.use_stormsuite:
+            lib.write_log("Loading pre-defined storm suite...")
+            pvals = pd.read_csv(inputs.storm_csv)
+            inputs.mc_n = pvals.shape[1]
+            lib.write_log("Storm suite hard bounds:  not defined")
+        else:
+            lib.write_log("Creating random storm suite.")
+            #choose N random values 0..1
+            pvals = np.random.uniform(inputs.nbounds[0], inputs.nbounds[1], inputs.mc_n)
+            pvals = pd.DataFrame(data=pvals, columns=['x'])
+            lib.write_log(f"Storm suite hard bounds: {inputs.nbounds[0]}, {inputs.nbounds[1]}")
+        
+        lib.write_log(f"Storm suite soft bounds: {pvals.min}, {pvals.max}")
+        lib.write_log(".writing PVALS csv.")
+        pvals.to_csv(os.path.join(inputs.out_shp_path,"pvals.csv"), index=False)
+        
+        lib.write_log("END STEP 4a.")
+        step4a_elapsed = math.ceil(monotonic()-step4a_start)
+        lib.write_log(f"Step 4a: {step4a_elapsed} sec elapsed")
   
         ##############
         #  	STEP 5
