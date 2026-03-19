@@ -1131,7 +1131,7 @@ class _PFRACoastal_Lib:
     #	main()
     # calls:
     #	NULL
-    def finalReportAAL2(self, results_tab=pd.DataFrame, prep_attr_map=pd.DataFrame) -> None:
+    def finalReportAAL2(self, results_tab: pd.DataFrame, prep_attr_map: pd.DataFrame) -> None:
         # summary statistics
         self.write_log(" ")
         self.write_log("Reporting AAL...")
