@@ -574,17 +574,13 @@ class PFRACoastal:
         # Find the fully NULL nodes in PSURGE .
         # remove those features from each feature class
         goodrows = PSURGE_DF.iloc[:,SWEL_attr_map.shape[0]-1].ne(pd.to_numeric(SWEL_attr_map["DEF"].iat[-1])).to_list()
-        if not all(goodrows):
-            PSURGE_DF = PSURGE_DF.iloc[goodrows,:]
-            psurge_geom = PSURGE_SPDF['geometry'].iloc[goodrows]
-            PSURGE84_DF = PSURGE84_DF[goodrows,:]
-            psurge84_geom = PSURGE84_SPDF['geometry'].iloc[goodrows]
-            PSURGERR_DF = PSURGERR_DF[goodrows,:]
-            psurgerr_geom = PSURGERR_SPDF['geometry'].iloc[goodrows]
-        else:
-            psurge_geom = PSURGE_SPDF['geometry']
-            psurge84_geom = PSURGE84_SPDF['geometry']
-            psurgerr_geom = PSURGERR_SPDF['geometry']
+
+        PSURGE_DF = PSURGE_DF.iloc[goodrows,:]
+        psurge_geom = PSURGE_SPDF['geometry'].iloc[goodrows]
+        PSURGE84_DF = PSURGE84_DF.iloc[goodrows,:]
+        psurge84_geom = PSURGE84_SPDF['geometry'].iloc[goodrows]
+        PSURGERR_DF = PSURGERR_DF.iloc[goodrows,:]
+        psurgerr_geom = PSURGERR_SPDF['geometry'].iloc[goodrows]
         
         PSURGE_SPDF = gpd.GeoDataFrame(data=PSURGE_DF, geometry=psurge_geom, crs=psurge_geom.crs)
         PSURGE84_SPDF = gpd.GeoDataFrame(data=PSURGE84_DF, geometry=psurge84_geom, crs=psurge84_geom.crs)
@@ -612,7 +608,6 @@ class PFRACoastal:
             WV_attr_map = SWEL_attr_map.copy()
             sel = WV_attr_map['CHECK'] == 1
             WV_attr_map.loc[sel, 'OUT'] = WV_attr_map.loc[sel, 'OUT'].str.replace('s','w', regex=False)
-            WV_attr_map.loc['surge' in WV_attr_map['DESC']]
             WV_attr_map['DESC'] = WV_attr_map['DESC'].str.replace('surge','wave')
             WV_attr_map['DESC'] = WV_attr_map['DESC'].str.replace('elevation','height')
             sel = WV_attr_map['CHECK'] == 1
@@ -621,6 +616,7 @@ class PFRACoastal:
             # load Wave BE
             lib.write_log('Wave A (Best Estimate)')
             PWAVE_SPDF = lib.formatSurge(inputs.waveA_path, WV_attr_map)
+            PWAVE_DF = PWAVE_SPDF.drop(columns='geometry')
             lib.write_log('Sample Wave A:')
             lib.write_log(str(PWAVE_SPDF.head()))
             
@@ -629,6 +625,7 @@ class PFRACoastal:
                 # load SWEL B
                 lib.write_log('Wave B (84CL Estimate)')
                 PWAVE84_SPDF = lib.formatSurge(inputs.waveB_path, WV_attr_map)
+                PWAVE84_DF = PWAVE84_SPDF.drop(columns='geometry')
                 lib.write_log('Sample Wave B:')
                 lib.write_log(str(PWAVE84_SPDF.head()))
                 
@@ -639,53 +636,48 @@ class PFRACoastal:
                 WVERR_attr_map.loc[sel,'DESC'] = 'wave error'
                 
                 PWAVERR_SPDF = PWAVE84_SPDF.copy()
-                current_cols = [c for c in PWAVERR_SPDF.columns if c != 'geometry']
+                PWAVERR_DF = PWAVERR_SPDF.drop(columns='geometry')
+                current_cols = [c for c in PWAVERR_DF.columns.to_list()]
                 new_cols = WVERR_attr_map['OUT'].tolist()
                 new_cols = {old: new for old, new in zip(current_cols, new_cols)}
-                PWAVERR_SPDF.rename(columns=new_cols)
+                PWAVERR_DF.rename(columns=new_cols, inplace=True)
                 
-                minus_tab = PWAVERR_SPDF.columns.difference('geometry')
-                tempcols = [i for i, col in enumerate(PWAVERR_SPDF.columns) if col.startswith("w")]
+                minus_tab = PWAVERR_DF.copy()
+                tempcols = PWAVERR_DF.columns.get_indexer([col for col in PWAVERR_DF.columns.to_list() if col.startswith("w")])
 
 				# create a copy of PSURGE and PSURGE84 that converts -99999 to NA for calculating 
 				# differences
 				# Erase copies with the trash collection
-                PWAVE_copy_SPDF = PWAVE_SPDF.copy()
-                PWAVE_copy_SPDF_mask = PWAVE_copy_SPDF.columns.difference(['geometry'])
-                PWAVE_copy_SPDF[PWAVE_copy_SPDF_mask] = PWAVE_copy_SPDF[PWAVE_copy_SPDF_mask].mask(PWAVE_copy_SPDF[PWAVE_copy_SPDF_mask] < -999, np.nan)
+                PWAVE_copy_DF = PWAVE_DF.copy()
+                PWAVE_copy_DF.mask(PWAVE_copy_DF.lt(-999), np.nan, inplace=True)
                 
-                
-                PWAVE84_copy_SPDF = PWAVE84_SPDF.copy()
-                PWAVE84_copy_SPDF_mask = PWAVE84_copy_SPDF.columns.difference(['geometry'])
-                PWAVE84_copy_SPDF[PWAVE84_copy_SPDF_mask] = PWAVE84_copy_SPDF[PWAVE84_copy_SPDF_mask].mask(PWAVE84_copy_SPDF[PWAVE84_copy_SPDF_mask] < -999, np.nan)
-    
+                PWAVE84_copy_DF = PWAVE84_DF.copy()
+                PWAVE84_copy_DF.mask(PWAVE84_copy_DF.le(-999), np.nan, inplace=True)
                 for i in tempcols:
-                    minus_tab[i] = PWAVE84_copy_SPDF_mask[i] - PWAVE_copy_SPDF_mask[i]
+                    minus_tab.iloc[:,i] = PWAVE84_copy_DF.iloc[:,i] - PWAVE_copy_DF.iloc[:,i]
 
-    
-                minus_tab_num_cols = minus_tab.select_dtypes(include='number').columns
-                minus_tab[minus_tab_num_cols] = minus_tab[minus_tab_num_cols].clip(lower=0)
+                minus_tab.mask(minus_tab.lt(0), 0, inplace=True)
+                PWAVERR_DF = minus_tab
                 
-                PWAVERR_SPDF_mask = PWAVERR_SPDF.columns.difference(['geometry'])
-                PWAVERR_SPDF[PWAVERR_SPDF_mask] = minus_tab
-                
-                
-                fill_value = float(WVERR_attr_map['DEF'].iloc[-1])
-                num_cols = PWAVERR_SPDF.select_dtypes(include='number').columns
-                PWAVERR_SPDF[num_cols] = PWAVERR_SPDF[num_cols].fillna(fill_value)
+                fill_value = pd.to_numeric(WVERR_attr_map['DEF'].iloc[-1])
+                PWAVERR_DF.mask(PWAVERR_DF.isna(), fill_value, inplace=True)
                 lib.write_log('Sample Surge Error (B-A):')
-                lib.write_log(str(PWAVERR_SPDF.columns.difference('geometry').head()))
+                lib.write_log(str(PWAVERR_DF.head()))
                 
                 # Find the fully NULL nodes in PSURGE and get the SIDs.
                 # remove those features from each feature class
-                PWAVE_SPDF_mask = PWAVE_SPDF.columns.difference('geometry')
-                PWAVE_SPDF_filtered = PWAVE_SPDF[PWAVE_SPDF_mask]
-                badrows = PWAVE_SPDF_filtered[len(WV_attr_map)-1].eq(WV_attr_map.iloc[len(WV_attr_map)]['DEF'])
+                goodrows = PWAVE_DF.iloc[:,WV_attr_map.shape[0]-1].ne(pd.to_numeric(WV_attr_map["DEF"].iat[-1])).to_list()
                 
-                if (~badrows).sum() > 0:
-                    PWAVE_SPDF = PWAVE_SPDF[~badrows]
-                    PWAVE84_SPDF = PWAVE84_SPDF[~badrows]
-                    PWAVERR_SPDF = PWAVERR_SPDF[~badrows]
+                PWAVE_DF = PWAVE_DF.iloc[goodrows,:]
+                pwave_geom = PWAVE_SPDF.geometry.iloc[goodrows]
+                PWAVE84_DF = PWAVE84_DF.iloc[goodrows,:]
+                pwave84_geom = PWAVE84_SPDF.geometry.iloc[goodrows]
+                PWAVERR_DF = PWAVERR_DF.iloc[goodrows,:]
+                pwaverr_geom = PWAVERR_SPDF.geometry.iloc[goodrows]
+
+                PWAVE_SPDF = gpd.GeoDataFrame(data=PWAVE_DF, geometry=pwave_geom, crs=pwave_geom.crs)
+                PWAVE84_SPDF = gpd.GeoDataFrame(data=PWAVE84_DF, geometry=pwave84_geom, crs=pwave84_geom.crs)
+                PWAVERR_SPDF = gpd.GeoDataFrame(data=PWAVERR_DF, geometry=pwaverr_geom, crs=pwaverr_geom.crs)
                 
                 lib.write_log('END STEP 2b.')
                 step2b_elapsed = math.ceil(monotonic() - step2b_start)
@@ -706,7 +698,7 @@ class PFRACoastal:
         for i in range(len(BUILDING_SPDF)):
             row = BUILDING_SPDF.iloc[i]
             # drop geometry column for attributes (mimics @data[this.row,])
-            attr_row = row.drop(labels=[BUILDING_SPDF.geometry.name])
+            attr_row = row.drop(columns=[BUILDING_SPDF.geometry.name])
             # extract coordinates (mimics @coords[this.row,])
             coord_xy = (row.geometry.x, row.geometry.y)
             res = lib.attachWSELtoBUILDING3(attr_row, coord_xy, PSURGE_SPDF, surge_attr_map)
@@ -723,6 +715,7 @@ class PFRACoastal:
             surge_attr_map = SWEL_attr_map.copy()
             out_tab2 = None
             dfs = []
+            # Get 3NN PSURGERR
             for i in range(len(BUILDING_SPDF)):
                 row = BUILDING_SPDF.iloc[i]
                 # drop geometry column for attributes (mimics @data[this.row,])
@@ -740,36 +733,35 @@ class PFRACoastal:
             
         else:
             out_tab2 = None
-            
-        surge_error_col = SWERR_attr_map.loc[SWERR_attr_map["DESC"] == "surge error", "OUT"].iloc[0]
-        out_tab3 = out_tab2[["BID", surge_error_col]]
+        
+        out_tab3 = out_tab2.loc[:,["BID"]+SWERR_attr_map.query("DESC=='surge error'")["OUT"].to_list()]
         out_tab1 = out_tab.merge(out_tab3, on="BID", how="left")
-        out_tab1 = out_tab1 = out_tab1.sort_values(by="BID").reset_index(drop=True)
+        out_tab1 = out_tab1.sort_values(by="BID").reset_index(drop=True)
             
         # set building validity
         lib.write_log(".attributing building validity.")
 		# find which buildings have good probability of being affected by max event
-        tabWET = out_tab1.apply(lambda row: 1 - norm.cdf(lib.getZscore(row["DEMFT"], row["s10000"], row["sx10000"])),axis=1)
-        sel = tabWET.index[tabWET >= 0.05].tolist()
+        tabWET = out_tab1.loc[:,["DEMFT", "s10000", "sx10000"]].apply(lambda row: 1-norm.cdf(row.iat[0], row.iat[1], row.iat[2]), axis=1, result_type="reduce")
+        sel = tabWET.ge(0.05).to_list()
         out_tab1.loc[sel, 'VALID'] = 1
 
         # set building validity
         # find building elevations = -9999
-        sel = out_tab1.index[out_tab1["DEMft"] <= -999].tolist()
+        sel = out_tab1["DEMFT"].le(-999).tolist()
         out_tab1.loc[sel, 'VALID'] = 0
         
         # build output shapefile
 		# no record filtering and no joining, so out points geometry = in points geometry
-        out_tab1['geometry'] = BUILDING_SPDF['geometry']
-        WSE_SPDF = gpd.GeoDataFrame(out_tab1, geometry='geometry')
+        WSE_SPDF = gpd.GeoDataFrame(data=out_tab1, geometry=BUILDING_SPDF['geometry'], crs=BUILDING_SPDF['geometry'].crs)
 
         # create a copy of WSE for writing output that converts NA to -99999 so ESRI SHP doesnt 
 		# auto-convert NA to 0.
 		# Erase copy with the trash collection
         WSE2_SPDF = WSE_SPDF.copy()
-        WSE2_SPDF = WSE2_SPDF.fillna(float(SWEL_attr_map.loc[1, "DEF"]))
+        WSE2_SPDF = WSE2_SPDF.fillna(pd.to_numeric(SWEL_attr_map["DEF"].iat[1]))
         
         # write output shapefile
+        lib.write_log("Writing WSE SPDF to {0}".format(fr'{inputs.out_shp_path}\{inputs.proj_prefix}_WSE.shp'))
         WSE2_SPDF.to_file(fr'{inputs.out_shp_path}\{inputs.proj_prefix}_WSE.shp')
 
         lib.write_log('END STEP 2c.')
@@ -791,7 +783,7 @@ class PFRACoastal:
         for i in range(len(BUILDING_SPDF)):
             row = BUILDING_SPDF.iloc[i]
             # drop geometry column for attributes (mimics @data[this.row,])
-            attr_row = row.drop(labels=[BUILDING_SPDF.geometry.name])
+            attr_row = row.drop(columns=[BUILDING_SPDF.geometry.name])
             # extract coordinates (mimics @coords[this.row,])
             coord_xy = (row.geometry.x, row.geometry.y)
             res = lib.attachWSELtoBUILDING3(attr_row, coord_xy, PWAVE_SPDF, surge_attr_map)
@@ -825,16 +817,16 @@ class PFRACoastal:
             
         else:
             out_tab2 = None
-            
-        wave_error_col = WVERR_attr_map.loc[WVERR_attr_map["DESC"] == "surge error", "OUT"].iloc[0]
-        out_tab3 = out_tab2[["BID", wave_error_col]]
-        out_tab1 = out_tab.merge(out_tab3, on="BID", how="left")
-        out_tab1 = out_tab1 = out_tab1.sort_values(by="BID").reset_index(drop=True)
         
-        out_tab1['geometry'] = BUILDING_SPDF['geometry']
-        WV_SPDF = gpd.GeoDataFrame(out_tab1, geometry='geometry')
+        out_tab3 = out_tab2.loc[:,["BID"]+WVERR_attr_map.query("DESC=='wave error'")["OUT"].to_list()]
+        out_tab1 = out_tab.merge(out_tab3, on="BID", how="left")
+        out_tab1 = out_tab1.sort_values(by="BID").reset_index(drop=True)
+        
+        #out_tab1['geometry'] = BUILDING_SPDF['geometry']
+        WV_SPDF = gpd.GeoDataFrame(data=out_tab1, geometry=BUILDING_SPDF['geometry'], crs=BUILDING_SPDF['geometry'].crs)
         
         # write output shapefile
+        lib.write_log("Writing WAV SPDF to {0}".format(fr'{inputs.out_shp_path}\{inputs.proj_prefix}_WAV.shp'))
         WV_SPDF.to_file(fr'{inputs.out_shp_path}\{inputs.proj_prefix}_WAV.shp')
         
         lib.write_log('END STEP 2d.')
@@ -857,8 +849,8 @@ class PFRACoastal:
         lib.write_log(".creating WSE attribute map.")
         wse_attr_out = inputs.bldg_attr_map.query("DESC == 'new building id'")["OUT"].to_list()+inputs.bldg_attr_map.query("DESC == 'ground elevation'")["OUT"].to_list()+["VALID","spt1","spt2","spt3"]+SWEL_attr_map.query("DDC == 1")["OUT"].to_list()+SWERR_attr_map.query("DDC == 1")["OUT"].to_list()+WV_attr_map.query("DDC == 1")["OUT"].to_list()+WVERR_attr_map.query("DDC == 1")["OUT"].to_list()
         wse_attr_desc = ["new building id","ground elevation","valid for analysis","NNsurgeID","NNsurgeID","NNsurgeID"]+["surge elevation" for i in range(SWEL_attr_map.query("DDC == 1").shape[0])]+["surge error" for i in range(SWERR_attr_map.query("DDC == 1").shape[0])]+["wave height" for i in range(WV_attr_map.query("DDC == 1").shape[0])]+["wave error" for i in range(WVERR_attr_map.query("DDC == 1").shape[0])]
-        wse_attr_prep = [1,0,0,0,0,0]+[1 for i in range(SWEL_attr_map.query("DESC == 'surge elevation' and DDC==1").shape[0])]+[1 for i in range(SWERR_attr_map.query("DESC == 'surge error' and DDC==1").shape[0])]+[1 for i in range(WV_attr_map.query("DESC == 'wave height' and DDC==1"))]+[1 for i in range(WVERR_attr_map.query("DESC == 'wave error' and DDC==1"))]
-        wse_attr_join = [1,0,0,0,0,0]+[1 for i in range(SWEL_attr_map.query("DESC == 'surge elevation' and DDC==1").shape[0])]+[1 for i in range(SWERR_attr_map.query("DESC == 'surge error' and DDC==1").shape[0])]+[1 for i in range(WV_attr_map.query("DESC == 'wave height' and DDC==1"))]+[1 for i in range(WVERR_attr_map.query("DESC == 'wave error' and DDC==1"))]
+        wse_attr_prep = [1,0,0,0,0,0]+[1 for i in range(SWEL_attr_map.query("DESC == 'surge elevation' and DDC==1").shape[0])]+[1 for i in range(SWERR_attr_map.query("DESC == 'surge error' and DDC==1").shape[0])]+[1 for i in range(WV_attr_map.query("DESC == 'wave height' and DDC==1").shape[0])]+[1 for i in range(WVERR_attr_map.query("DESC == 'wave error' and DDC==1").shape[0])]
+        wse_attr_join = [1,0,0,0,0,0]+[1 for i in range(SWEL_attr_map.query("DESC == 'surge elevation' and DDC==1").shape[0])]+[1 for i in range(SWERR_attr_map.query("DESC == 'surge error' and DDC==1").shape[0])]+[1 for i in range(WV_attr_map.query("DESC == 'wave height' and DDC==1"))]+[1 for i in range(WVERR_attr_map.query("DESC == 'wave error' and DDC==1").shape[0])]
         wse_attr_map = pd.DataFrame({"OUT":wse_attr_out, "DESC":wse_attr_desc, "PREP":wse_attr_prep, "JOIN":wse_attr_join})
         
         # append wave data to swel data	
