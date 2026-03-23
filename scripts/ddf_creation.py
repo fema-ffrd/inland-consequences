@@ -3,9 +3,25 @@ import pandas as pd
 
 def generate_flsbt_lookup_table():
     """
+    The reference data for this is a spreadsheet from the OpenHazus project "OpenHazusDDFUpdates_2025.xlsx",
+    and provides a complex table of rules with Foundation Type and Flood Peril Type as MultiIndex Header columns,
+    then rows with flood-specific buildings types (ex: WF001, WSF002-004, WMUH001-004, etc.). This process
+    needs to be done explicitly since the source data is not in a machine-readable format.
+
+    This complex table needs to be unnested based on the known building types and attributes that the 
+    flood-specific building types codes represent to arrive at a simple lookup table with the following
+    fields:
+
+        - Construction Type (ex: W, M, C, S, H, MH)
+        - Occupancy Type (ex: RES1, COM1, IND1, etc.)
+        - Story Min
+        - Story Max
+        - SQFT Min (if applicable)
+        - SQFT Max (if applicable)
+        - FLSBT Range (ex: WSF001-004, MLRI, SPMB, etc.)
+
     Generate a complete lookup table that maps:
-    (Construction Type, Occupancy Type, Story Range, SQFT Range) → FLSBT Range
-    
+    (Construction Type, Occupancy Type, Story Min, Story Max, SQFT Min, SQFT Max) → FLSBT Range.
     This replaces the complex conditional logic with a simple table lookup.
     """
     
@@ -211,7 +227,16 @@ def unpivot_foundation_flood_table(filepath_or_df):
     The CSV has two header rows:
     - Row 1: Foundation Type (PILE, SHAL, SLAB, BASE repeating)
     - Row 2: Flood Peril Type (RLS, RHS, RLL, RHL, CST, CMV, CHW repeating)
-    
+
+    NOTE: Flood Peril Lookup Types:
+    - RLS: Riverine Low Velocity, Short Duration (Typical Riverine AE, non-floodway)
+    - RHS: Riverine High Velocity, Short Duration (Typical Riverine VE, floodway)
+    - RLL: Riverine Low Velocity, Long Duration (Riverine 1 with long duration flooding)
+    - RHL: Riverine High Velocity, Long Duration (Riverine 2 with long duration flooding)
+    - CST: Coastal Stillwater (AE from coastal flood hazards)
+    - CMV: Coastal Moderate Wave (Coastal AE based on LimWA)
+    - CHW: Coastal High Wave (Coastal VE)
+
     Returns a long table with columns:
     - FLSBT_Range
     - Foundation_Type
@@ -334,6 +359,9 @@ def create_complete_lookup_table(foundation_flood_csv_path):
     # Load and unpivot foundation/flood table
     print(f"Loading foundation/flood table from {foundation_flood_csv_path}...")
     foundation_flood = unpivot_foundation_flood_table(foundation_flood_csv_path)
+
+    # print(f"foundation_flood table: {foundation_flood[foundation_flood['FLSBT_Range']=='WMUH001-004'].head()}")
+    print(f"foundation_flood table: {foundation_flood[foundation_flood['FLSBT_Range']=='WMUH001-004'].head()}")
     
     # Join the two tables on FLSBT_Range
     print("Merging tables...")
@@ -361,6 +389,9 @@ def create_complete_lookup_table(foundation_flood_csv_path):
 
     # Update foundation types to full names (SHAL->SHALLOW, BASE->BASEMENT)
     complete_table = update_foundation_types(complete_table)
+
+    # convert damage_function_id to integer where possible
+    complete_table['damage_function_id'] = pd.to_numeric(complete_table['damage_function_id'], errors='coerce').astype('Int64')
 
     print(f"\nComplete! Generated {len(complete_table)} total lookup rules")
     print(f"  - {len(flsbt_lookup)} unique FLSBT ranges")
@@ -392,7 +423,7 @@ if __name__ == "__main__":
     print("GENERATING COMPLETE FLATTENED TABLE:")
     print("="*60)
     
-    complete_table = create_complete_lookup_table('data/foundation_flood_table.csv')
+    complete_table = create_complete_lookup_table('data/foundation_flood_table_structures.csv') # updated version - 2025 Hazus DDFs
     print("\nSample from complete table:")
     print(complete_table.head(20))
     

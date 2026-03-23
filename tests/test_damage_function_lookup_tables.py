@@ -194,8 +194,8 @@ def sample_structures():
             'sqft': None,
             'foundation_type': 'SLAB',  # 4-letter code
             'flood_peril_type': 'RHS',
-            'validated_building_damage_function_id': 699,
-            'validated_contents_damage_function_id': 446,
+            'validated_building_damage_function_id': 262, # updated per 2025 Hazus DDFs
+            'validated_contents_damage_function_id': 446, # older HAZUS DDF (pending update)
             'validated_inventory_damage_function_id': None # undefined for residential
         },
         {
@@ -210,6 +210,18 @@ def sample_structures():
             'validated_contents_damage_function_id': 427,
             'validated_inventory_damage_function_id': None # undefined for residential
         },
+        {
+            'flood_specific_bldg_type': 'WSF001', # reference only
+            'construction_type': 'W',
+            'occupancy_type': 'RES1',
+            'num_stories': 1,
+            'sqft': 1500,
+            'foundation_type': 'SLAB',  # 4-letter code
+            'flood_peril_type': 'RHS',
+            'validated_building_damage_function_id': 639, # updated per 2025 Hazus DDFs
+            'validated_contents_damage_function_id': 421, # older HAZUS DDF (pending update)
+            'validated_inventory_damage_function_id': None # undefined for residential
+        }
     ]
     
     return pd.DataFrame(sample_data)
