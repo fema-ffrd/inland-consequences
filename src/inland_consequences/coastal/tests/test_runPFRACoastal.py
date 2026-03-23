@@ -43,7 +43,6 @@ def inputs_obj():
 
 @pytest.fixture
 def test_datasets():
-    #test_data_dir = r"C:\Users\astimson\Downloads\alex_testing"
     test_data_dir = path.join(path.abspath(path.dirname(__file__)), "_data", "TEST_CALC", "output")
     test_proj_prefix = 'Test1'
     test_hm_name = 'heatmap'
