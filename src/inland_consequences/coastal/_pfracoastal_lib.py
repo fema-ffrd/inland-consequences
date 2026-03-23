@@ -821,7 +821,7 @@ class _PFRACoastal_Lib:
         
         # Build the loss table by building flood depth
         bldg_ddf_df = pd.read_csv(inputs.bddf_lut_path)
-        FBtab0 = self.buildBldgFloodDepthTable6(this_bldg_attr, inputs.use_waves, prep_atr_map, bldg_ddf_df) # fields df1402 & df1403 come back all nan
+        FBtab0 = self.buildBldgFloodDepthTable6(this_bldg_attr, inputs.use_waves, prep_atr_map, bldg_ddf_df)
 
         #check for truncated output
         if not np.any(FBtab0.columns.isin(["rLOSSLw"])):
@@ -873,7 +873,7 @@ class _PFRACoastal_Lib:
         if inputs.use_outcsv:
             out_csv_dir = os.path.join(inputs.out_shp_path,"TAB")
             out_csv_name = f"BID_{'0'*(6-len(str(in_building)))}{in_building}.csv"
-            FBtab0.to_csv(os.path.join(out_csv_dir,out_csv_name))
+            FBtab0.to_csv(os.path.join(out_csv_dir,out_csv_name), index=False)
         
         #print(in_building)
         #print(FBtab0)
@@ -911,7 +911,7 @@ class _PFRACoastal_Lib:
         # end edit 12/18/2024
         
         # if there are <2 loss values, then a curve cant be constructed. Loss = 0
-        if MCLossTab.notna().query("MC_rp == True").shape[0] < 2:
+        if MCLossTab["MC_rp"].count() < 2:
             out_df = pd.DataFrame(data={"BID":in_building, "BAAL":0, "BAALmin":0, "BAALmax":0, "FLAG_DF16":in_bldg_flag}, index=[0])
         else:
             out_df = pd.DataFrame(data={"BID":in_building, 
@@ -1026,21 +1026,21 @@ class _PFRACoastal_Lib:
 	    #calc depth above FF error
         FBtab['BFDe'] = np.sqrt((FBtab['FFEe']**2)+(FBtab['TWLe']**2))
     
-        interp = np.interp(x=np.log10(FBtab['RP'].values), xp=np.log10(b_rpnames), fp=SWvals)
+        interp = np.interp(x=np.log10(FBtab['RP'].values), xp=np.log10(b_rpnames), fp=SWvals, left=np.nan, right=np.nan)
         FBtab['SWEL'] = interp
 
 
-        interp = np.interp(x=np.log10(FBtab['RP'].values), xp=np.log10(b_rpnames), fp=SWerrs)
+        interp = np.interp(x=np.log10(FBtab['RP'].values), xp=np.log10(b_rpnames), fp=SWerrs, left=np.nan, right=np.nan)
         FBtab['SWELe'] = interp
         Z = self.getZscore(b_DEM, FBtab['SWEL'], FBtab['SWELe'])
         FBtab['WET'] = 1 - norm.cdf(Z)
 
         if use_waves:
             
-            interp = np.interp(x=np.log10(FBtab['RP'].values), xp=np.log10(b_rpnames), fp=WVvals)
+            interp = np.interp(x=np.log10(FBtab['RP'].values), xp=np.log10(b_rpnames), fp=WVvals, left=np.nan, right=np.nan)
             FBtab['Hc'] = interp
             
-            interp = np.interp(x=np.log10(FBtab['RP'].values), xp=np.log10(b_rpnames), fp=WVerrs)
+            interp = np.interp(x=np.log10(FBtab['RP'].values), xp=np.log10(b_rpnames), fp=WVerrs, left=np.nan, right=np.nan)
             FBtab['Hce'] = interp
 
             Z = self.getZscore(1, FBtab['Hc'], FBtab['Hce'])
@@ -1131,7 +1131,7 @@ class _PFRACoastal_Lib:
     #	main()
     # calls:
     #	NULL
-    def finalReportAAL2(self, results_tab=pd.DataFrame, prep_attr_map=pd.DataFrame) -> None:
+    def finalReportAAL2(self, results_tab: pd.DataFrame, prep_attr_map: pd.DataFrame) -> None:
         # summary statistics
         self.write_log(" ")
         self.write_log("Reporting AAL...")
