@@ -347,7 +347,7 @@ class PFRACoastal:
         # configure logging
         logger.setLevel("INFO")
         if inputs.blabfile:
-            fh = logging.FileHandler(inputs.blabfile, mode='a')
+            fh = logging.FileHandler(inputs.blabfile, mode='w')
             fh.setLevel("INFO")
         else:
             fh = logging.NullHandler()
@@ -447,8 +447,8 @@ class PFRACoastal:
         if inputs.storm_csv not in ('', None):
             if not os.path.exists(inputs.storm_csv):
                 lib.write_log("\tWARNING: File {0} not found. Use Stormsuite set to False".format(inputs.storm_csv))
-            elif os.path.splitext(inputs.storm_csv)[1] != 'csv':
-                lib.write_log("\tWARNING: File format of {0} is invalid. Must be a csv. Use Stormsuite set to False")
+            elif os.path.splitext(inputs.storm_csv)[1] != '.csv':
+                lib.write_log("\tWARNING: File format of {0} is invalid. Must be a csv. Use Stormsuite set to False".format(inputs.storm_csv))
 
         # print out error messages
         for msg in err_msgs:
@@ -850,26 +850,26 @@ class PFRACoastal:
         wse_attr_out = inputs.bldg_attr_map.query("DESC == 'new building id'")["OUT"].to_list()+inputs.bldg_attr_map.query("DESC == 'ground elevation'")["OUT"].to_list()+["VALID","spt1","spt2","spt3"]+SWEL_attr_map.query("DDC == 1")["OUT"].to_list()+SWERR_attr_map.query("DDC == 1")["OUT"].to_list()+WV_attr_map.query("DDC == 1")["OUT"].to_list()+WVERR_attr_map.query("DDC == 1")["OUT"].to_list()
         wse_attr_desc = ["new building id","ground elevation","valid for analysis","NNsurgeID","NNsurgeID","NNsurgeID"]+["surge elevation" for i in range(SWEL_attr_map.query("DDC == 1").shape[0])]+["surge error" for i in range(SWERR_attr_map.query("DDC == 1").shape[0])]+["wave height" for i in range(WV_attr_map.query("DDC == 1").shape[0])]+["wave error" for i in range(WVERR_attr_map.query("DDC == 1").shape[0])]
         wse_attr_prep = [1,0,0,0,0,0]+[1 for i in range(SWEL_attr_map.query("DESC == 'surge elevation' and DDC==1").shape[0])]+[1 for i in range(SWERR_attr_map.query("DESC == 'surge error' and DDC==1").shape[0])]+[1 for i in range(WV_attr_map.query("DESC == 'wave height' and DDC==1").shape[0])]+[1 for i in range(WVERR_attr_map.query("DESC == 'wave error' and DDC==1").shape[0])]
-        wse_attr_join = [1,0,0,0,0,0]+[1 for i in range(SWEL_attr_map.query("DESC == 'surge elevation' and DDC==1").shape[0])]+[1 for i in range(SWERR_attr_map.query("DESC == 'surge error' and DDC==1").shape[0])]+[1 for i in range(WV_attr_map.query("DESC == 'wave height' and DDC==1"))]+[1 for i in range(WVERR_attr_map.query("DESC == 'wave error' and DDC==1").shape[0])]
+        wse_attr_join = [1,0,0,0,0,0]+[1 for i in range(SWEL_attr_map.query("DESC == 'surge elevation' and DDC==1").shape[0])]+[1 for i in range(SWERR_attr_map.query("DESC == 'surge error' and DDC==1").shape[0])]+[1 for i in range(WV_attr_map.query("DESC == 'wave height' and DDC==1").shape[0])]+[1 for i in range(WVERR_attr_map.query("DESC == 'wave error' and DDC==1").shape[0])]
         wse_attr_map = pd.DataFrame({"OUT":wse_attr_out, "DESC":wse_attr_desc, "PREP":wse_attr_prep, "JOIN":wse_attr_join})
         
         # append wave data to swel data	
         lib.write_log(".appending WAV to SWEL.")
         WSE_tab = WSE_SPDF.drop('geometry', axis=1)
-        WAV_tab = WAV_SPDF.drop('geometry', axis=1).set_index("BID")
+        WAV_tab = WV_SPDF.drop('geometry', axis=1)
         
-        full_tab = WSE_tab.join(WAV_tab.loc[:,["BID"]+WV_attr_map.query("DESC=='wave height'")["OUT"].to_list()+WVERR_attr_map.query("DESC=='wave error'")["OUT"].to_list()], on="BID", how='left')
-        full_tab.sort_values(by="BID", axis=0, inplace=True)
+        full_tab = WSE_tab.join(WAV_tab.loc[:,["BID"]+WV_attr_map.query("DESC=='wave height'")["OUT"].to_list()+WVERR_attr_map.query("DESC=='wave error'")["OUT"].to_list()].set_index("BID"), on="BID", how='left')
+        full_tab.sort_values(by="BID", inplace=True)
         shp_geom = BUILDING_SPDF.geometry
         shp_proj = BUILDING_SPDF.crs
         FULL_SPDF = gpd.GeoDataFrame(data=full_tab, geometry=shp_geom, crs=shp_proj)
         
         lib.write_log(".filtering Buildings based on validity.")
         # select previously identified valid points
-        sel = FULL_SPDF.query("VALID==1").index.to_list()
-        shp_geom = FULL_SPDF.iloc[FULL_SPDF.index.isin(sel).tolist(), FULL_SPDF.columns.get_loc('geometry')]
+        sel = FULL_SPDF["VALID"].eq(1).to_list()
+        shp_geom = FULL_SPDF.iloc[sel, FULL_SPDF.columns.get_loc('geometry')]
         shp_proj = FULL_SPDF.crs
-        VAL_SPDF = gpd.GeoDataFrame(data=full_tab.iloc[full_tab.index.isin(sel).tolist(),:], geometry=shp_geom, crs=shp_proj)
+        VAL_SPDF = gpd.GeoDataFrame(data=full_tab.iloc[sel,:], geometry=shp_geom, crs=shp_proj)
         lib.write_log(f"FULL BLDG: {FULL_SPDF.shape[0]}")
         lib.write_log(f"Reduced BLDG: {VAL_SPDF.shape[0]}")
         
@@ -878,24 +878,24 @@ class PFRACoastal:
         # get the IDs of the valid buildings
         sel = BUILDING_SPDF["BID"].isin(VAL_SPDF['BID'].to_list()).to_list()
         # grab the building attribute table and keep only the records corresponding to valid buildings
-        BUILDING_tab = BUILDING_SPDF.drop('geometry', axis=1)
+        BUILDING_tab = BUILDING_SPDF.drop(columns='geometry')
         bldgred_tab = BUILDING_tab.iloc[sel, BUILDING_SPDF.columns.get_indexer(inputs.bldg_attr_map.query("ANLYS==1")["OUT"].to_list())].copy()
         # add sort field because bldg.tab and bldg.coords are 1:1 and .tab might get jumbled in future merges or joins
-        bldgred_tab["sort"] = [i for i in range(1,bldgred_tab.shape[0]+1)]
+        bldgred_tab["sort"] = [i for i in range(bldgred_tab.shape[0])]
         
         # DDFS
         # Assign DDFs to buildings
         lib.write_log(".assigning coastal DDFs.")
         # Select Four TASK4 DDFs, 1 for freshwater intrusion, 1 each for low-wave, med-wave, and
         # high-wave conditions
-        DDF_tab = lib.assign_TASK4_DDFs(bldgred_tab)
+        DDF_tab = lib.assign_TASK4_DDFs(inputs, bldgred_tab)
         bldgred_tab["DDF1"] = DDF_tab["DDF1"]
         bldgred_tab["DDF2"] = DDF_tab["DDF2"]
         bldgred_tab["DDF3"] = DDF_tab["DDF3"]
         bldgred_tab["DDF4"] = DDF_tab["DDF4"]
         
         # placeholder for future Erosion DDFs
-        bldgred_tab["DDFE"] = pd.Series(data=[0 for i in range(bldgred_tab.shape[0])])
+        bldgred_tab["DDFE"] = 0
         
         lib.write_log(".creating PREP attribute map.")
         # this attribute map will hold the field names and their descriptions for the PREP attribute table to be written in this section. 
@@ -904,13 +904,16 @@ class PFRACoastal:
         prep_attr_map = pd.DataFrame({"OUT":prep_attr_out, "DESC":prep_attr_desc})
         
         # merge wsels to bldg attributes and format
-        VAL_tab = VAL_SPDF.drop('geometry', axis=1).set_index("BID")
-        prep_tab = bldgred_tab.join(VAL_tab.loc[:,wse_attr_map.query("PREP==1")["OUT"].to_list()], on="BID", how='left')
+        VAL_tab = VAL_SPDF.drop('geometry', axis=1)
+        prep_tab = bldgred_tab.join(VAL_tab.loc[:,wse_attr_map.query("PREP==1")["OUT"].to_list()].set_index("BID"), on="BID", how='left')
         
         # sort to ensure proper order with VAL.SPDF@coords, then remove any extra field
         prep_tab.sort_values("sort",inplace=True)
-        prep_tab.index = list(range(prep_tab.shape[0]))
-        prep_tab.drop(columns=["sort", "BID_prep", "BID_val"], inplace=True)
+        prep_tab.reset_index(inplace=True, drop=True)
+        prep_tab.drop(columns=["sort"], inplace=True)
+
+        # make sure all values in DDFE are 0 
+        # added because some values in DDFE kept being incorrectly set to null
         
         # build output SPDF
         lib.write_log("Sample PREP data:")
@@ -919,13 +922,14 @@ class PFRACoastal:
         # create a copy of PREP for writing output that converts NA to -99999 so ESRI SHP doesnt
         # auto-convert NA to 0.
         # Erase copy with the trash collection
-        shp_geom = VAL_SPDF.geometry
+        shp_geom = VAL_SPDF['geometry'].reset_index(drop=True)
         shp_proj = VAL_SPDF.crs
         PREP_SPDF = gpd.GeoDataFrame(data=prep_tab, geometry=shp_geom, crs=shp_proj)
         
         # write output shapefile
-        PREP2_SPDF = PREP_SPDF.copy()
-        PREP2_SPDF.mask(PREP2_SPDF.isna, pd.to_numeric(SWEL_attr_map.iat[1,SWEL_attr_map.columns.get_loc("DEF")]), inplace=True)
+        prep2_tab = prep_tab.copy()
+        prep2_tab.mask(prep2_tab.isna(), pd.to_numeric(SWEL_attr_map.iat[1,SWEL_attr_map.columns.get_loc("DEF")]), inplace=True)
+        PREP2_SPDF = gpd.GeoDataFrame(data=prep2_tab, geometry=PREP_SPDF.geometry, crs=PREP_SPDF.crs)
         out_shp_lay = inputs.proj_prefix + "_PREP"
         out_shp_dsn = os.path.join(inputs.out_shp_path, out_shp_lay+".shp")
         lib.write_log(f".writing Prep data to {out_shp_dsn}")
@@ -948,8 +952,8 @@ class PFRACoastal:
         # load or create probabilities
         if inputs.use_stormsuite:
             lib.write_log("Loading pre-defined storm suite...")
-            pvals = pd.read_csv(inputs.storm_csv)
-            inputs.mc_n = pvals.shape[1]
+            pvals = pd.read_csv(inputs.storm_csv, float_precision="round_trip")
+            inputs.mc_n = pvals.shape[0]
             lib.write_log("Storm suite hard bounds:  not defined")
         else:
             lib.write_log("Creating random storm suite.")
@@ -958,7 +962,7 @@ class PFRACoastal:
             pvals = pd.DataFrame(data=pvals, columns=['x'])
             lib.write_log(f"Storm suite hard bounds: {inputs.nbounds[0]}, {inputs.nbounds[1]}")
         
-        lib.write_log(f"Storm suite soft bounds: {pvals.min}, {pvals.max}")
+        lib.write_log(f"Storm suite soft bounds: {pvals.iloc[0].min()}, {pvals.iloc[0].max()}")
         lib.write_log(".writing PVALS csv.")
         pvals.to_csv(os.path.join(inputs.out_shp_path,"pvals.csv"), index=False)
         
@@ -985,26 +989,28 @@ class PFRACoastal:
                 os.mkdir(out_csvtable_path)
         
         # grab all building IDs for analysis
-        allbldgs = PREP_SPDF["BID"].copy()
+        allbldgs = PREP_SPDF["BID"]
         building_summary = pd.DataFrame()
+        prep_tab = PREP_SPDF.drop(columns='geometry')
 
         lib.write_log(f"Calculating damage, losses, and annualized loss for {allbldgs.shape[0]} buildings...")
         for this_building in allbldgs.to_list():
-            temp_tab = lib.runMC_AALU_x4(PREP_SPDF, pvals, int(this_building), inputs, prep_attr_map)
+            temp_tab = lib.runMC_AALU_x4(prep_tab, pvals, int(this_building), inputs, prep_attr_map)
             building_summary = pd.concat([building_summary, temp_tab], ignore_index=True)
         building_summary.loc[:,"A"] = 1
 
-        lossTables_elapsed = math.ceil(monotonic-step4b_start)
+        lossTables_elapsed = math.ceil(monotonic()-step4b_start)
         lib.write_log(f"loss tables: {lossTables_elapsed} sec elapsed")
 
         lib.write_log(".formatting AAL results.")
         # create a base to which to add run results AAL results
-        base_tab = pd.DataFrame({"BID":BUILDING_SPDF["BID"], "ANLYS":[0 for i in range(BUILDING_SPDF.shape[0])]})
+        base_tab = pd.DataFrame({"BID":BUILDING_SPDF["BID"], "ANLYS":list(range(1,BUILDING_SPDF["BID"].shape[0]+1))})
 
         # join
         # field names hard-coded in runMC_AALU_x
-        join_tab = base_tab.join(building_summary.set_index("BID"), on="BID", how="left").sort_values("ANYLS")
-        join_tab.loc[join_tab.query("A==1").index.to_list(), "ANLYS"] = 1
+        join_tab = base_tab.join(building_summary.set_index("BID"), on="BID", how="left").sort_values("ANLYS")
+        join_tab.loc[:,"ANLYS"] = 0
+        join_tab.iloc[join_tab["A"].eq(1).to_list(), join_tab.columns.get_loc("ANLYS")] = 1
         join_tab.drop(columns=join_tab.columns.to_list()[-1], inplace=True)
 
         # replace NAs
@@ -1028,7 +1034,7 @@ class PFRACoastal:
         RESULTS_SPDF.to_file(out_shp_dsn)
 
         # print results
-        lib.finalReportAAL2(results_tab)
+        lib.finalReportAAL2(results_tab, prep_attr_map)
         lib.write_log("END STEP 4b.")
         step4b_elapsed = math.ceil(monotonic()-step4b_start)
         lib.write_log(f"Step 4b: {step4b_elapsed} sec elapsed")
