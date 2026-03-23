@@ -1064,10 +1064,10 @@ class PFRACoastal:
             # get extents of points data
             coords_tab = shp_geom.get_coordinates(ignore_index=True)
             coords_mat = coords_tab.to_numpy()
-            minx = coords_tab['x'].min
-            maxx = coords_tab['x'].max
-            miny = coords_tab['y'].min
-            maxy = coords_tab['y'].max
+            minx = coords_tab['x'].min()
+            maxx = coords_tab['x'].max()
+            miny = coords_tab['y'].min()
+            maxy = coords_tab['y'].max()
             # determine columns and rows
             spanx = maxx - minx
             spany = maxy - miny
@@ -1075,21 +1075,21 @@ class PFRACoastal:
             num_rows = math.ceil(spany/inputs.hm_resolution)+1
             # determine starting X/Y
             gridx = minx - (((num_cols * inputs.hm_resolution) - spanx) / 2)
-            gridy = miny - (((num_rows * inputs.hm_resolution) - spany) / 2)
+            gridy = miny + (((num_rows * inputs.hm_resolution) + spany) / 2)
 
             # create starting grid with value 0
             lib.write_log(".create new empty grid.")
-            x = np.linspace(start=minx, stop=(gridx+(num_cols*inputs.hm_resolution)), num=num_cols)
-            y = np.linspace(start=miny, stop=(gridy+(num_rows*inputs.hm_resolution)), num=num_rows)
+            x = np.linspace(start=gridx, stop=(gridx+(num_cols*inputs.hm_resolution)), num=num_cols)
+            y = np.linspace(start=gridy, stop=(gridy+(num_rows*inputs.hm_resolution)), num=num_rows)
             X,Y = np.meshgrid(x,y)
 
             aal_tab = RESULTS_SPDF.drop(columns='geometry')
             aal_field = 'BAAL'
             # create an empty results matrix to store kde calculations
-            kde_mat = np.zeros(shape=X.shape)
+            kde_mat = np.zeros(shape=X.shape).astype("float32")
             out_hm_path = os.path.join(inputs.out_shp_path, f"{inputs.proj_prefix}_{inputs.hm_name}.tif")
-            hm_transform = rasterio.transform.Affine.translation(x[0]-(inputs.hm_resolution/2), y[0]+(inputs.hm_resolution/2)) * rasterio.transform.Affine.scale(inputs.hm_resolution, -inputs.hm_resolution)
-
+            hm_transform = rasterio.transform.Affine.translation(gridx, gridy) * rasterio.transform.Affine.scale(inputs.hm_resolution, -inputs.hm_resolution)
+            
             with rasterio.open(
                 out_hm_path,
                 'w',
@@ -1111,7 +1111,9 @@ class PFRACoastal:
                         bpt_dist = scipy.spatial.distance.cdist(coords_mat, cell_centroid, metric='euclidean')
 
                         # filter for points that are inside the search radius
-                        bpt_df = pd.DataFrame({"BID":aal_tab["BID"], "AAL":aal_tab[aal_field], "Dist":bpt_dist.flatten().tolist()})
+                        bpt_df = pd.DataFrame({"BID":aal_tab["BID"],
+                                                "AAL":aal_tab[aal_field], 
+                                                "Dist":bpt_dist.flatten().tolist()})
                         bpt_sel = bpt_df.query(f"Dist <= {inputs.hm_bandwidth}").copy()
 
                         # calculate density of filtered points and convert to acres

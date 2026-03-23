@@ -147,12 +147,6 @@ def test_verify_loss_tab_folder(inputs_obj, test_datasets):
     else:
         exists_chk = True
         csv_cnt_chk = True
-    
-    output = r"C:\inland-consequences\src\inland_consequences\coastal\tests\_data\run_PFRACoastal_output\TAB\BID_000095.csv"
-    test = r"C:\inland-consequences\src\inland_consequences\coastal\tests\_data\TEST_CALC\output\TAB\BID_000095.csv"
-    out_df, test_df = pd.read_csv(output, float_precision="round_trip"), pd.read_csv(test, float_precision='round_trip')
-    sel = out_df["TWLe"].notna().to_list()
-    print(out_df.iloc[sel].eq(test_df.iloc[sel]).all()) # all() is false for PVAL-PWG3, df fields, dam fields. any() is false for only SWELe & PWG3
 
     chks_list = [exists_chk, csv_cnt_chk]
     assert all(chks_list)
@@ -167,7 +161,6 @@ def test_verify_results_shp(inputs_obj, test_datasets):
     
     output_gdf = gpd.read_file(output_data_path)
     test_gdf = gpd.read_file(test_data_path)
-    print(output_gdf.eq(test_gdf).all())
     chk = output_gdf.eq(test_gdf).all().all()
     assert chk
 
