@@ -425,7 +425,7 @@ class TestLossesMinMeanMax:
         loss_min_500 = BUILDING_COST_1 * stats_500["d_min"] / 100.0
         expected = _expected_aal(loss_min_100, loss_min_500)
         row = conn.execute(
-            "SELECT aal_min FROM aal_losses WHERE ID = 1"
+            "SELECT baal_min FROM aal_losses WHERE ID = 1"
         ).fetchone()
         assert row is not None
         assert row[0] == pytest.approx(expected, rel=1e-6)
@@ -438,7 +438,7 @@ class TestLossesMinMeanMax:
         loss_mean_500 = BUILDING_COST_1 * stats_500["damage_percent_mean"] / 100.0
         expected = _expected_aal(loss_mean_100, loss_mean_500)
         row = conn.execute(
-            "SELECT aal_mean FROM aal_losses WHERE ID = 1"
+            "SELECT baal_mean FROM aal_losses WHERE ID = 1"
         ).fetchone()
         assert row is not None
         assert row[0] == pytest.approx(expected, rel=1e-6)
@@ -451,7 +451,7 @@ class TestLossesMinMeanMax:
         loss_max_500 = BUILDING_COST_1 * stats_500["d_max"] / 100.0
         expected = _expected_aal(loss_max_100, loss_max_500)
         row = conn.execute(
-            "SELECT aal_max FROM aal_losses WHERE ID = 1"
+            "SELECT baal_max FROM aal_losses WHERE ID = 1"
         ).fetchone()
         assert row is not None
         assert row[0] == pytest.approx(expected, rel=1e-6)
@@ -464,7 +464,7 @@ class TestLossesMinMeanMax:
         loss_min_500 = BUILDING_COST_2 * stats_500["d_min"] / 100.0
         expected = _expected_aal(loss_min_100, loss_min_500)
         row = conn.execute(
-            "SELECT aal_min FROM aal_losses WHERE ID = 2"
+            "SELECT baal_min FROM aal_losses WHERE ID = 2"
         ).fetchone()
         assert row is not None
         assert row[0] == pytest.approx(expected, rel=1e-6)
@@ -477,7 +477,7 @@ class TestLossesMinMeanMax:
         loss_mean_500 = BUILDING_COST_2 * stats_500["damage_percent_mean"] / 100.0
         expected = _expected_aal(loss_mean_100, loss_mean_500)
         row = conn.execute(
-            "SELECT aal_mean FROM aal_losses WHERE ID = 2"
+            "SELECT baal_mean FROM aal_losses WHERE ID = 2"
         ).fetchone()
         assert row is not None
         assert row[0] == pytest.approx(expected, rel=1e-6)
@@ -490,7 +490,7 @@ class TestLossesMinMeanMax:
         loss_max_500 = BUILDING_COST_2 * stats_500["d_max"] / 100.0
         expected = _expected_aal(loss_max_100, loss_max_500)
         row = conn.execute(
-            "SELECT aal_max FROM aal_losses WHERE ID = 2"
+            "SELECT baal_max FROM aal_losses WHERE ID = 2"
         ).fetchone()
         assert row is not None
         assert row[0] == pytest.approx(expected, rel=1e-6)
@@ -499,12 +499,12 @@ class TestLossesMinMeanMax:
         """AAL values should form a consistent ordering: min <= mean <= max."""
         conn = pipeline_results.conn
         rows = conn.execute(
-            "SELECT ID, aal_min, aal_mean, aal_max FROM aal_losses ORDER BY ID"
+            "SELECT ID, baal_min, baal_mean, baal_max FROM aal_losses ORDER BY ID"
         ).fetchall()
         for row in rows:
-            bld_id, aal_min, aal_mean, aal_max = row
-            assert aal_min <= aal_mean, f"Building {bld_id}: aal_min > aal_mean"
-            assert aal_mean <= aal_max, f"Building {bld_id}: aal_mean > aal_max"
+            bld_id, baal_min, baal_mean, baal_max = row
+            assert baal_min <= baal_mean, f"Building {bld_id}: baal_min > baal_mean"
+            assert baal_mean <= baal_max, f"Building {bld_id}: baal_mean > baal_max"
 
     def test_each_building_has_exactly_one_damage_function(self, pipeline_results):
         """Every building should have exactly one damage function assigned.
@@ -775,7 +775,7 @@ class TestAalSingleReturnPeriod:
         stats = _expected_damage_stats(SINGLE_RP_DEPTH, STD_DEV)
         loss_mean = BUILDING_COST_1 * stats["damage_percent_mean"] / 100.0
         expected = _expected_aal_single_rp_nontruncated(loss_mean, SINGLE_RP, SINGLE_RP_NEXT_LOWER)
-        row = conn.execute("SELECT aal_mean FROM aal_losses WHERE ID = 1").fetchone()
+        row = conn.execute("SELECT baal_mean FROM aal_losses WHERE ID = 1").fetchone()
         assert row is not None
         assert row[0] == pytest.approx(expected, rel=1e-6)
 
@@ -784,7 +784,7 @@ class TestAalSingleReturnPeriod:
         stats = _expected_damage_stats(SINGLE_RP_DEPTH, STD_DEV)
         loss_mean = BUILDING_COST_2 * stats["damage_percent_mean"] / 100.0
         expected = _expected_aal_single_rp_nontruncated(loss_mean, SINGLE_RP, SINGLE_RP_NEXT_LOWER)
-        row = conn.execute("SELECT aal_mean FROM aal_losses WHERE ID = 2").fetchone()
+        row = conn.execute("SELECT baal_mean FROM aal_losses WHERE ID = 2").fetchone()
         assert row is not None
         assert row[0] == pytest.approx(expected, rel=1e-6)
 
@@ -793,7 +793,7 @@ class TestAalSingleReturnPeriod:
         stats = _expected_damage_stats(SINGLE_RP_DEPTH, STD_DEV)
         loss_min = BUILDING_COST_1 * stats["d_min"] / 100.0
         expected = _expected_aal_single_rp_nontruncated(loss_min, SINGLE_RP, SINGLE_RP_NEXT_LOWER)
-        row = conn.execute("SELECT aal_min FROM aal_losses WHERE ID = 1").fetchone()
+        row = conn.execute("SELECT baal_min FROM aal_losses WHERE ID = 1").fetchone()
         assert row is not None
         assert row[0] == pytest.approx(expected, rel=1e-6)
 
@@ -802,6 +802,6 @@ class TestAalSingleReturnPeriod:
         stats = _expected_damage_stats(SINGLE_RP_DEPTH, STD_DEV)
         loss_max = BUILDING_COST_1 * stats["d_max"] / 100.0
         expected = _expected_aal_single_rp_nontruncated(loss_max, SINGLE_RP, SINGLE_RP_NEXT_LOWER)
-        row = conn.execute("SELECT aal_max FROM aal_losses WHERE ID = 1").fetchone()
+        row = conn.execute("SELECT baal_max FROM aal_losses WHERE ID = 1").fetchone()
         assert row is not None
         assert row[0] == pytest.approx(expected, rel=1e-6)

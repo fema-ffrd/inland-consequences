@@ -26,6 +26,7 @@ app = marimo.App(width="full", app_title="Flood Results Explorer")
 
 @app.cell
 def _imports():
+    import io
     import sys
     from pathlib import Path
 
@@ -48,6 +49,7 @@ def _imports():
         Path,
         duckdb,
         gpd,
+        io,
         mo,
         mpl,
         pd,
@@ -70,14 +72,81 @@ def _header(mo):
 
 
 @app.cell
-def _config(Path):
-    DB_PATH = Path(__file__).parent.parent.parent / "inland_flood_analysis_20260303_221911.duckdb"
-    return (DB_PATH,)
+def _db_picker(Path, mo):
+    _root = Path(__file__).parent.parent
+    _excluded_dirs = {"tests", "outputs"}
+
+    _candidates = []
+    for _p in sorted(_root.rglob("*.duckdb")):
+        _rel_parts = set(_p.relative_to(_root).parts[:-1])
+        if _rel_parts & _excluded_dirs:
+            continue
+        if _p.name.startswith("test_"):
+            continue
+        _candidates.append(_p)
+
+    _db_options = {str(p.relative_to(_root)): p for p in _candidates}
+    _db_default = next(iter(_db_options)) if _db_options else None
+
+    GEO_LEVEL_ORDER = ["state", "county", "tract", "block_group", "block", "community", "huc"]
+    _GEO_LABELS = {
+        "state": "State",
+        "county": "County",
+        "tract": "Tract",
+        "block_group": "Block Group",
+        "block": "Block",
+        "community": "Community",
+        "huc": "HUC (Watershed)",
+    }
+
+    db_file_dropdown = mo.ui.dropdown(
+        options=_db_options,
+        value=_db_default,
+        label="DuckDB file",
+    )
+    geo_level_multiselect = mo.ui.multiselect(
+        options={_GEO_LABELS[lvl]: lvl for lvl in GEO_LEVEL_ORDER},
+        value=["State", "County", "Tract"],
+        label="Geography hierarchy (coarse → fine)",
+    )
+    view_button = mo.ui.run_button(label="▶ View Results")
+
+    mo.vstack([
+        mo.md("### Configure Analysis"),
+        mo.hstack([db_file_dropdown, geo_level_multiselect], gap=2),
+        view_button,
+    ])
+    return (
+        GEO_LEVEL_ORDER,
+        db_file_dropdown,
+        geo_level_multiselect,
+        view_button,
+    )
 
 
 @app.cell
-def _load_data(DB_PATH, FloodResultsAggregator, duckdb, mo):
-    _HIERARCHY = ["state", "county", "tract"]
+def _config(
+    GEO_LEVEL_ORDER,
+    db_file_dropdown,
+    geo_level_multiselect,
+    mo,
+    view_button,
+):
+    mo.stop(
+        not view_button.value,
+        mo.callout(
+            mo.md("Select a DuckDB file and geography levels, then click **▶ View Results**."),
+            kind="info",
+        ),
+    )
+    DB_PATH = db_file_dropdown.value
+    HIERARCHY = [lvl for lvl in GEO_LEVEL_ORDER if lvl in set(geo_level_multiselect.value)]
+    return DB_PATH, HIERARCHY
+
+
+@app.cell
+def _load_data(DB_PATH, FloodResultsAggregator, HIERARCHY, duckdb, mo):
+    _HIERARCHY = HIERARCHY
     BREAKDOWN_DIMS = {
         "Occupancy Type": "occupancy_type",
         "Damage Category": "st_damcat",
@@ -516,6 +585,135 @@ def _top10_table(GT, comparison_df, comparison_level, mo, pd, return_periods):
             .tab_source_note("AAL = Average Annual Loss.  Ratio = USD per $1M exposure.")
         )
     _output
+    return
+
+
+@app.cell
+def _geo_summary_controls(comparison_level, mo):
+    _ALL_GEO_LEVELS = ["state", "county", "tract", "block_group", "block", "community", "huc"]
+    _GEO_LABELS = {
+        "state": "State",
+        "county": "County",
+        "tract": "Tract",
+        "block_group": "Block Group",
+        "block": "Block",
+        "community": "Community",
+        "huc": "HUC (Watershed)",
+    }
+    geo_summary_dropdown = mo.ui.dropdown(
+        options={_GEO_LABELS[lvl]: lvl for lvl in _ALL_GEO_LEVELS},
+        value=_GEO_LABELS.get(comparison_level, "County"),
+        label="Summarize by geography",
+    )
+    geo_summary_dropdown
+    return (geo_summary_dropdown,)
+
+
+@app.cell
+def _geo_summary_gdf(
+    DB_PATH,
+    FloodResultsAggregator,
+    duckdb,
+    geo_summary_dropdown,
+    gpd,
+    mo,
+    pd,
+    pygris,
+):
+    _selected_level = geo_summary_dropdown.value
+    _CENSUS_GEO_COL = {
+        "state": "state_fips",
+        "county": "county_fips",
+        "tract": "tract_fips",
+        "block_group": "block_group_fips",
+        "block": "block_fips",
+    }
+
+    _conn = duckdb.connect(str(DB_PATH), read_only=True)
+    _agg_obj = FloodResultsAggregator(conn=_conn)
+    _agg_df = _agg_obj.aggregate(geography=_selected_level)
+
+    _status = None
+    if _selected_level not in _CENSUS_GEO_COL:
+        geo_summary_gdf = gpd.GeoDataFrame(_agg_df)
+        _status = mo.callout(
+            mo.md(f"No census geometry available for **{_selected_level}** — showing tabular data only."),
+            kind="warn",
+        )
+    else:
+        _geo_col = _CENSUS_GEO_COL[_selected_level]
+        _valid = _agg_df[_agg_df[_geo_col].notna()]
+        if _valid.empty:
+            geo_summary_gdf = gpd.GeoDataFrame(_agg_df)
+            _status = mo.callout(mo.md("No geography IDs in results — tabular data only."), kind="warn")
+        else:
+            _state_fips = _valid[_geo_col].str[:2].iloc[0]
+            try:
+                if _selected_level == "state":
+                    _raw = pygris.states(cb=True, resolution="500k", cache=True)
+                elif _selected_level == "county":
+                    _raw = pygris.counties(state=_state_fips, cb=True, resolution="500k", cache=True)
+                elif _selected_level == "tract":
+                    _county_codes = _valid[_geo_col].str[2:5].unique().tolist()
+                    _raw = gpd.pd.concat(
+                        [pygris.tracts(state=_state_fips, county=_c, cb=True, cache=True) for _c in _county_codes],
+                        ignore_index=True,
+                    )
+                elif _selected_level == "block_group":
+                    _county_codes = _valid[_geo_col].str[2:5].unique().tolist()
+                    _raw = gpd.pd.concat(
+                        [pygris.block_groups(state=_state_fips, county=_c, cb=True, cache=True) for _c in _county_codes],
+                        ignore_index=True,
+                    )
+                else:  # block
+                    _county_codes = _valid[_geo_col].str[2:5].unique().tolist()
+                    _raw = gpd.pd.concat(
+                        [pygris.blocks(state=_state_fips, county=_c, cache=True) for _c in _county_codes],
+                        ignore_index=True,
+                    )
+                geo_summary_gdf = _raw.to_crs("EPSG:4326").merge(
+                    _agg_df, left_on="GEOID", right_on=_geo_col, how="left"
+                )
+            except Exception as _e:
+                geo_summary_gdf = gpd.GeoDataFrame(_agg_df)
+                _status = mo.callout(mo.md(f"Could not fetch geometry: {_e}"), kind="warn")
+
+    _status
+    return (geo_summary_gdf,)
+
+
+@app.cell
+def _geo_summary_table_download(geo_summary_dropdown, geo_summary_gdf, io, mo, pd):
+    def _to_parquet_bytes(gdf):
+        buf = io.BytesIO()
+        _has_geom = (
+            "geometry" in gdf.columns
+            and hasattr(gdf, "geometry")
+            and not gdf["geometry"].isna().all()
+        )
+        if _has_geom:
+            gdf.to_parquet(buf, index=False)
+        else:
+            _cols = [c for c in gdf.columns if c != "geometry"]
+            pd.DataFrame(gdf[_cols]).to_parquet(buf, index=False)
+        return buf.getvalue()
+
+    _level_lbl = geo_summary_dropdown.value.replace("_", " ").title()
+    _display_cols = [c for c in geo_summary_gdf.columns if c != "geometry"]
+
+    mo.vstack([
+        mo.ui.table(
+            geo_summary_gdf[_display_cols].reset_index(drop=True),
+            label=f"{_level_lbl} results ({len(geo_summary_gdf):,} rows)",
+        ),
+        mo.md("### Export"),
+        mo.download(
+            data=_to_parquet_bytes(geo_summary_gdf),
+            filename=f"geography_{geo_summary_dropdown.value}_results.parquet",
+            mimetype="application/octet-stream",
+            label=f"Download {_level_lbl} Results (.parquet)",
+        ),
+    ])
     return
 
 

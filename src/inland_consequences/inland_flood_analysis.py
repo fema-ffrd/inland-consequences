@@ -540,6 +540,18 @@ class InlandFloodAnalysis:
             self._log(conn, "INFO", "ddf_statistics",
                       "Damage function statistics (triangular distribution) computed", time.perf_counter() - t)
 
+            # Compute content damage function statistics
+            t = time.perf_counter()
+            self._compute_content_damage_function_statistics(conn)
+            self._log(conn, "INFO", "content_ddf_statistics",
+                      "Content damage function statistics computed", time.perf_counter() - t)
+
+            # Compute inventory damage function statistics
+            t = time.perf_counter()
+            self._compute_inventory_damage_function_statistics(conn)
+            self._log(conn, "INFO", "inventory_ddf_statistics",
+                      "Inventory damage function statistics computed", time.perf_counter() - t)
+
             # Calculate damages
             t = time.perf_counter()
             self._calculate_losses(conn)
@@ -632,6 +644,55 @@ class InlandFloodAnalysis:
         connection.execute("DROP TABLE IF EXISTS buildings")
         connection.execute("CREATE TABLE buildings AS SELECT * FROM standardized_arrow")
 
+    def _create_vulnerability_tables(self, connection: duckdb.DuckDBPyConnection) -> None:
+        """Create tables from the vulnerability data CSVs.
+
+        Args:
+            connection: Active DuckDB connection.
+        """
+        import pandas as pd
+        # Define CSV file paths
+        base_path = Path(__file__).parent / "data"
+        csv_files = {
+            "xref_contents": base_path / "df_lookup_contents.csv",
+            "xref_inventory": base_path / "df_lookup_inventory.csv",
+            "xref_structures": base_path / "df_lookup_structures.csv",
+        }
+
+        for table_name, csv_path in csv_files.items():
+            df = pd.read_csv(csv_path)
+            arrow_table = pa.Table.from_pandas(df)
+            connection.execute(f"DROP TABLE IF EXISTS {table_name}")
+            connection.execute(f"CREATE TABLE {table_name} AS SELECT * FROM arrow_table")
+        
+        df_structure = pd.read_csv(base_path / "df_structure.csv")
+        structure_arrow_table = pa.Table.from_pandas(df_structure)
+
+        # TODO: Not sure I like this implementation because of the repeated automated test.
+        #   I feel like the parameterized tests should be handling this.
+        connection.execute("DROP TABLE IF EXISTS ddf_structure")
+        connection.execute(f"CREATE TABLE ddf_structure AS SELECT * FROM structure_arrow_table")
+
+        # Content damage curves (ft-style depth columns: ft12m, ft0_5, ft01, ...)
+        df_contents_curves = pd.read_csv(base_path / "damage_curves_contents.csv")
+        df_contents_curves = df_contents_curves.rename(columns={"DDF_ID": "ddf_id", "Originator Source": "comment"})
+        contents_curves_arrow = pa.Table.from_pandas(df_contents_curves)
+        connection.execute("DROP TABLE IF EXISTS ddf_contents")
+        connection.execute("CREATE TABLE ddf_contents AS SELECT * FROM contents_curves_arrow")
+
+        # Inventory damage curves (same ft-style format)
+        df_inventory_curves = pd.read_csv(base_path / "damage_curves_inventory.csv")
+        df_inventory_curves = df_inventory_curves.rename(columns={"DDF_ID": "ddf_id", "Originator Source": "comment"})
+        inventory_curves_arrow = pa.Table.from_pandas(df_inventory_curves)
+        connection.execute("DROP TABLE IF EXISTS ddf_inventory")
+        connection.execute("CREATE TABLE ddf_inventory AS SELECT * FROM inventory_curves_arrow")
+
+        # Economic income parameters for computing inventory cost when not provided
+        df_econ = pd.read_csv(base_path / "econ_inc_parms.csv")
+        econ_arrow = pa.Table.from_pandas(df_econ)
+        connection.execute("DROP TABLE IF EXISTS econ_inc_parms")
+        connection.execute("CREATE TABLE econ_inc_parms AS SELECT * FROM econ_arrow")
+        
     def _create_hazard_tables(self, connection: duckdb.DuckDBPyConnection) -> None:
         """Create a hazard table by sampling raster values at building point locations.
         
@@ -921,10 +982,11 @@ class InlandFloodAnalysis:
                     'buildings',
                     'results_validation',
                     'FLOOD_PERIL_TYPE_NULL',
-                    'flood_peril_type is null; indicates missing hazard data or processing issue',
+                    'flood_peril_type is null for building with flood depth > 0; indicates a processing issue',
                     'ERROR'
                 FROM buildings
-                WHERE flood_peril_type IS NULL;
+                WHERE flood_peril_type IS NULL
+                AND id IN (SELECT DISTINCT ID FROM hazard);
 
                 -- Check for loss ratios > 1 (100%) in building or content loss
                 INSERT INTO validation_log (building_id, table_name, source, rule, message, severity)
@@ -960,11 +1022,11 @@ class InlandFloodAnalysis:
                     'aal_losses',
                     'results_validation',
                     'HIGH_AAL_LOSS_RATIO',
-                    'AAL loss ratio >10% of building value (' || ROUND((a.aal_mean / NULLIF(b.building_cost, 0)) * 100, 1) || '%); review for erroneous location or anomalies with return period hazard data',
+                    'AAL loss ratio >10% of building value (' || ROUND((a.baal_mean / NULLIF(b.building_cost, 0)) * 100, 1) || '%); review for erroneous location or anomalies with return period hazard data',
                     'WARNING'
                 FROM aal_losses a
                 JOIN buildings b ON a.ID = b.id
-                WHERE (a.aal_mean / NULLIF(b.building_cost, 0)) > 0.1;
+                WHERE (a.baal_mean / NULLIF(b.building_cost, 0)) > 0.1;
 
                 -- Check for non-monotonic losses (loss decreases as return period increases)
                 -- This indicates non-monotonic hazard depth data which distorts AAL estimates
@@ -1632,32 +1694,386 @@ class InlandFloodAnalysis:
         '''
         connection.execute(sql_statement)
 
-    def _calculate_losses(self, connection: duckdb.DuckDBPyConnection) -> None:
-        # Compute the damages from the valuation * the damage percents.
-        # damage_function_statistics with damage_percent_mean and damage_percent_std by building_id and return_period.
-        # Also computes loss_min and loss_max from d_min and d_max respectively.
+    def _compute_content_damage_function_statistics(self, connection: duckdb.DuckDBPyConnection) -> None:
+        """Compute damage percentages for content using content damage functions.
+
+        Mirrors _compute_damage_function_statistics but uses content_damage_functions
+        and ddf_contents (ft-style depth columns). Depth is adjusted by first_floor_height
+        from the buildings table, consistent with the structure damage computation.
+
+        If ddf_contents is not loaded (e.g. test fixtures that patch
+        _create_vulnerability_tables), an empty statistics table is created so
+        downstream SQL can still run without errors.
+        """
+        table_exists = connection.execute(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'ddf_contents'"
+        ).fetchone()[0]
+
+        if not table_exists:
+            connection.execute("""
+                CREATE OR REPLACE TABLE content_damage_function_statistics (
+                    building_id INTEGER, return_period INTEGER,
+                    damage_percent DOUBLE, d_min DOUBLE, d_max DOUBLE,
+                    d_mode DOUBLE, damage_percent_mean DOUBLE, damage_percent_std DOUBLE
+                )
+            """)
+            return
 
         sql_statement = '''
+            CREATE OR REPLACE TABLE content_damage_function_statistics AS
+
+            WITH
+            -- 1. Unpivot Content DDF (ft-style columns: ft12m, ft0_5, ft01, ...)
+            ddf_points AS (
+                SELECT
+                    ddf_id,
+                    CASE WHEN variable_name LIKE '%m'
+                        THEN -CAST(REPLACE(REPLACE(REPLACE(variable_name, 'ft', ''), '_', '.'), 'm', '') AS DOUBLE)
+                        ELSE  CAST(REPLACE(REPLACE(variable_name, 'ft', ''), '_', '.') AS DOUBLE)
+                    END AS depth_ft,
+                    value_column AS value
+                FROM ddf_contents
+                UNPIVOT EXCLUDE NULLS (
+                    value_column FOR variable_name IN (COLUMNS('^ft'))
+                )
+            ),
+
+            -- 2. Create Interpolation Segments
+            ddf_segments AS (
+                SELECT
+                    ddf_id,
+                    depth_ft AS x1,
+                    value AS y1,
+                    LEAD(depth_ft) OVER (PARTITION BY ddf_id ORDER BY depth_ft) AS x2,
+                    LEAD(value)    OVER (PARTITION BY ddf_id ORDER BY depth_ft) AS y2
+                FROM ddf_points
+            ),
+
+            -- 3. Generate Hazard Evaluation Points (depth - first_floor_height, same as structures)
+            hazard_points AS (
+                SELECT h.id, h.return_period, cdf.damage_function_id AS ddf_id,
+                       h.depth - COALESCE(b.first_floor_height, 0) AS eval_depth, 'mean' AS point_type
+                FROM hazard h
+                JOIN content_damage_functions cdf ON h.ID = cdf.building_id
+                JOIN buildings b ON h.ID = b.id
+                UNION ALL
+                SELECT h.id, h.return_period, cdf.damage_function_id AS ddf_id,
+                       h.depth + h.std_dev - COALESCE(b.first_floor_height, 0) AS eval_depth, 'max' AS point_type
+                FROM hazard h
+                JOIN content_damage_functions cdf ON h.ID = cdf.building_id
+                JOIN buildings b ON h.ID = b.id
+                UNION ALL
+                SELECT h.id, h.return_period, cdf.damage_function_id AS ddf_id,
+                       h.depth - h.std_dev - COALESCE(b.first_floor_height, 0) AS eval_depth, 'min' AS point_type
+                FROM hazard h
+                JOIN content_damage_functions cdf ON h.ID = cdf.building_id
+                JOIN buildings b ON h.ID = b.id
+            ),
+
+            -- 4. Perform Linear Interpolation
+            interpolated_results AS (
+                SELECT
+                    hp.id,
+                    hp.return_period,
+                    hp.point_type,
+                    CASE
+                        WHEN ds.x1 IS NULL THEN 0
+                        WHEN ds.x2 IS NULL THEN ds.y1
+                        ELSE ds.y1 + (hp.eval_depth - ds.x1) * (ds.y2 - ds.y1) / (ds.x2 - ds.x1)
+                    END AS calc_damage
+                FROM hazard_points hp
+                ASOF LEFT JOIN ddf_segments ds
+                    ON hp.ddf_id = ds.ddf_id AND hp.eval_depth >= ds.x1
+            ),
+
+            -- 5. Pivot Statistics
+            pivoted_stats AS (
+                SELECT
+                    id AS building_id,
+                    return_period,
+                    MAX(CASE WHEN point_type = 'mean' THEN calc_damage END) AS d_mean,
+                    MAX(CASE WHEN point_type = 'min'  THEN calc_damage END) AS d_min,
+                    MAX(CASE WHEN point_type = 'max'  THEN calc_damage END) AS d_max
+                FROM interpolated_results
+                GROUP BY id, return_period
+            ),
+
+            -- 6. Apply Triangular Distribution Logic
+            triangular_calc AS (
+                SELECT
+                    building_id,
+                    return_period,
+                    d_mean,
+                    d_min,
+                    d_max,
+                    GREATEST(d_min, LEAST(d_max, (3 * d_mean) - d_min - d_max)) AS mode_clamped
+                FROM pivoted_stats
+            )
+
+            -- 7. Final Output
+            SELECT
+                building_id,
+                return_period,
+                d_mean AS damage_percent,
+                d_min,
+                d_max,
+                mode_clamped AS d_mode,
+                d_mean + ((d_min + d_max - 2 * d_mean) * (1.0 / SQRT(2 * PI()))) AS damage_percent_mean,
+                ABS(d_max - d_min) / 2.0 AS damage_percent_std
+            FROM triangular_calc;
+        '''
+        connection.execute(sql_statement)
+
+    def _compute_inventory_damage_function_statistics(self, connection: duckdb.DuckDBPyConnection) -> None:
+        """Compute damage percentages for inventory using inventory damage functions.
+
+        Mirrors _compute_content_damage_function_statistics but uses inventory_damage_functions
+        and ddf_inventory. Depth is adjusted by first_floor_height from the buildings table.
+
+        If ddf_inventory is not loaded, an empty statistics table is created so
+        downstream SQL can still run without errors.
+        """
+        table_exists = connection.execute(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'ddf_inventory'"
+        ).fetchone()[0]
+
+        if not table_exists:
+            connection.execute("""
+                CREATE OR REPLACE TABLE inventory_damage_function_statistics (
+                    building_id INTEGER, return_period INTEGER,
+                    damage_percent DOUBLE, d_min DOUBLE, d_max DOUBLE,
+                    d_mode DOUBLE, damage_percent_mean DOUBLE, damage_percent_std DOUBLE
+                )
+            """)
+            return
+
+        sql_statement = '''
+            CREATE OR REPLACE TABLE inventory_damage_function_statistics AS
+
+            WITH
+            -- 1. Unpivot Inventory DDF (ft-style columns)
+            ddf_points AS (
+                SELECT
+                    ddf_id,
+                    CASE WHEN variable_name LIKE '%m'
+                        THEN -CAST(REPLACE(REPLACE(REPLACE(variable_name, 'ft', ''), '_', '.'), 'm', '') AS DOUBLE)
+                        ELSE  CAST(REPLACE(REPLACE(variable_name, 'ft', ''), '_', '.') AS DOUBLE)
+                    END AS depth_ft,
+                    value_column AS value
+                FROM ddf_inventory
+                UNPIVOT EXCLUDE NULLS (
+                    value_column FOR variable_name IN (COLUMNS('^ft'))
+                )
+            ),
+
+            -- 2. Create Interpolation Segments
+            ddf_segments AS (
+                SELECT
+                    ddf_id,
+                    depth_ft AS x1,
+                    value AS y1,
+                    LEAD(depth_ft) OVER (PARTITION BY ddf_id ORDER BY depth_ft) AS x2,
+                    LEAD(value)    OVER (PARTITION BY ddf_id ORDER BY depth_ft) AS y2
+                FROM ddf_points
+            ),
+
+            -- 3. Generate Hazard Evaluation Points (depth - first_floor_height)
+            hazard_points AS (
+                SELECT h.id, h.return_period, idf.damage_function_id AS ddf_id,
+                       h.depth - COALESCE(b.first_floor_height, 0) AS eval_depth, 'mean' AS point_type
+                FROM hazard h
+                JOIN inventory_damage_functions idf ON h.ID = idf.building_id
+                JOIN buildings b ON h.ID = b.id
+                UNION ALL
+                SELECT h.id, h.return_period, idf.damage_function_id AS ddf_id,
+                       h.depth + h.std_dev - COALESCE(b.first_floor_height, 0) AS eval_depth, 'max' AS point_type
+                FROM hazard h
+                JOIN inventory_damage_functions idf ON h.ID = idf.building_id
+                JOIN buildings b ON h.ID = b.id
+                UNION ALL
+                SELECT h.id, h.return_period, idf.damage_function_id AS ddf_id,
+                       h.depth - h.std_dev - COALESCE(b.first_floor_height, 0) AS eval_depth, 'min' AS point_type
+                FROM hazard h
+                JOIN inventory_damage_functions idf ON h.ID = idf.building_id
+                JOIN buildings b ON h.ID = b.id
+            ),
+
+            -- 4. Perform Linear Interpolation
+            interpolated_results AS (
+                SELECT
+                    hp.id,
+                    hp.return_period,
+                    hp.point_type,
+                    CASE
+                        WHEN ds.x1 IS NULL THEN 0
+                        WHEN ds.x2 IS NULL THEN ds.y1
+                        ELSE ds.y1 + (hp.eval_depth - ds.x1) * (ds.y2 - ds.y1) / (ds.x2 - ds.x1)
+                    END AS calc_damage
+                FROM hazard_points hp
+                ASOF LEFT JOIN ddf_segments ds
+                    ON hp.ddf_id = ds.ddf_id AND hp.eval_depth >= ds.x1
+            ),
+
+            -- 5. Pivot Statistics
+            pivoted_stats AS (
+                SELECT
+                    id AS building_id,
+                    return_period,
+                    MAX(CASE WHEN point_type = 'mean' THEN calc_damage END) AS d_mean,
+                    MAX(CASE WHEN point_type = 'min'  THEN calc_damage END) AS d_min,
+                    MAX(CASE WHEN point_type = 'max'  THEN calc_damage END) AS d_max
+                FROM interpolated_results
+                GROUP BY id, return_period
+            ),
+
+            -- 6. Apply Triangular Distribution Logic
+            triangular_calc AS (
+                SELECT
+                    building_id,
+                    return_period,
+                    d_mean,
+                    d_min,
+                    d_max,
+                    GREATEST(d_min, LEAST(d_max, (3 * d_mean) - d_min - d_max)) AS mode_clamped
+                FROM pivoted_stats
+            )
+
+            -- 7. Final Output
+            SELECT
+                building_id,
+                return_period,
+                d_mean AS damage_percent,
+                d_min,
+                d_max,
+                mode_clamped AS d_mode,
+                d_mean + ((d_min + d_max - 2 * d_mean) * (1.0 / SQRT(2 * PI()))) AS damage_percent_mean,
+                ABS(d_max - d_min) / 2.0 AS damage_percent_std
+            FROM triangular_calc;
+        '''
+        connection.execute(sql_statement)
+
+    def _calculate_losses(self, connection: duckdb.DuckDBPyConnection) -> None:
+        """Compute building, content, inventory, and total losses per building per return period.
+
+        Building loss columns (loss_*) are unchanged from the original computation.
+        Content loss (content_loss_*), inventory loss (inventory_loss_*), and
+        total loss (total_loss_*) are added alongside them.
+
+        Inventory cost uses the provided inventory_value column when available,
+        falling back to area * GrossSales * (BusinessInv / 100) from econ_inc_parms.
+        """
+        # Ensure econ_inc_parms exists (may be absent when _create_vulnerability_tables is patched in tests)
+        econ_exists = connection.execute(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'econ_inc_parms'"
+        ).fetchone()[0]
+        if not econ_exists:
+            connection.execute("""
+                CREATE TABLE econ_inc_parms (Occupancy VARCHAR, GrossSales DOUBLE, BusinessInv DOUBLE)
+            """)
+
+        col_names = {
+            row[0]
+            for row in connection.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_name = 'buildings'"
+            ).fetchall()
+        }
+        if "inventory_value" in col_names:
+            inv_cost_expr = "COALESCE(b.inventory_value, b.area * e.GrossSales * (e.BusinessInv / 100.0))"
+        else:
+            inv_cost_expr = "b.area * e.GrossSales * (e.BusinessInv / 100.0)"
+
+        sql_statement = f'''
             CREATE OR REPLACE TABLE losses AS
+            WITH inv_cost_cte AS (
+                SELECT
+                    b.id,
+                    {inv_cost_expr} AS inventory_cost
+                FROM buildings b
+                LEFT JOIN econ_inc_parms e ON TRIM(b.occupancy_type) = TRIM(e.Occupancy)
+            )
             SELECT
                 b.ID,
                 d.return_period,
-                ROUND(b.building_cost * (d.d_min / 100.0), 2) AS loss_min,
-                ROUND(b.building_cost * (d.d_mode / 100.0), 2) AS loss_mode_clamped,
-                ROUND(b.building_cost * (d.damage_percent / 100.0), 2) AS loss_mean,
+
+                -- Building losses (unchanged)
+                ROUND(b.building_cost * (d.d_min / 100.0), 2)            AS loss_min,
+                ROUND(b.building_cost * (d.d_mode / 100.0), 2)           AS loss_mode_clamped,
+                ROUND(b.building_cost * (d.damage_percent / 100.0), 2)   AS loss_mean,
                 ROUND(b.building_cost * (d.damage_percent_mean / 100.0), 2) AS loss_mean_adjusted,
-                ROUND(b.building_cost * (d.damage_percent_std / 100.0), 2) AS loss_std,
-                ROUND(b.building_cost * (d.d_max / 100.0), 2) AS loss_max
+                ROUND(b.building_cost * (d.damage_percent_std / 100.0), 2)  AS loss_std,
+                ROUND(b.building_cost * (d.d_max / 100.0), 2)            AS loss_max,
+
+                -- Content losses (NULL when no content damage function matched or no content_cost)
+                ROUND(b.content_cost * (cd.d_min / 100.0), 2)            AS content_loss_min,
+                ROUND(b.content_cost * (cd.damage_percent / 100.0), 2)   AS content_loss_mean,
+                ROUND(b.content_cost * (cd.d_max / 100.0), 2)            AS content_loss_max,
+
+                -- Inventory losses (NULL when no inventory damage function matched or no inventory_cost)
+                ROUND(ic.inventory_cost * (invd.d_min / 100.0), 2)       AS inventory_loss_min,
+                ROUND(ic.inventory_cost * (invd.damage_percent / 100.0), 2) AS inventory_loss_mean,
+                ROUND(ic.inventory_cost * (invd.d_max / 100.0), 2)       AS inventory_loss_max,
+
+                -- Total losses (building + content + inventory; NULLs treated as 0)
+                ROUND(
+                    COALESCE(b.building_cost * (d.d_min / 100.0), 0) +
+                    COALESCE(b.content_cost  * (cd.d_min  / 100.0), 0) +
+                    COALESCE(ic.inventory_cost * (invd.d_min / 100.0), 0),
+                    2
+                ) AS total_loss_min,
+                ROUND(
+                    COALESCE(b.building_cost * (d.damage_percent / 100.0), 0) +
+                    COALESCE(b.content_cost  * (cd.damage_percent / 100.0), 0) +
+                    COALESCE(ic.inventory_cost * (invd.damage_percent / 100.0), 0),
+                    2
+                ) AS total_loss_mean,
+                ROUND(
+                    COALESCE(b.building_cost * (d.d_max / 100.0), 0) +
+                    COALESCE(b.content_cost  * (cd.d_max  / 100.0), 0) +
+                    COALESCE(ic.inventory_cost * (invd.d_max / 100.0), 0),
+                    2
+                ) AS total_loss_max
+
             FROM buildings b
-            JOIN damage_function_statistics d ON b.ID = d.building_id
+            JOIN damage_function_statistics d
+                ON b.ID = d.building_id
+            LEFT JOIN content_damage_function_statistics cd
+                ON b.ID = cd.building_id AND d.return_period = cd.return_period
+            LEFT JOIN inventory_damage_function_statistics invd
+                ON b.ID = invd.building_id AND d.return_period = invd.return_period
+            LEFT JOIN inv_cost_cte ic
+                ON b.ID = ic.id
         '''
 
         connection.execute(sql_statement)
 
     def _calculate_aal(self, connection: duckdb.DuckDBPyConnection) -> None:
-        # Calculate AAL using trapezoidal rule, including min, mean, and max values
+        """Calculate AAL using the trapezoidal rule for building, content, inventory, and total losses.
+
+        Produces BAAL (building), CAAL (content), IAAL (inventory), TAAL (total), each with
+        min/mean/max uncertainty columns, plus loss-ratio-per-$1M columns baalr/caalr/iaalr/taalr.
+        """
         all_rps = self.raster_collection.return_periods()
         all_rps_literal = str(all_rps)
+
+        # Ensure econ_inc_parms exists for the inventory cost join in the ratio calculation
+        econ_exists = connection.execute(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'econ_inc_parms'"
+        ).fetchone()[0]
+        if not econ_exists:
+            connection.execute("""
+                CREATE TABLE econ_inc_parms (Occupancy VARCHAR, GrossSales DOUBLE, BusinessInv DOUBLE)
+            """)
+
+        col_names = {
+            row[0]
+            for row in connection.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_name = 'buildings'"
+            ).fetchall()
+        }
+        if "inventory_value" in col_names:
+            inv_cost_expr = "COALESCE(b.inventory_value, b.area * e.GrossSales * (e.BusinessInv / 100.0))"
+        else:
+            inv_cost_expr = "b.area * e.GrossSales * (e.BusinessInv / 100.0)"
 
         sql_statement = f'''
             CREATE OR REPLACE TABLE aal_losses AS
@@ -1666,7 +2082,7 @@ class InlandFloodAnalysis:
             WITH settings AS (
                 -- 0 = Non-Truncated (Hazus default): Averages $0 modeled losses with the next period.
                 -- 1 = Truncated (GoConsequences): Excludes $0 modeled loss periods from the summation entirely.
-                SELECT {self.aal_truncation} as truncation_option
+                SELECT {self.aal_truncation} AS truncation_option
             ),
 
             -- 0b. Full return period list from RasterCollection (all RPs, including those with no losses)
@@ -1674,28 +2090,36 @@ class InlandFloodAnalysis:
                 SELECT UNNEST({all_rps_literal}::INT[]) AS rp_val
             ),
 
-            -- 1. Base Probabilities
+            -- 1. Base Probabilities — carry all four loss types
             probabilities AS (
-                SELECT 
+                SELECT
                     ID,
-                    1.0 / return_period as prob,
+                    1.0 / return_period                              AS prob,
                     loss_min,
                     loss_mean,
                     loss_std,
-                    loss_max
+                    loss_max,
+                    COALESCE(content_loss_min,       0)             AS content_loss_min,
+                    COALESCE(content_loss_mean,      0)             AS content_loss_mean,
+                    COALESCE(content_loss_max,       0)             AS content_loss_max,
+                    COALESCE(inventory_loss_min,     0)             AS inventory_loss_min,
+                    COALESCE(inventory_loss_mean,    0)             AS inventory_loss_mean,
+                    COALESCE(inventory_loss_max,     0)             AS inventory_loss_max,
+                    total_loss_min,
+                    total_loss_mean,
+                    total_loss_max
                 FROM losses
             ),
 
-            -- 1b. Non-truncated zero anchor: for each building, the next lower RP in the full set
-            --     below its minimum modeled RP gets a $0 loss entry to properly bound the trapezoid.
+            -- 1b. Non-truncated zero anchor
             next_lower_zero AS (
                 SELECT
                     l.ID,
                     1.0 / MAX(g.rp_val) AS prob,
-                    0.0 AS loss_min,
-                    0.0 AS loss_mean,
-                    0.0 AS loss_std,
-                    0.0 AS loss_max
+                    0.0 AS loss_min,       0.0 AS loss_mean,       0.0 AS loss_std,       0.0 AS loss_max,
+                    0.0 AS content_loss_min,   0.0 AS content_loss_mean,   0.0 AS content_loss_max,
+                    0.0 AS inventory_loss_min, 0.0 AS inventory_loss_mean, 0.0 AS inventory_loss_max,
+                    0.0 AS total_loss_min, 0.0 AS total_loss_mean, 0.0 AS total_loss_max
                 FROM (SELECT ID, MIN(return_period) AS min_rp FROM losses GROUP BY ID) l
                 CROSS JOIN global_rp_list g
                 WHERE g.rp_val < l.min_rp
@@ -1705,37 +2129,48 @@ class InlandFloodAnalysis:
 
             -- 2. Add Anchor Points to close the curve at P=1 and P=0
             anchored_points AS (
-                -- Original Data
                 SELECT * FROM probabilities
-                
+
                 UNION ALL
-                
-                -- Anchor: 1-year return (P=1.0). Assuming 0 loss for high frequency.
-                SELECT DISTINCT 
-                    ID, 
-                    1.0 as prob, 
-                    0.0 as loss_min, 
-                    0.0 as loss_mean, 
-                    0.0 as loss_std, 
-                    0.0 as loss_max 
+
+                -- Anchor: 1-year return (P=1.0) — zero loss
+                SELECT DISTINCT
+                    ID, 1.0 AS prob,
+                    0.0, 0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0
                 FROM probabilities
-                
+
                 UNION ALL
-                
-                -- Anchor: Infinite return (P=0.0). 
-                SELECT 
-                    ID, 
-                    0.0 as prob,
-                    FIRST_VALUE(loss_min) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_min,
-                    FIRST_VALUE(loss_mean) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_mean,
-                    FIRST_VALUE(loss_std) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_std,
-                    FIRST_VALUE(loss_max) OVER (PARTITION BY ID ORDER BY prob ASC) as loss_max
+
+                -- Anchor: Infinite return (P=0.0) — carry forward highest modeled loss
+                SELECT
+                    ID, 0.0 AS prob,
+                    FIRST_VALUE(loss_min)            OVER (PARTITION BY ID ORDER BY prob ASC),
+                    FIRST_VALUE(loss_mean)           OVER (PARTITION BY ID ORDER BY prob ASC),
+                    FIRST_VALUE(loss_std)            OVER (PARTITION BY ID ORDER BY prob ASC),
+                    FIRST_VALUE(loss_max)            OVER (PARTITION BY ID ORDER BY prob ASC),
+                    FIRST_VALUE(content_loss_min)    OVER (PARTITION BY ID ORDER BY prob ASC),
+                    FIRST_VALUE(content_loss_mean)   OVER (PARTITION BY ID ORDER BY prob ASC),
+                    FIRST_VALUE(content_loss_max)    OVER (PARTITION BY ID ORDER BY prob ASC),
+                    FIRST_VALUE(inventory_loss_min)  OVER (PARTITION BY ID ORDER BY prob ASC),
+                    FIRST_VALUE(inventory_loss_mean) OVER (PARTITION BY ID ORDER BY prob ASC),
+                    FIRST_VALUE(inventory_loss_max)  OVER (PARTITION BY ID ORDER BY prob ASC),
+                    FIRST_VALUE(total_loss_min)      OVER (PARTITION BY ID ORDER BY prob ASC),
+                    FIRST_VALUE(total_loss_mean)     OVER (PARTITION BY ID ORDER BY prob ASC),
+                    FIRST_VALUE(total_loss_max)      OVER (PARTITION BY ID ORDER BY prob ASC)
                 FROM probabilities
 
                 UNION ALL
 
                 -- Non-truncated: add $0 at the next lower RP to properly bound the trapezoid
-                SELECT nlz.ID, nlz.prob, nlz.loss_min, nlz.loss_mean, nlz.loss_std, nlz.loss_max
+                SELECT
+                    nlz.ID, nlz.prob,
+                    nlz.loss_min, nlz.loss_mean, nlz.loss_std, nlz.loss_max,
+                    nlz.content_loss_min, nlz.content_loss_mean, nlz.content_loss_max,
+                    nlz.inventory_loss_min, nlz.inventory_loss_mean, nlz.inventory_loss_max,
+                    nlz.total_loss_min, nlz.total_loss_mean, nlz.total_loss_max
                 FROM next_lower_zero nlz
                 CROSS JOIN settings
                 WHERE settings.truncation_option = 0
@@ -1743,68 +2178,179 @@ class InlandFloodAnalysis:
 
             -- 3. Create Trapezoidal Segments
             segments AS (
-                SELECT 
+                SELECT
                     ID,
-                    prob as p_start,
-                    loss_min as lmin_start,
-                    loss_mean as l_start,
-                    loss_std as s_start,
-                    loss_max as lmax_start,
-                    LEAD(prob) OVER (PARTITION BY ID ORDER BY prob DESC) as p_end,
-                    LEAD(loss_min) OVER (PARTITION BY ID ORDER BY prob DESC) as lmin_end,
-                    LEAD(loss_mean) OVER (PARTITION BY ID ORDER BY prob DESC) as l_end,
-                    LEAD(loss_std) OVER (PARTITION BY ID ORDER BY prob DESC) as s_end,
-                    LEAD(loss_max) OVER (PARTITION BY ID ORDER BY prob DESC) as lmax_end
+                    prob              AS p_start,
+                    loss_min          AS lmin_start,
+                    loss_mean         AS l_start,
+                    loss_std          AS s_start,
+                    loss_max          AS lmax_start,
+                    content_loss_min  AS cmin_start,
+                    content_loss_mean AS c_start,
+                    content_loss_max  AS cmax_start,
+                    inventory_loss_min  AS imin_start,
+                    inventory_loss_mean AS i_start,
+                    inventory_loss_max  AS imax_start,
+                    total_loss_min    AS tmin_start,
+                    total_loss_mean   AS t_start,
+                    total_loss_max    AS tmax_start,
+                    LEAD(prob)              OVER (PARTITION BY ID ORDER BY prob DESC) AS p_end,
+                    LEAD(loss_min)          OVER (PARTITION BY ID ORDER BY prob DESC) AS lmin_end,
+                    LEAD(loss_mean)         OVER (PARTITION BY ID ORDER BY prob DESC) AS l_end,
+                    LEAD(loss_std)          OVER (PARTITION BY ID ORDER BY prob DESC) AS s_end,
+                    LEAD(loss_max)          OVER (PARTITION BY ID ORDER BY prob DESC) AS lmax_end,
+                    LEAD(content_loss_min)  OVER (PARTITION BY ID ORDER BY prob DESC) AS cmin_end,
+                    LEAD(content_loss_mean) OVER (PARTITION BY ID ORDER BY prob DESC) AS c_end,
+                    LEAD(content_loss_max)  OVER (PARTITION BY ID ORDER BY prob DESC) AS cmax_end,
+                    LEAD(inventory_loss_min)  OVER (PARTITION BY ID ORDER BY prob DESC) AS imin_end,
+                    LEAD(inventory_loss_mean) OVER (PARTITION BY ID ORDER BY prob DESC) AS i_end,
+                    LEAD(inventory_loss_max)  OVER (PARTITION BY ID ORDER BY prob DESC) AS imax_end,
+                    LEAD(total_loss_min)    OVER (PARTITION BY ID ORDER BY prob DESC) AS tmin_end,
+                    LEAD(total_loss_mean)   OVER (PARTITION BY ID ORDER BY prob DESC) AS t_end,
+                    LEAD(total_loss_max)    OVER (PARTITION BY ID ORDER BY prob DESC) AS tmax_end
                 FROM (SELECT DISTINCT * FROM anchored_points)
             ),
 
-            -- 4. Calculate Area of Segments (Hazus vs GoConsequences Logic)
+            -- 4. Calculate Area of Each Segment
             segment_areas AS (
-                SELECT 
+                SELECT
                     s.ID,
-                    
-                    -- MIN
-                    CASE 
-                        WHEN s.p_start = 1.0 THEN 0.0 -- ALWAYS prevent the P=1.0 anchor from blowing up AAL
-                        WHEN set.truncation_option = 1 AND s.lmin_start = 0 THEN 0.0 -- GoConsequences (Truncated)
-                        ELSE ( (s.lmin_start + s.lmin_end) / 2.0 ) * (s.p_start - s.p_end) -- Hazus (Non-Truncated)
-                    END as aal_contribution_min,
 
-                    -- MEAN
-                    CASE 
+                    -- BUILDING MIN
+                    CASE
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.lmin_start = 0 THEN 0.0
+                        ELSE ((s.lmin_start + s.lmin_end) / 2.0) * (s.p_start - s.p_end)
+                    END AS baal_contribution_min,
+
+                    -- BUILDING MEAN
+                    CASE
                         WHEN s.p_start = 1.0 THEN 0.0
                         WHEN set.truncation_option = 1 AND s.l_start = 0 THEN 0.0
-                        ELSE ( (s.l_start + s.l_end) / 2.0 ) * (s.p_start - s.p_end)
-                    END as aal_contribution_mean,
+                        ELSE ((s.l_start + s.l_end) / 2.0) * (s.p_start - s.p_end)
+                    END AS baal_contribution_mean,
 
-                    -- STD
-                    CASE 
+                    -- BUILDING STD
+                    CASE
                         WHEN s.p_start = 1.0 THEN 0.0
                         WHEN set.truncation_option = 1 AND s.s_start = 0 THEN 0.0
-                        ELSE ( (s.s_start + s.s_end) / 2.0 ) * (s.p_start - s.p_end)
-                    END as aal_contribution_std,
+                        ELSE ((s.s_start + s.s_end) / 2.0) * (s.p_start - s.p_end)
+                    END AS baal_contribution_std,
 
-                    -- MAX
-                    CASE 
+                    -- BUILDING MAX
+                    CASE
                         WHEN s.p_start = 1.0 THEN 0.0
                         WHEN set.truncation_option = 1 AND s.lmax_start = 0 THEN 0.0
-                        ELSE ( (s.lmax_start + s.lmax_end) / 2.0 ) * (s.p_start - s.p_end)
-                    END as aal_contribution_max
-                    
+                        ELSE ((s.lmax_start + s.lmax_end) / 2.0) * (s.p_start - s.p_end)
+                    END AS baal_contribution_max,
+
+                    -- CONTENT MIN
+                    CASE
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.cmin_start = 0 THEN 0.0
+                        ELSE ((s.cmin_start + s.cmin_end) / 2.0) * (s.p_start - s.p_end)
+                    END AS caal_contribution_min,
+
+                    -- CONTENT MEAN
+                    CASE
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.c_start = 0 THEN 0.0
+                        ELSE ((s.c_start + s.c_end) / 2.0) * (s.p_start - s.p_end)
+                    END AS caal_contribution_mean,
+
+                    -- CONTENT MAX
+                    CASE
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.cmax_start = 0 THEN 0.0
+                        ELSE ((s.cmax_start + s.cmax_end) / 2.0) * (s.p_start - s.p_end)
+                    END AS caal_contribution_max,
+
+                    -- INVENTORY MIN
+                    CASE
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.imin_start = 0 THEN 0.0
+                        ELSE ((s.imin_start + s.imin_end) / 2.0) * (s.p_start - s.p_end)
+                    END AS iaal_contribution_min,
+
+                    -- INVENTORY MEAN
+                    CASE
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.i_start = 0 THEN 0.0
+                        ELSE ((s.i_start + s.i_end) / 2.0) * (s.p_start - s.p_end)
+                    END AS iaal_contribution_mean,
+
+                    -- INVENTORY MAX
+                    CASE
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.imax_start = 0 THEN 0.0
+                        ELSE ((s.imax_start + s.imax_end) / 2.0) * (s.p_start - s.p_end)
+                    END AS iaal_contribution_max,
+
+                    -- TOTAL MIN
+                    CASE
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.tmin_start = 0 THEN 0.0
+                        ELSE ((s.tmin_start + s.tmin_end) / 2.0) * (s.p_start - s.p_end)
+                    END AS taal_contribution_min,
+
+                    -- TOTAL MEAN
+                    CASE
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.t_start = 0 THEN 0.0
+                        ELSE ((s.t_start + s.t_end) / 2.0) * (s.p_start - s.p_end)
+                    END AS taal_contribution_mean,
+
+                    -- TOTAL MAX
+                    CASE
+                        WHEN s.p_start = 1.0 THEN 0.0
+                        WHEN set.truncation_option = 1 AND s.tmax_start = 0 THEN 0.0
+                        ELSE ((s.tmax_start + s.tmax_end) / 2.0) * (s.p_start - s.p_end)
+                    END AS taal_contribution_max
+
                 FROM segments s
                 CROSS JOIN settings set
                 WHERE s.p_end IS NOT NULL
+            ),
+
+            -- 5. Aggregate Contributions per Building
+            aggregated AS (
+                SELECT
+                    ID,
+                    SUM(baal_contribution_min)  AS baal_min,
+                    SUM(baal_contribution_mean) AS baal_mean,
+                    SUM(baal_contribution_std)  AS baal_std,
+                    SUM(baal_contribution_max)  AS baal_max,
+                    SUM(caal_contribution_min)  AS caal_min,
+                    SUM(caal_contribution_mean) AS caal_mean,
+                    SUM(caal_contribution_max)  AS caal_max,
+                    SUM(iaal_contribution_min)  AS iaal_min,
+                    SUM(iaal_contribution_mean) AS iaal_mean,
+                    SUM(iaal_contribution_max)  AS iaal_max,
+                    SUM(taal_contribution_min)  AS taal_min,
+                    SUM(taal_contribution_mean) AS taal_mean,
+                    SUM(taal_contribution_max)  AS taal_max
+                FROM segment_areas
+                GROUP BY ID
             )
 
-            -- 5. Final Aggregation
-            SELECT 
-                ID,
-                SUM(aal_contribution_min) as aal_min,
-                SUM(aal_contribution_mean) as aal_mean,
-                SUM(aal_contribution_std) as aal_std,
-                SUM(aal_contribution_max) as aal_max
-            FROM segment_areas
-            GROUP BY ID;
+            -- 6. Final Output — AAL values plus loss ratios per $1M of exposure
+            SELECT
+                a.ID,
+                a.baal_min, a.baal_mean, a.baal_std, a.baal_max,
+                a.caal_min, a.caal_mean, a.caal_max,
+                a.iaal_min, a.iaal_mean, a.iaal_max,
+                a.taal_min, a.taal_mean, a.taal_max,
+                ROUND(a.baal_mean / (NULLIF(b.building_cost, 0) * 1000000.0), 4)                          AS baalr,
+                ROUND(a.caal_mean / (NULLIF(b.content_cost, 0) * 1000000.0), 4)                           AS caalr,
+                ROUND(a.iaal_mean / (NULLIF({inv_cost_expr}, 0) * 1000000.0), 4)                          AS iaalr,
+                ROUND(a.taal_mean / (NULLIF(
+                    COALESCE(b.building_cost, 0) +
+                    COALESCE(b.content_cost, 0) +
+                    COALESCE({inv_cost_expr}, 0), 0
+                ) * 1000000.0), 4)                                                                        AS taalr
+            FROM aggregated a
+            JOIN buildings b ON a.ID = b.id
+            LEFT JOIN econ_inc_parms e ON TRIM(b.occupancy_type) = TRIM(e.Occupancy);
         '''
 
         connection.execute(sql_statement)

@@ -47,3 +47,19 @@ To set up a pre-commit hook for [mdformat](https://mdformat.readthedocs.io/en/st
 ```
 (venv-inland) $ pre-commit install
 ```
+
+### Optional Test inspections
+
+You can run the pytest tests from the command line to direct where to put the temporary
+files that it generates when the test are run.
+
+```powershell
+uv run pytest -m manual tests/test_inland_flood_analysis.py  --basetemp=outputs
+```
+
+After that is run, you can inspect the generated files in the outputs folder for each test
+and open the DuckDB file using the DuckDB CLI.
+
+```powershell
+uv run duckdb -ui .\outputs\test_manual_calculate_lossescurrent\test_duwamish.duckdb
+```
