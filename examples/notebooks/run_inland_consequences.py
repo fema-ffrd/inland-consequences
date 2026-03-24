@@ -607,7 +607,7 @@ def _(
     # Step 3: Create vulnerability function
     with mo.status.spinner(title="Initializing vulnerability functions..."):
         step_start = time.perf_counter()
-        flood_function = InlandFloodVulnerability(buildings)
+        flood_function = InlandFloodVulnerability()
         analysis_results["vuln_time"] = time.perf_counter() - step_start
 
     # Step 4: Run analysis
@@ -619,7 +619,6 @@ def _(
             buildings=buildings,
             vulnerability=flood_function,
             calculate_aal=calculate_aal,
-            wildcard_fields=inv_uncert_multiselect.value
         )
 
         with analysis:

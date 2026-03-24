@@ -35,42 +35,9 @@ class InlandFloodAnalysis:
     and contain a column with monetary values (building_value_col).
     The vulnerability object must implement calculate_vulnerability(exposure_df)
     and return a DataFrame of damage ratios with the same shape as exposure_df.
-    
-    Damage Function Matching:
-        The damage function matching algorithm can be configured using wildcard_fields
-        to control which building attributes are used for matching:
-        
-        - Default (wildcard_fields=None or []): Match on all available attributes
-          * occupancy_type (if not NULL)
-          * foundation_type (if not NULL)
-          * number_stories (if not NULL, matched against story_min/story_max range)
-          * area (if not NULL, matched against sqft_min/sqft_max range; NULL bounds = open-ended)
-          * general_building_type (if not NULL)
-        
-        - Selective wildcarding: Specify fields to ignore even when values present
-          * wildcard_fields=['general_building_type'] - ignore construction material
-          * wildcard_fields=['foundation_type', 'number_stories'] - match on occupancy + construction
-          * wildcard_fields=['occupancy_type'] - match all curves regardless of occupancy type
-          * wildcard_fields=['area'] - ignore sqft range, match on all other attributes
-          * wildcard_fields=['occupancy_type', 'foundation_type', 'number_stories', 'area', 'general_building_type'] - 
-            match ALL curves (no attribute filtering)
-        
-        Example:
-            # Match on all attributes (default)
-            analysis = InlandFloodAnalysis(
-                raster_collection=rasters,
-                buildings=buildings,
-                vulnerability=vuln,
-                wildcard_fields=[]
-            )
-            
-            # Ignore construction type in matching (useful for testing sensitivity)
-            analysis = InlandFloodAnalysis(
-                raster_collection=rasters,
-                buildings=buildings,
-                vulnerability=vuln,
-                wildcard_fields=['general_building_type']
-            )
+
+    Damage function matching is configured via ``wildcard_fields`` on the
+    :class:`~inland_consequences.InlandFloodVulnerability` instance.
     """
 
     def __init__(
@@ -81,7 +48,6 @@ class InlandFloodAnalysis:
         calculate_aal: bool = True,
         aal_rate_limits: Optional[Tuple[float, float]] = None,
         aal_truncation: int = 0,
-        wildcard_fields: Optional[List[str]] = None,
     ) -> None:
         # Must be a RasterCollection instance (validated by its constructor)
         if not isinstance(raster_collection, RasterCollection):
@@ -94,9 +60,6 @@ class InlandFloodAnalysis:
         self.calculate_aal = calculate_aal
         self.aal_rate_limits = aal_rate_limits
         self.aal_truncation = aal_truncation
-        self.wildcard_fields = wildcard_fields or []  # Fields to ignore in matching even when values present
-
-        # Since the vulnerability needs the buildings right now we need to think about how to choose them and apply to keep the buildings in sync.
 
         # Minimal validation
         if not hasattr(self.buildings, "gdf"):
@@ -265,7 +228,7 @@ class InlandFloodAnalysis:
             }
 
         return_periods = self.raster_collection.return_periods()
-        wildcard_fields = self.wildcard_fields
+        wildcard_fields = getattr(self.vulnerability, 'wildcard_fields', [])
 
         aal_low = None
         aal_high = None
@@ -536,7 +499,7 @@ class InlandFloodAnalysis:
             
             # Copy vulnerability tables to database
             t = time.perf_counter()
-            self._create_vulnerability_tables(conn)
+            self.vulnerability.create_vulnerability_tables(conn)
             self._log(conn, "INFO", "vulnerability_tables", "Vulnerability tables loaded", time.perf_counter() - t)
             
             # Copy hazard inputs to database
@@ -562,18 +525,18 @@ class InlandFloodAnalysis:
 
             # Gather damage functions from vulnerability function
             t = time.perf_counter()
-            self._gather_damage_functions(conn)
+            self.vulnerability.gather_damage_functions(conn)
             self._log(conn, "INFO", "damage_function_matching", "Damage function matching complete", time.perf_counter() - t)
 
             # Gather damage functions for attributes outside
             t = time.perf_counter()
-            self._gather_missing_functions(conn)
+            self.vulnerability.gather_missing_functions(conn)
             self._log(conn, "INFO", "missing_function_fallback",
                       "Missing damage function fallback (clamping) complete", time.perf_counter() - t)
 
             # Compute the mean and std. deviation of the damage functions
             t = time.perf_counter()
-            self._compute_damage_function_statistics(conn)
+            self.vulnerability.compute_damage_function_statistics(conn)
             self._log(conn, "INFO", "ddf_statistics",
                       "Damage function statistics (triangular distribution) computed", time.perf_counter() - t)
 
@@ -669,35 +632,6 @@ class InlandFloodAnalysis:
         connection.execute("DROP TABLE IF EXISTS buildings")
         connection.execute("CREATE TABLE buildings AS SELECT * FROM standardized_arrow")
 
-    def _create_vulnerability_tables(self, connection: duckdb.DuckDBPyConnection) -> None:
-        """Create tables from the vulnerability data CSVs.
-
-        Args:
-            connection: Active DuckDB connection.
-        """
-        import pandas as pd
-        # Define CSV file paths
-        base_path = Path(__file__).parent / "data"
-        csv_files = {
-            "xref_contents": base_path / "df_lookup_contents.csv",
-            "xref_inventory": base_path / "df_lookup_inventory.csv",
-            "xref_structures": base_path / "df_lookup_structures.csv",
-        }
-
-        for table_name, csv_path in csv_files.items():
-            df = pd.read_csv(csv_path)
-            arrow_table = pa.Table.from_pandas(df)
-            connection.execute(f"DROP TABLE IF EXISTS {table_name}")
-            connection.execute(f"CREATE TABLE {table_name} AS SELECT * FROM arrow_table")
-        
-        df_structure = pd.read_csv(base_path / "df_structure.csv")
-        structure_arrow_table = pa.Table.from_pandas(df_structure)
-
-        # TODO: Not sure I like this implementation because of the repeated automated test.
-        #   I feel like the parameterized tests should be handling this.
-        connection.execute("DROP TABLE IF EXISTS ddf_structure")
-        connection.execute(f"CREATE TABLE ddf_structure AS SELECT * FROM structure_arrow_table")
-        
     def _create_hazard_tables(self, connection: duckdb.DuckDBPyConnection) -> None:
         """Create a hazard table by sampling raster values at building point locations.
         

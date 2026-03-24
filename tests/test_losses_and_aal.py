@@ -27,6 +27,7 @@ from unittest.mock import MagicMock, patch
 
 from inland_consequences.nsi_buildings import NsiBuildings
 from inland_consequences.inland_flood_analysis import InlandFloodAnalysis
+from inland_consequences.inland_vulnerability import InlandFloodVulnerability
 from inland_consequences.raster_collection import RasterCollection
 from sphere.core.schemas.abstract_raster_reader import AbstractRasterReader
 from sphere.core.schemas.abstract_vulnerability_function import AbstractVulnerabilityFunction
@@ -225,19 +226,20 @@ def _inject_linear_ddf(self_obj, connection):
 
 @pytest.fixture(scope="class")
 def pipeline_results(
-    mock_buildings_for_losses, mock_rasters_constant, mock_vulnerability_noop, tmp_path_factory
+    mock_buildings_for_losses, mock_rasters_constant, tmp_path_factory
 ):
     """Run the full pipeline once per class with a tmp_path-based duckdb file.
 
-    Patches ``_create_vulnerability_tables`` to inject the synthetic linear DDF
-    and ``_get_db_identifier`` to persist the database in the pytest temp directory.
+    Patches ``create_vulnerability_tables`` on InlandFloodVulnerability to inject
+    the synthetic linear DDF, and ``_get_db_identifier`` to persist the database
+    in the pytest temp directory.
     """
     tmp_path = tmp_path_factory.mktemp("losses_aal")
     db_path = str(tmp_path / "test_losses.duckdb")
 
     with patch.object(
-        InlandFloodAnalysis,
-        "_create_vulnerability_tables",
+        InlandFloodVulnerability,
+        "create_vulnerability_tables",
         _inject_linear_ddf,
     ), patch(
         "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
@@ -246,7 +248,7 @@ def pipeline_results(
         analysis = InlandFloodAnalysis(
             raster_collection=mock_rasters_constant,
             buildings=mock_buildings_for_losses,
-            vulnerability=mock_vulnerability_noop,
+            vulnerability=InlandFloodVulnerability(),
             calculate_aal=True,
         )
         with analysis:
@@ -706,15 +708,15 @@ def mock_rasters_single_rp():
 
 @pytest.fixture(scope="class")
 def pipeline_results_single_rp(
-    mock_buildings_for_losses, mock_rasters_single_rp, mock_vulnerability_noop, tmp_path_factory
+    mock_buildings_for_losses, mock_rasters_single_rp, tmp_path_factory
 ):
     """Run full pipeline with only the 2000-RP producing losses."""
     tmp_path = tmp_path_factory.mktemp("losses_aal_single_rp")
     db_path = str(tmp_path / "test_losses_single_rp.duckdb")
 
     with patch.object(
-        InlandFloodAnalysis,
-        "_create_vulnerability_tables",
+        InlandFloodVulnerability,
+        "create_vulnerability_tables",
         _inject_linear_ddf,
     ), patch(
         "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
@@ -723,7 +725,7 @@ def pipeline_results_single_rp(
         analysis = InlandFloodAnalysis(
             raster_collection=mock_rasters_single_rp,
             buildings=mock_buildings_for_losses,
-            vulnerability=mock_vulnerability_noop,
+            vulnerability=InlandFloodVulnerability(),
             calculate_aal=True,
         )
         with analysis:
