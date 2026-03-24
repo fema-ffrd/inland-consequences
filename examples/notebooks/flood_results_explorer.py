@@ -587,7 +587,10 @@ def _geo_summary_controls(comparison_level, mo):
         value=_GEO_LABELS.get(comparison_level, "County"),
         label="Summarize by geography",
     )
-    geo_summary_dropdown
+    mo.vstack([
+        mo.md("### Summarizing Dropdown"),
+        geo_summary_dropdown
+    ])
     return (geo_summary_dropdown,)
 
 
@@ -839,7 +842,7 @@ def _geo_summary_lonboard_map(
             # transmit the deck.gl layer data in marimo while the basemap still
             # renders, resulting in an empty-looking map.
             _map_out = lb.Map(layers=[_layer], height=500)
-        
+
     else:
         _map_out = mo.callout(mo.md("No geometry available for map."), kind="info")
 
