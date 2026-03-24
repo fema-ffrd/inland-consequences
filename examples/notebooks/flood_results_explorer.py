@@ -32,6 +32,7 @@ def _imports():
 
     import duckdb
     import geopandas as gpd
+    import lonboard as lb
     import matplotlib as mpl
     import matplotlib.pyplot as plt
     import marimo as mo
@@ -39,6 +40,7 @@ def _imports():
     import pandas as pd
     import pygris
     from great_tables import GT, loc, style
+    from lonboard.colormap import apply_continuous_cmap
 
     sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
     from inland_consequences.results_aggregation import FloodResultsAggregator
@@ -47,11 +49,14 @@ def _imports():
         FloodResultsAggregator,
         GT,
         Path,
+        apply_continuous_cmap,
         duckdb,
         gpd,
         io,
+        lb,
         mo,
         mpl,
+        np,
         pd,
         plt,
         pygris,
@@ -88,59 +93,32 @@ def _db_picker(Path, mo):
     _db_options = {str(p.relative_to(_root)): p for p in _candidates}
     _db_default = next(iter(_db_options)) if _db_options else None
 
-    GEO_LEVEL_ORDER = ["state", "county", "tract", "block_group", "block", "community", "huc"]
-    _GEO_LABELS = {
-        "state": "State",
-        "county": "County",
-        "tract": "Tract",
-        "block_group": "Block Group",
-        "block": "Block",
-        "community": "Community",
-        "huc": "HUC (Watershed)",
-    }
-
     db_file_dropdown = mo.ui.dropdown(
         options=_db_options,
         value=_db_default,
         label="DuckDB file",
     )
-    geo_level_multiselect = mo.ui.multiselect(
-        options={_GEO_LABELS[lvl]: lvl for lvl in GEO_LEVEL_ORDER},
-        value=["State", "County", "Tract"],
-        label="Geography hierarchy (coarse → fine)",
-    )
     view_button = mo.ui.run_button(label="▶ View Results")
 
     mo.vstack([
         mo.md("### Configure Analysis"),
-        mo.hstack([db_file_dropdown, geo_level_multiselect], gap=2),
+        db_file_dropdown,
         view_button,
     ])
-    return (
-        GEO_LEVEL_ORDER,
-        db_file_dropdown,
-        geo_level_multiselect,
-        view_button,
-    )
+    return db_file_dropdown, view_button
 
 
 @app.cell
-def _config(
-    GEO_LEVEL_ORDER,
-    db_file_dropdown,
-    geo_level_multiselect,
-    mo,
-    view_button,
-):
+def _config(db_file_dropdown, mo, view_button):
     mo.stop(
         not view_button.value,
         mo.callout(
-            mo.md("Select a DuckDB file and geography levels, then click **▶ View Results**."),
+            mo.md("Select a DuckDB file, then click **▶ View Results**."),
             kind="info",
         ),
     )
     DB_PATH = db_file_dropdown.value
-    HIERARCHY = [lvl for lvl in GEO_LEVEL_ORDER if lvl in set(geo_level_multiselect.value)]
+    HIERARCHY = ["state", "county", "tract", "block_group", "block"]
     return DB_PATH, HIERARCHY
 
 
@@ -268,23 +246,26 @@ def _summary_table(GT, mo, pd, return_periods, summary_df, summary_level):
     ).any():
         _output = mo.md("_No summary-level results available._")
     else:
-        _geo_col = {
+        _GEO_COL_MAP = {
             "state": "state_fips",
             "county": "county_fips",
             "tract": "tract_fips",
             "block_group": "block_group_fips",
             "block": "block_fips",
-        }[summary_level]
+        }
+        _geo_col = _GEO_COL_MAP.get(summary_level, summary_level)
+
+        _display = summary_df.copy()
+        _display = _display[
+            _display["aal_mean"].notna() & (_display["aal_mean"] > 0)
+        ].reset_index(drop=True)
 
         _cols = (
             [_geo_col, "building_count", "total_building_exposure"]
             + [f"loss_rp{rp}" for rp in return_periods]
             + ["aal_min", "aal_mean", "aal_max", "aal_ratio"]
         )
-        _display = summary_df[[c for c in _cols if c in summary_df.columns]].copy()
-        _display = _display[
-            _display["aal_mean"].notna() & (_display["aal_mean"] > 0)
-        ].reset_index(drop=True)
+        _display = _display[[c for c in _cols if c in _display.columns]]
 
         def _fmt_dollars(v):
             if pd.isna(v):
@@ -359,7 +340,7 @@ def _comparison_geometries(
         "block_group": "block_group_fips",
         "block": "block_fips",
     }
-    _geo_col = _GEO_COL[comparison_level]
+    _geo_col = _GEO_COL.get(comparison_level, comparison_level)
 
     # Derive state FIPS from first available result row
     _state_fips = comparison_df[_geo_col].str[:2].iloc[0]
@@ -504,13 +485,14 @@ def _choropleth(
 
 @app.cell
 def _top10_table(GT, comparison_df, comparison_level, mo, pd, return_periods):
-    _geo_col = {
+    _GEO_COL_MAP = {
         "state": "state_fips",
         "county": "county_fips",
         "tract": "tract_fips",
         "block_group": "block_group_fips",
         "block": "block_fips",
-    }[comparison_level]
+    }
+    _geo_col = _GEO_COL_MAP.get(comparison_level, comparison_level)
 
     _results = (
         comparison_df[comparison_df["aal_mean"].notna() & (comparison_df["aal_mean"] > 0)]
@@ -610,14 +592,110 @@ def _geo_summary_controls(comparison_level, mo):
 
 
 @app.cell
-def _geo_summary_gdf(
+def _fetch_huc8_geo(
     DB_PATH,
     FloodResultsAggregator,
     duckdb,
     geo_summary_dropdown,
     gpd,
     mo,
-    pd,
+):
+    import requests as _requests
+    from shapely.geometry import shape as _shape
+
+    huc8_gdf = None
+    if geo_summary_dropdown.value == "huc":
+        _conn = duckdb.connect(str(DB_PATH), read_only=True)
+        _agg_df = FloodResultsAggregator(conn=_conn).aggregate(geography="huc")
+        _huc_ids = _agg_df["huc"].dropna().unique().tolist() if not _agg_df.empty else []
+        if _huc_ids:
+            _BASE_URL = "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4/query"
+            _BATCH_SIZE = 50
+            _batches = [_huc_ids[i: i + _BATCH_SIZE] for i in range(0, len(_huc_ids), _BATCH_SIZE)]
+            _rows = []
+            for _batch in mo.status.progress_bar(
+                _batches,
+                title="Downloading HUC8 boundaries (USGS WBD)...",
+                remove_on_exit=True,
+            ):
+                _ids_str = ",".join(f"'{h}'" for h in _batch)
+                _resp = _requests.get(_BASE_URL, params={
+                    "where": f"huc8 IN ({_ids_str})",
+                    "outFields": "huc8,name",
+                    "returnGeometry": "true",
+                    "f": "geojson",
+                    "outSR": "4326",
+                })
+                _resp.raise_for_status()
+                for _feat in _resp.json().get("features", []):
+                    _props = _feat.get("properties") or _feat.get("attributes") or {}
+                    _geom = _shape(_feat["geometry"]) if _feat.get("geometry") else None
+                    _rows.append({**_props, "geometry": _geom})
+            if _rows:
+                import pandas as _pd
+                _combined = gpd.GeoDataFrame(_rows, crs="EPSG:4326")
+                _combined.columns = [c.lower() for c in _combined.columns]
+                huc8_gdf = _combined.rename(columns={"huc8": "huc", "name": "huc_name"})
+    return (huc8_gdf,)
+
+
+@app.cell
+def _fetch_community_geo(
+    DB_PATH,
+    FloodResultsAggregator,
+    duckdb,
+    geo_summary_dropdown,
+    gpd,
+    mo,
+):
+    import requests as _requests
+    from shapely.geometry import shape as _shape
+
+    community_gdf = None
+    if geo_summary_dropdown.value == "community":
+        _conn = duckdb.connect(str(DB_PATH), read_only=True)
+        _agg_df = FloodResultsAggregator(conn=_conn).aggregate(geography="community")
+        _comm_ids = _agg_df["community_id"].dropna().unique().tolist() if not _agg_df.empty else []
+        if _comm_ids:
+            _LAYER_URL = "https://services.arcgis.com/XG15cJAlne2vxtgt/arcgis/rest/services/NFIP_Community_Layer__flattened__2024v1_WFL1/FeatureServer/0/query"
+            _BATCH_SIZE = 50
+            _batches = [_comm_ids[i: i + _BATCH_SIZE] for i in range(0, len(_comm_ids), _BATCH_SIZE)]
+            _rows = []
+            for _batch in mo.status.progress_bar(
+                _batches,
+                title="Fetching NFIP community shapes...",
+                remove_on_exit=True,
+            ):
+                _ids_str = ",".join(f"'{c}'" for c in _batch)
+                _resp = _requests.get(_LAYER_URL, params={
+                    "where": f"cis_cid IN ({_ids_str})",
+                    "outFields": "cis_cid,cis_community_name_short",
+                    "returnGeometry": "true",
+                    "f": "geojson",
+                    "outSR": "4326",
+                })
+                _resp.raise_for_status()
+                for _feat in _resp.json().get("features", []):
+                    _props = _feat.get("properties") or _feat.get("attributes") or {}
+                    _geom = _shape(_feat["geometry"]) if _feat.get("geometry") else None
+                    _rows.append({**_props, "geometry": _geom})
+            if _rows:
+                _combined = gpd.GeoDataFrame(_rows, crs="EPSG:4326")
+                _combined.columns = [c.lower() for c in _combined.columns]
+                community_gdf = _combined.rename(columns={"cis_cid": "community_id", "cis_community_name_short": "community_name"})
+    return (community_gdf,)
+
+
+@app.cell
+def _geo_summary_gdf(
+    DB_PATH,
+    FloodResultsAggregator,
+    community_gdf,
+    duckdb,
+    geo_summary_dropdown,
+    gpd,
+    huc8_gdf,
+    mo,
     pygris,
 ):
     _selected_level = geo_summary_dropdown.value
@@ -634,7 +712,23 @@ def _geo_summary_gdf(
     _agg_df = _agg_obj.aggregate(geography=_selected_level)
 
     _status = None
-    if _selected_level not in _CENSUS_GEO_COL:
+    if _selected_level == "huc" and huc8_gdf is not None:
+        geo_summary_gdf = gpd.GeoDataFrame(
+            _agg_df.merge(huc8_gdf[["huc", "huc_name", "geometry"]], on="huc", how="left"),
+            geometry="geometry",
+            crs="EPSG:4326",
+        )
+    elif _selected_level == "community" and community_gdf is not None:
+        geo_summary_gdf = gpd.GeoDataFrame(
+            _agg_df.merge(
+                community_gdf[["community_id", "community_name", "geometry"]],
+                on="community_id",
+                how="left",
+            ),
+            geometry="geometry",
+            crs="EPSG:4326",
+        )
+    elif _selected_level not in _CENSUS_GEO_COL:
         geo_summary_gdf = gpd.GeoDataFrame(_agg_df)
         _status = mo.callout(
             mo.md(f"No census geometry available for **{_selected_level}** — showing tabular data only."),
@@ -683,15 +777,95 @@ def _geo_summary_gdf(
 
 
 @app.cell
-def _geo_summary_table_download(geo_summary_dropdown, geo_summary_gdf, io, mo, pd):
+def _geo_summary_lonboard_map(
+    apply_continuous_cmap,
+    geo_summary_gdf,
+    gpd,
+    lb,
+    mo,
+    np,
+):
+    import matplotlib.cm as _mcm
+
+    _has_geom = (
+        "geometry" in geo_summary_gdf.columns
+        and not geo_summary_gdf["geometry"].isna().all()
+    )
+    _has_aal = "aal_mean" in geo_summary_gdf.columns and "building_count" in geo_summary_gdf.columns
+
+    _map_out = None
+    if _has_geom and _has_aal:
+        # Strip down to only the columns lonboard needs — avoids serialization issues
+        # with mixed-type or NA-heavy result columns
+        _keep = [c for c in ["huc", "huc_name", "community_id", "community_name",
+                              "county_fips", "tract_fips", "state_fips",
+                              "aal_mean", "building_count", "geometry"]
+                 if c in geo_summary_gdf.columns]
+        _gdf = geo_summary_gdf[_keep][geo_summary_gdf["geometry"].notna()].copy()
+        _gdf = gpd.GeoDataFrame(_gdf, geometry="geometry", crs="EPSG:4326")
+
+        # Keep only rows with actual AAL data — census left-joins pull in many
+        # shapes without results, inflating the arrow table and producing
+        # invisible light-yellow polygons that blend with the basemap.
+        _gdf = _gdf[_gdf["aal_mean"].notna() & (_gdf["aal_mean"] > 0)].reset_index(drop=True)
+
+        if _gdf.empty:
+            _map_out = mo.callout(
+                mo.md("No rows with both **geometry** and **AAL data** to map."),
+                kind="info",
+            )
+        else:
+            _bc = _gdf["building_count"].replace(0, float("nan"))
+            _gdf["avg_aal_mean"] = _gdf["aal_mean"] / _bc
+
+            _vals = _gdf["avg_aal_mean"].fillna(0).values.astype(float)
+            _vmax = _vals.max()
+            # Log-normalize — handles skewed distributions much better
+            _vals_log = np.log1p(_vals)  # log1p handles zeros safely
+            _vmax_log = _vals_log.max()
+            _normalized = (_vals_log / _vmax_log).clip(0, 1) if _vmax_log > 0 else np.zeros_like(_vals_log)
+
+            _fill_colors = apply_continuous_cmap(_normalized, _mcm.YlOrRd, alpha=0.8)
+
+            _layer = lb.PolygonLayer.from_geopandas(
+                _gdf,
+                get_fill_color=_fill_colors,
+                get_line_color=[80, 80, 80, 60],
+                get_line_width=50,
+                pickable=True,
+                auto_highlight=True,
+            )
+            # Render via standalone HTML — the anywidget protocol can fail to
+            # transmit the deck.gl layer data in marimo while the basemap still
+            # renders, resulting in an empty-looking map.
+            _map_out = lb.Map(layers=[_layer], height=500)
+        
+    else:
+        _map_out = mo.callout(mo.md("No geometry available for map."), kind="info")
+
+    _map_out
+    return
+
+
+@app.cell
+def _geo_summary_table_download(
+    geo_summary_dropdown,
+    geo_summary_gdf,
+    io,
+    mo,
+    pd,
+):
     def _to_parquet_bytes(gdf):
+        import geopandas as _gpd
         buf = io.BytesIO()
         _has_geom = (
             "geometry" in gdf.columns
-            and hasattr(gdf, "geometry")
             and not gdf["geometry"].isna().all()
         )
         if _has_geom:
+            # Ensure it's a GeoDataFrame so geopandas writes GeoParquet metadata
+            if not isinstance(gdf, _gpd.GeoDataFrame):
+                gdf = _gpd.GeoDataFrame(gdf, geometry="geometry")
             gdf.to_parquet(buf, index=False)
         else:
             _cols = [c for c in gdf.columns if c != "geometry"]
@@ -699,11 +873,49 @@ def _geo_summary_table_download(geo_summary_dropdown, geo_summary_gdf, io, mo, p
         return buf.getvalue()
 
     _level_lbl = geo_summary_dropdown.value.replace("_", " ").title()
-    _display_cols = [c for c in geo_summary_gdf.columns if c != "geometry"]
+
+    # Build display table: add avg_aal_mean column, sort by aal_mean desc
+    _display = geo_summary_gdf[[c for c in geo_summary_gdf.columns if c != "geometry"]].copy()
+    if "aal_mean" in _display.columns and "building_count" in _display.columns:
+        _display["avg_aal_mean"] = (
+            _display["aal_mean"] / _display["building_count"].replace(0, float("nan"))
+        )
+    _display = _display.sort_values("aal_mean", ascending=False).reset_index(drop=True)
+
+    # Summary stat cards
+    _with_results = (
+        _display[_display["aal_mean"].notna() & (_display["aal_mean"] > 0)]
+        if "aal_mean" in _display.columns else pd.DataFrame()
+    )
+    _total_aal = _with_results["aal_mean"].sum() if not _with_results.empty else None
+    _total_buildings = (
+        _with_results["building_count"].sum()
+        if "building_count" in _with_results.columns and not _with_results.empty else None
+    )
+    _avg_aal_mean = (
+        _total_aal / _total_buildings
+        if _total_aal is not None and _total_buildings and _total_buildings > 0 else None
+    )
+
+    def _fmt_stat(v):
+        if v is None or pd.isna(v):
+            return "N/A"
+        if abs(v) >= 1e9:
+            return f"${v/1e9:.2f}B"
+        if abs(v) >= 1e6:
+            return f"${v/1e6:.1f}M"
+        return f"${v:,.0f}"
+
+    _stat_cards = [
+        mo.stat(value=_fmt_stat(_total_aal), label=f"Total AAL ({len(_with_results)} {_level_lbl}s)", bordered=True),
+        mo.stat(value=_fmt_stat(_avg_aal_mean), label=f"Avg AAL per {_level_lbl}", bordered=True),
+        mo.stat(value=f"{int(_total_buildings):,}" if _total_buildings else "N/A", label="Total Buildings", bordered=True),
+    ]
 
     mo.vstack([
+        mo.hstack(_stat_cards),
         mo.ui.table(
-            geo_summary_gdf[_display_cols].reset_index(drop=True),
+            _display,
             label=f"{_level_lbl} results ({len(geo_summary_gdf):,} rows)",
         ),
         mo.md("### Export"),
