@@ -24,11 +24,11 @@ These CSVs are **manually derived** from the Excel source files (see Step 0 belo
 | File | Asset Type | Source |
 |---|---|---|
 | `foundation_flood_table_structures.csv` | Structures | `source_data/OpenHazusDDFUpdates_2025.xlsx` |
-| `foundation_flood_table_cont1.csv` | Contents (FLSBT-based) | `source_data/OpenHazusDDFUpdates_2025.xlsx` |
-| `foundation_flood_table_cont2.csv` | Contents (story-specific occupancies) | `source_data/OpenHazusDDFUpdates_2025.xlsx` |
 | `foundation_flood_table_inv.csv` | Inventory | `source_data/Damage_Function_Deliverable_2-5-2024.xlsx` |
 
 These CSVs are checked in and do not need to be regenerated unless the source Excel files change.
+
+> **Note:** The contents lookup table is no longer generated from intermediate foundation flood CSVs. `scripts/ddf_creation_cont.py` reads directly from `source_data/OpenHazusDDFUpdates_2025.xlsx`.
 
 ---
 
@@ -59,7 +59,11 @@ The foundation flood tables use a two-row MultiIndex header: the first row is **
 
 ### FLSBT Codes
 
-FLSBT (Flood-Specific Building Type) codes encode a combination of construction material, occupancy class, story range, and sometimes square footage. For example, `WSF001` represents a wood single-family structure. The full mapping of FLSBT codes to building characteristics is documented in `source_data/Task4d_Updated_FloodDF_Approach-20240213.xlsx`. The script `scripts/flsbt_generate.py` produces the programmatic version of this mapping as a CSV.
+FLSBT (Flood-Specific Building Type) codes encode a combination of construction material, occupancy class, story range, and sometimes square footage. For example, `WSF001` represents a wood single-family structure. The full mapping of FLSBT codes to building characteristics is documented in `source_data/Task4d_Updated_FloodDF_Approach-20240213.xlsx`. The script `scripts/flsbt_generate.py` produces the programmatic version of this mapping as a CSV.  
+
+FLSBT codes have been deprecated in the 2025 OpenHazus curves, however, pre-existing schemas of the inland 
+consequences tool required some carryover to ensure interoperability. Future updates could completely remove
+FLSBT codes.
 
 ---
 
@@ -91,23 +95,23 @@ Columns (final table): `Construction_Type`, `Occupancy_Type`, `Story_Min`, `Stor
 
 ### Track A — Contents
 
-`scripts/ddf_creation_cont.py` follows the same FLSBT-based approach as the structures script, but with two sources:
+`scripts/ddf_creation_cont.py` reads the "Proposed Contents DDF" sheet directly from `source_data/OpenHazusDDFUpdates_2025.xlsx` and programmatically expands it into a fully explicit long-format lookup. It no longer uses FLSBT codes or intermediate foundation flood CSVs. The expansion pipeline is:
 
-1. **FLSBT path** — Most building types go through the standard FLSBT lookup using `foundation_flood_table_cont1.csv`.
-2. **Occupancy path** — Certain occupancies (e.g., COM4) have story-specific damage functions tracked separately in `foundation_flood_table_cont2.csv`, handled by `unpivot_occupancy_flood_table_cont()`. These rows are merged back into the final table.
+1. **Read Excel** — Reads the riverine content table (occupancy × duration), dropping coastal columns.
+2. **Expand foundation types** — Duplicates rows for each foundation type, mapping `BASE` → `BASEMENT` and `NOBASE` → `SHALLOW`, `SLAB`, `PILE`.
+3. **Expand peril types** — Maps `Short Duration` → `RLS`, `RHS`; `Long Duration` → `RLL`, `RHL`.
+4. **Expand occupancy/story ranges** — Parses occupancy labels (e.g., `RES1, 1 Story`, `RES3, 4+ Story`) into `story_min`/`story_max`; expands `RES3` into all six subtypes (`RES3A`–`RES3F`). Occupancies without story distinctions receive null `story_min`/`story_max`.
+5. **Expand construction types** — Assigns `C`, `M`, `S`, `W` to all occupancies; `RES2` receives `H` and `MH`.
 
 ```bash
 uv run python scripts/ddf_creation_cont.py
 ```
 
-**Inputs:**
-- `outputs/flsbt_lookup_table_contents.csv` (generated internally during the run)
-- `data/foundation_flood_table_cont1.csv`
-- `data/foundation_flood_table_cont2.csv`
+**Input:** `data/source_data/OpenHazusDDFUpdates_2025.xlsx` (sheet: `Proposed Contents DDF`)
 
 **Output:** `outputs/df_lookup_contents.csv`
 
-Columns match `df_lookup_structures.csv`.
+Columns match `df_lookup_structures.csv`. Note that `story_min`/`story_max` will be null for occupancy types where story count does not affect the contents damage function (e.g., IND, COM, EDU, AGR).
 
 ### Track B — Inventory
 
@@ -127,7 +131,11 @@ Columns: `Occupancy_Type`, `Foundation_Type`, `Flood_Peril_Type`, `Damage_Functi
 
 ### Damage Curves
 
-`scripts/df_extract_curves.py` extracts the actual depth-damage curves from `source_data/Damage_Function_Deliverable_2-5-2024.xlsx` into normalized CSVs. It handles three asset types (structure, contents, inventory), corrects null values (zero-filling before first valid depth, forward-filling at max after last valid depth, linear interpolation between valid depths), and flags any curves where damage decreases with depth.
+`scripts/df_extract_curves.py` extracts the actual depth-damage curves from `source_data/Damage_Function_Deliverable_2-5-2024.xlsx` into normalized CSVs. It handles three asset types (structure, contents, inventory), corrects null values (zero-filling before first valid depth, forward-filling at max after last valid depth, linear interpolation between valid depths), and flags any curves where damage decreases with depth.  
+
+Note: OpenHAZUS 2025 updates had some changes to the actual depth damage curves, but they did not affect the inland consequences building types, so the 2024 versions were persisted. Future updates could fully adopt the 2025 curves 
+by first performing a QC analysis to ensure monotonically increasing damage with increasing depth, uniqueness of depth 
+damage ids, etc.  
 
 ```bash
 uv run python scripts/df_extract_curves.py
@@ -163,7 +171,6 @@ result = lookup_damage_function(buildings_df, complete_lookup_table)
 | Output File | Script | Asset Type |
 |---|---|---|
 | `outputs/flsbt_lookup_table.csv` | `scripts/ddf_creation.py` | Structures (intermediate) |
-| `outputs/flsbt_lookup_table_contents.csv` | `scripts/ddf_creation_cont.py` | Contents (intermediate) |
 | `outputs/df_lookup_structures.csv` | `scripts/ddf_creation.py` | Structures |
 | `outputs/df_lookup_contents.csv` | `scripts/ddf_creation_cont.py` | Contents |
 | `outputs/df_lookup_inventory.csv` | `scripts/ddf_creation_inv.py` | Inventory |
