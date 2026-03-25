@@ -2,605 +2,312 @@ import os
 import pandas as pd
 import numpy as np
 
+"""
+This script processes the 2025 OpenHazus damage function lookup table for riverine contents,
+expanding foundation types, peril types, occupancy/story ranges, and construction types,
+and exports the final DataFrame to a CSV file for use in the inland consequences model.
 
-def update_foundation_types(df):
-    """
-    Update abbreviated foundation type codes to their full names.
+The new OpenHazusDDFUpdates_2025.xlsx file is the source for the updated damage function lookup
+tables. The previous method relied on flood specific building types which have been deprecated and
+will only be discoverable through the git history of the repository.
+"""
+
+def read_riverine_content_excel_table(file_path, sheet_name="Proposed Contents DDF"):
+    """Read the riverine content from the 2025 OpenHazus content damage function lookup table
     
-    Mappings:
-    - SHAL -> SHALLOW
-    - BASE -> BASEMENT
-    
-    Parameters:
-    -----------
-    df : DataFrame with 'foundation_type' column
+    Args:
+        file_path (str): Path to the Excel file (OpenHazusDDFUpdates_2025.xlsx)
+        sheet_name (str): Name of the sheet to read from the Excel file
     
     Returns:
-    --------
-    DataFrame with updated foundation_type values
+        pd.DataFrame: DataFrame containing the riverine content data
     """
-    df = df.copy()
-    
-    foundation_mappings = {
-        "SHAL": "SHALLOW",
-        "BASE": "BASEMENT"
-    }
-    
-    df['foundation_type'] = df['foundation_type'].replace(foundation_mappings)
-    
+    # read the proposed content tab, subsetting to the freshwater (riverine) content columns
+    df = pd.read_excel(file_path,
+                       sheet_name=sheet_name,
+                       usecols=[0, 1, 2, 3, 4])
+
+    # drop row 0 (title row) and row 1 ("Freshwater" header), keeping occupancy col for now
+    df = df.drop(index=1).reset_index(drop=True)
+
+    # extract occupancy values from col 0 before dropping it (data rows start at index 2)
+    occupancy = df.iloc[2:, 0].reset_index(drop=True)
+
+    # drop col 0 now that occupancy is saved
+    df = df.iloc[:, 1:]
+
+    # infill the missing merged-cell values for duration labels
+    df.iloc[1, 1] = "Short Duration"
+    df.iloc[1, 3] = "Long Duration"
+
+    # set first two rows as a MultiIndex header
+    new_header = df.iloc[0:2]
+    df = df.iloc[2:].reset_index(drop=True)
+    df.columns = pd.MultiIndex.from_arrays(new_header.values)
+
+    # set occupancy as the index so it survives the stack
+    df.index = occupancy
+    df.index.name = "Occupancy"
+
+    # unpivot: stack MultiIndex columns into rows, then flatten index to columns
+    df = df.stack(level=[0, 1]).reset_index()
+    df.columns = ["Occupancy", "Base Type", "Duration", "DDF Value"]
+
     return df
 
-
-def generate_flsbt_lookup_table():
-    """
-    Generate a complete lookup table (for contents) that maps:
-    (Construction Type, Occupancy Type, Story Range, SQFT Range) → FLSBT Range
+def expand_foundation_types(df):
+    """Expand foundation types in the DataFrame by duplicating rows for each foundation type.
     
-    This replaces the complex conditional logic with a simple table lookup.
+    Args:
+        df (pd.DataFrame): Input DataFrame with a 'Base Type' column
+    
+    Returns:
+        pd.DataFrame: Expanded DataFrame with separate rows for each foundation type
     """
+    # generate a foundation map and dataframe
+    foundation_map = [
+        ("NOBASE", "SHALLOW"),
+        ("NOBASE", "SLAB"),
+        ("NOBASE", "PILE"),
+        ("BASE",   "BASEMENT"),
+    ]
 
-    rows = []
+    df_foundation = pd.DataFrame(foundation_map, columns=["Base Type", "Foundation Type"])
 
-    # Helper function to add rows
-    def add_row(construction, occupancies, story_min, story_max, flsbt_base, sqft_min=np.nan, sqft_max=np.nan):
-        """Add a row for each occupancy type in the list"""
-        if isinstance(occupancies, str):
-            occupancies = [occupancies]
-        
-        # Determine FLSBT range format
-        if flsbt_base in ["MH", "MLRI", "SPMB"]:
-            # No story suffix
-            flsbt_range = flsbt_base
-        elif story_min == story_max:
-            # Single story
-            flsbt_range = f"{flsbt_base}{story_min:03d}"
+    # outer join to duplicate rows for each foundation type
+    df_expanded = df.merge(df_foundation, on="Base Type", how="outer")
+
+    return df_expanded
+
+def expand_peril_type(df):
+    """Expand peril types in the DataFrame by duplicating rows for each peril type.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame with a 'Duration' column
+    
+    Returns:
+        pd.DataFrame: Expanded DataFrame with separate rows for each peril type
+    """
+    # generate a peril map and dataframe
+    peril_map = [
+        ("Short Duration", "RLS"),
+        ("Short Duration", "RHS"),
+        ("Long Duration", "RLL"),
+        ("Long Duration", "RHL"),
+    ]
+
+    df_peril = pd.DataFrame(peril_map, columns=["Duration", "flood_peril_type"])
+
+    # outer join to duplicate rows for each peril type
+    df_expanded = df.merge(df_peril, on="Duration", how="outer")
+
+    return df_expanded
+
+def expand_occupancy_story_ranges(df):
+    """Expand occupancy and story ranges in the DataFrame by duplicating rows for each story count.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame with an 'Occupancy' column and complex story ranges (ex:
+            'RES1, 1 Story', 'RES3, 1-3 Story', 'RES3, 4+ Story', 'RES2')
+
+    Returns:
+        pd.DataFrame: Expanded DataFrame with separate rows for each story count
+    """
+    # define a helper function to parse story ranges
+    def parse_story_range(story_range_str):
+        if story_range_str == '1 Story':
+            return (1, 999)
+        elif story_range_str == '2 Story+':
+            return (2, 999)
+        elif story_range_str == '1-3 Story':
+            return (1, 3)
+        elif story_range_str == '4+ Story':
+            return (4, 999)
+        elif story_range_str == '2 Story +':
+            return (2, 999)
         else:
-            # Story range
-            flsbt_range = f"{flsbt_base}{story_min:03d}-{story_max:03d}"
+            raise ValueError(f"Unrecognized story range: {story_range_str}")
         
-        for occ in occupancies:
-            rows.append({
-                'Construction_Type': construction,
-                'Occupancy_Type': occ,
-                'Story_Min': story_min,
-                'Story_Max': story_max,
-                'SQFT_Min': sqft_min,
-                'SQFT_Max': sqft_max,
-                'FLSBT_Range': flsbt_range
-            })
-
-    # ==================== MANUFACTURED HOMES ====================
-    add_row('H', 'RES2', 1, 999, 'MH', None, None)
-    add_row('MH', 'RES2', 1, 999, 'MH', None, None)
-
-    # ==================== WOOD (W) ====================
-    
-    # WSF: RES1, RES3A (1-4 stories)
-    add_row('W', ['RES1', 'RES3A'], 1, 1, 'WSF', None, None)
-    add_row('W', ['RES1', 'RES3A'], 2, 4, 'WSF', None, None)
-
-    # WMUH: RES3B-F, RES4-6 (1-4 stories)
-    wmuh_occs = ['RES3B', 'RES3C', 'RES3D', 'RES3E', 'RES3F', 'RES4', 'RES5', 'RES6']
-    add_row('W', wmuh_occs, 1, 1, 'WMUH', None, None)
-    add_row('W', wmuh_occs, 2, 4, 'WMUH', None, None)
-
-    # WLRM: special case, occupancy-based
-    # # add_row('W', ['COM1', 'COM9'], 1, 2, 'WLRM', None, None) # Original - structures version
-    # wlrm_occs = ['COM1', 'COM2', 'COM3', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'COM10',
-    #              'IND1', 'IND2', 'IND3', 'IND4', 'IND5', 'IND6',
-    #              'REL1', 'AGR1', 'GOV1', 'GOV2', 'EDU1', 'EDU2']
-    # add_row('W', wlrm_occs, 1, 2, 'WLRM', None, None)  # Updated - contents version
-    # add_row('W', ['COM4'], 1, 1, 'WLRM', None, None)  # COM4 1 Story
-    # add_row('W', ['COM4'], 2, 2, 'WLRM', None, None)  # COM4 2 Story+
-
-    # debugging - reverting to original
-    add_row('W', ['COM1', 'COM9'], 1, 2, 'WLRM', None, None)  # COM1, COM9 1-2 Stories
-    
-    # # WLRI: COM1, COM9 (3-6 stories): special case, Missing from Source Table so integrating below
-    add_row('W', ['COM1', 'COM9'], 3, 6, 'WLRI', None, None)
-
-    # # WLRI: special case, occupancy-based
-    # wlri_occs = ['COM1', 'COM2', 'COM3', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9','COM10',
-    #              'IND1', 'IND2', 'IND3', 'IND4', 'IND5', 'IND6',
-    #              'REL1', 'AGR1', 'GOV1', 'GOV2', 'EDU1', 'EDU2']
-    # add_row('W', wlri_occs, 1, 6, 'WLRI', None, None) # Updated - contents version
-    # add_row('W', ['COM4'], 1, 1, 'WLRI', None, None)  # COM4 1 Story
-    # add_row('W', ['COM4'], 2, 6, 'WLRI', None, None)  # COM4 2 Story+
-
-    # debugging
-    # wlri_occs = ['COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 
-    wlri_occs = ['COM2', 'COM3', 'COM5', 'COM6', 'COM7', 'COM8', # REMOVE COM4 DUE TO STORY SPECIFIC LOOKUP 
-                 'IND1', 'IND2', 'IND3', 'IND4', 'IND5', 'IND6',
-                 'REL1', 'AGR1', 'GOV1', 'GOV2', 'EDU1', 'EDU2']
-    add_row('W', wlri_occs, 1, 6, 'WLRI', None, None) 
-
-    add_row('W', ['COM4'], 1, 1, 'WLRI', None, None)  # COM4 1 Story
-    add_row('W', ['COM4'], 2, 6, 'WLRI', None, None)  # COM4 2 Story+
-
-    # ==================== MASONRY (M) ====================
-    
-    # MSF: RES1, RES3A (1-7 stories)
-    add_row('M', ['RES1', 'RES3A'], 1, 1, 'MSF', None, None)
-    add_row('M', ['RES1', 'RES3A'], 2, 4, 'MSF', None, None)
-    add_row('M', ['RES1', 'RES3A'], 5, 7, 'MSF', None, None)
-
-    # MMUH: RES3B (1-7 stories)
-    add_row('M', 'RES3B', 1, 1, 'MMUH', None, None)
-    add_row('M', 'RES3B', 2, 4, 'MMUH', None, None)
-    add_row('M', 'RES3B', 5, 7, 'MMUH', None, None)
-
-    # MLRM: COM1, COM9 (1-2 stories)
-    add_row('M', ['COM1', 'COM9'], 1, 2, 'MLRM', None, None)
-
-    # MLRI: IND1, AGR1 (1 story only, no suffix)
-    add_row('M', ['IND1', 'AGR1'], 1, 1, 'MLRI', None, None)
-
-    # MERB: RES3C-F, RES4-6 (1-30 stories)
-    merb_occs = ['RES3C', 'RES3D', 'RES3E', 'RES3F', 'RES4', 'RES5', 'RES6']
-    add_row('M', merb_occs, 1, 1, 'MERB', None, None)
-    add_row('M', merb_occs, 2, 4, 'MERB', None, None)
-    add_row('M', merb_occs, 5, 30, 'MERB', None, None)
-
-    # # MECB: COM1, COM9 (3+ stories): special case, Missing from Source Table so integrating below
-    # add_row('M', ['COM1', 'COM9'], 1, 30, 'MECB', None, None)
-
-    # MECB: COM1, COM9 (3-30 stories)
-    add_row('M', ['COM1', 'COM9'], 3, 30, 'MECB', None, None)
-
-    # MECB: IND1, AGR1 (2-30 stories)
-    add_row('M', ['IND1', 'AGR1'], 2, 30, 'MECB', None, None)
-
-    # MECB: COM4, 1-1 and 2-30 stories
-    add_row('M', ['COM4'], 1, 1, 'MECB', None, None)
-    add_row('M', ['COM4'], 2, 30, 'MECB', None, None)
-
-    # MECB: Other commercial/industrial (1-30 stories)
-    # mecb_occs = ['COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM10',
-    mecb_occs = ['COM2', 'COM3', 'COM5', 'COM6', 'COM7', 'COM8', 'COM10',
-                 'IND2', 'IND3', 'IND4', 'IND5', 'IND6',
-                 'REL1', 'GOV1', 'GOV2', 'EDU1', 'EDU2']
-    add_row('M', mecb_occs, 1, 30, 'MECB', None, None)
-
-    # ==================== CONCRETE (C) ====================
-    
-    # CSF: RES1, RES3A (1-40 stories)
-    add_row('C', ['RES1', 'RES3A'], 1, 1, 'CSF', None, None)
-    add_row('C', ['RES1', 'RES3A'], 2, 4, 'CSF', None, None)
-    add_row('C', ['RES1', 'RES3A'], 5, 40, 'CSF', None, None) 
-
-    # CERB: RES3B-F, RES4-6 (1-40 stories)
-    cerb_occs = ['RES3B', 'RES3C', 'RES3D', 'RES3E', 'RES3F', 'RES4', 'RES5', 'RES6']
-    add_row('C', cerb_occs, 1, 1, 'CERB', None, None)
-    add_row('C', cerb_occs, 2, 4, 'CERB', None, None)
-    add_row('C', cerb_occs, 5, 40, 'CERB', None, None)
-
-    # CECB: All commercial/industrial (1-40 stories) TODO: See Occupancy Table
-    cecb_occs = ['COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'COM10',
-                 'IND1', 'IND2', 'IND3', 'IND4', 'IND5', 'IND6',
-                 'REL1', 'AGR1', 'GOV1', 'GOV2', 'EDU1', 'EDU2']
-    # add_row('C', cecb_occs, 1, 4, 'CECB', None, None)
-    # add_row('C', cecb_occs, 5, 40, 'CECB', None, None)
-    # add_row('C', cecb_occs, 1, 40, 'CECB', None, None)
-
-    add_row('C', cecb_occs, 1, 1, 'CECB', None, None)  # COM4 1 Story
-    add_row('C', cecb_occs, 2, 40, 'CECB', None, None)  # COM4 2 Story+
-
-    # ==================== STEEL (S) ====================
-    
-    # SPMB: COM1, COM2, IND1-6, AGR1 (≤4000 sqft, no story suffix) TODO: See Occupancy Table
-    spmb_occs = ['COM1', 'COM2', 'IND1', 'IND2', 'IND3', 'IND4', 'IND5', 'IND6', 'AGR1']
-    add_row('S', spmb_occs, 1, 108, 'SPMB', None, None) # TODO: Resolve if >4000sf?
-
-    # SERB: All residential (1-108 stories)
-    serb_occs = ['RES1', 'RES3A', 'RES3B', 'RES3C', 'RES3D', 'RES3E', 'RES3F', 'RES4', 'RES5', 'RES6']
-    add_row('S', serb_occs, 1, 1, 'SERB')
-    add_row('S', serb_occs, 2, 4, 'SERB')
-    add_row('S', serb_occs, 5, 108, 'SERB')
-
-    # SECB: COM1, COM2, IND1-6, AGR1 (>4000 sqft, 1-108 stories) TODO: See Occupancy Table
-    # secb1_occs = ['COM1', 'COM2', 'IND1', 'IND2', 'IND3', 'IND4', 'IND5', 'IND6', 'AGR1']
-    # add_row('S', secb1_occs, 1, 4, 'SECB', sqft_min=4001, sqft_max=None) # TODO: See occupancy table
-    # add_row('S', secb1_occs, 5, 108, 'SECB', sqft_min=4001, sqft_max=None) # TODO: See occupancy table
-
-    # # SECB: Other commercial/institutional (1-108 stories)
-    # # secb2_occs = ['COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'COM10',
-    # secb2_occs = ['COM3', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'COM10',
-    #               'REL1', 'GOV1', 'GOV2', 'EDU1', 'EDU2']
-
-    # SECB: All commercial/institutional (1-108 stories, simplified for contents (no sqft))
-    secb_occs = ['COM1', 'COM2', 'COM3', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'COM10',
-                 'IND1', 'IND2', 'IND3', 'IND4', 'IND5', 'IND6',
-                 'REL1', 'AGR1', 'GOV1', 'GOV2', 'EDU1', 'EDU2']
-    # add_row('S', secb_occs, 1, 4, 'SECB')
-    # add_row('S', secb_occs, 5, 108, 'SECB')
-    add_row('S', secb_occs, 1, 108, 'SECB')
-
-    # SECB: COM4 story specific
-    add_row('S', ['COM4'], 1, 1, 'SECB', None, None)  # COM4 1 Story
-    add_row('S', ['COM4'], 2, 108, 'SECB', None, None)  # COM4 2 Story+
-
-
-    # Create DataFrame
-    df = pd.DataFrame(rows)
-    
-    # Sort for better readability
-    df = df.sort_values(['Construction_Type', 'Occupancy_Type', 'Story_Min'])
-    df = df.reset_index(drop=True)
-    
-    return df
-
-
-
-def unpivot_foundation_flood_table_cont(filepath_or_df):
-    """
-    Unpivot the foundation type and flood peril type table (for contents).
-
-    The CSV has a first column with flood specific building types (FLSBT)
-    The CSV has two header rows:
-    - Row 1: Foundation Type (PILE, SHAL, SLAB, BASE repeating)
-    - Row 2: Flood Peril Type (RLS, RHS, RLL, RHL, CST, CMV, CHW repeating)
-    
-    Returns a long table with columns:
-    - FLSBT_Range
-    - Foundation_Type
-    - Flood_Peril_Type
-    - Damage_Function_ID
-    
-    Parameters:
-    -----------
-    filepath_or_df : str or DataFrame
-        Either path to CSV file or DataFrame with the foundation/flood data
-    
-    Returns:
-    --------
-    DataFrame
-        Unpivoted long format DataFrame
-    """
-    # Load data with first two rows as headers
-    if isinstance(filepath_or_df, str):
-        df = pd.read_csv(filepath_or_df, header=[0, 1])
-    else:
-        df = filepath_or_df.copy()
-    
-    # Normalize the first column name to 'FLSBT_Range'
-    if hasattr(df.columns, 'levels') and getattr(df.columns, 'nlevels', 1) > 1:
-        # MultiIndex: replace the first tuple with a simple string
-        cols = list(df.columns)
-        cols[0] = 'FLSBT_Range'
-        df.columns = cols
-    else:
-        # Single-level columns: just rename the first column
-        first_col = df.columns[0]
-        df = df.rename(columns={first_col: 'FLSBT_Range'})
-    
-    # Build long format table
-    rows = []
-    
+    # get the occupancy values (always coded first, before any commas)
+    occupancies = []
     for _, row in df.iterrows():
-        flsbt = row['FLSBT_Range']
-        
-        # Iterate through all other columns (which are tuples of (Foundation, Peril))
-        for col in df.columns[1:]:
-            if isinstance(col, tuple) and len(col) == 2:
-                foundation = col[0]  # First header row value
-                peril = col[1]       # Second header row value
-                damage_id = row[col]
+        if ',' not in row['Occupancy']:
+            occupancies.append(row['Occupancy'])
+        else:
+            occupancies.append(row['Occupancy'].split(',')[0].strip())
 
-                rows.append({
-                    'FLSBT_Range': flsbt,
-                    'Foundation_Type': foundation,
-                    'Flood_Peril_Type': peril,
-                    'Damage_Function_ID': damage_id
-                })
-    
-    result_df = pd.DataFrame(rows)
-    
-    # Convert Damage_Function_ID to integer
-    result_df['Damage_Function_ID'] = result_df['Damage_Function_ID'].astype(int)
-
-    # Sort for readability
-    result_df = result_df.sort_values(['FLSBT_Range', 'Foundation_Type', 'Flood_Peril_Type'])
-    result_df = result_df.reset_index(drop=True)
-
-    print(f"Unpivoted foundation/flood table with {len(result_df)} rows")
-    print(result_df.head(10))
-    
-    return result_df
-
-
-def unpivot_occupancy_flood_table_cont(filepath_or_df):
-    """
-    Unpivot the occupancy-based foundation type and flood peril type table (for contents).
-
-    The CSV has a first column with occupancy types (COM1, COM2, etc.)
-    Some occupancy types include story information (e.g., "COM4 1 Story", "COM4 2 Story+")
-    
-    The CSV has two header rows:
-    - Row 1: Foundation Type (PILE, SHAL, SLAB, BASE repeating)
-    - Row 2: Flood Peril Type (RLS, RHS, RLL, RHL, CST, CMV, CHW repeating)
-    
-    Returns a long table with columns:
-    - Occupancy_Type (normalized to base occupancy)
-    - Story_Min
-    - Story_Max
-    - Foundation_Type
-    - Flood_Peril_Type
-    - Damage_Function_ID
-    
-    Parameters:
-    -----------
-    filepath_or_df : str or DataFrame
-        Either path to CSV file or DataFrame with the occupancy/flood data
-    
-    Returns:
-    --------
-    DataFrame
-        Unpivoted long format DataFrame
-    """
-    # Load data with first two rows as headers
-    if isinstance(filepath_or_df, str):
-        df = pd.read_csv(filepath_or_df, header=[0, 1])
-    else:
-        df = filepath_or_df.copy()
-    
-    # Normalize the first column name to 'Occupancy_Type'
-    if hasattr(df.columns, 'levels') and getattr(df.columns, 'nlevels', 1) > 1:
-        # MultiIndex: replace the first tuple with a simple string
-        cols = list(df.columns)
-        cols[0] = 'Occupancy_Type'
-        df.columns = cols
-    else:
-        # Single-level columns: just rename the first column
-        first_col = df.columns[0]
-        df = df.rename(columns={first_col: 'Occupancy_Type'})
-    
-    # Helper function to parse occupancy type with embedded story info
-    def parse_occupancy_type(occ_string):
-        """
-        Parse occupancy type string and extract base occupancy and story range.
-        
-        Examples:
-        - "COM4 1 Story" → ("COM4", 1, 1)
-        - "COM4 2 Story+" → ("COM4", 2, 2) # depends on the story range for this COM type
-        - "COM1" → ("COM1", NaN, NaN)
-        """
-        occ_string = str(occ_string).strip()
-        
-        # Pattern: "OCCTYPE 1 Story" (single story)
-        if " 1 Story" in occ_string:
-
-            base_occ = occ_string.replace(" 1 Story", "").strip()
-            return (base_occ, 1, 1)
-        
-        # Pattern: "OCCTYPE 2 Story+" (story and above)
-        if " 2 Story+" in occ_string:
-            base_occ = occ_string.replace(" 2 Story+", "").strip()
-            return (base_occ, 2, 999)  # Generalized for all described Story_Max and undefined above Story_Max
-        
-        # No story info embedded
-        return (occ_string, np.nan, np.nan)
-    
-    # Build long format table
-    rows = []
-    
+    # hard-code story range strings
+    story_min = []
+    story_max = []
     for _, row in df.iterrows():
-        occupancy_raw = row['Occupancy_Type']
-        base_occ, story_min, story_max = parse_occupancy_type(occupancy_raw)
-        
-        # Iterate through all other columns (which are tuples of (Foundation, Peril))
-        for col in df.columns[1:]:
-            if isinstance(col, tuple) and len(col) == 2:
-                foundation = col[0]  # First header row value
-                peril = col[1]       # Second header row value
-                damage_id = row[col]
+        if ',' not in row['Occupancy']:
+            story_min.append(np.nan)
+            story_max.append(np.nan)
+        else:
+            story_range_str = row['Occupancy'].split(',')[1].strip()
+            min_story, max_story = parse_story_range(story_range_str)
+            story_min.append(min_story)
+            story_max.append(max_story)
 
-                rows.append({
-                    'Occupancy_Type': base_occ,
-                    'Story_Min': story_min,
-                    'Story_Max': story_max,
-                    'Foundation_Type': foundation,
-                    'Flood_Peril_Type': peril,
-                    'Damage_Function_ID': damage_id
-                })
-    
-    result_df = pd.DataFrame(rows)
-    
-    # Convert Damage_Function_ID to integer
-    result_df['Damage_Function_ID'] = result_df['Damage_Function_ID'].astype(int)
+    # ensure occupancy, story_min, story_max and the original df have the same length
+    assert len(occupancies) == len(story_min) == len(story_max) == len(df)
 
-    # Sort for readability
-    result_df = result_df.sort_values(['Occupancy_Type', 'Story_Min', 'Foundation_Type', 'Flood_Peril_Type'])
-    result_df = result_df.reset_index(drop=True)
+    # add the new columns to the dataframe
+    df = df.copy()
+    df['occupancy_type'] = occupancies
+    df['story_min'] = story_min
+    df['story_max'] = story_max
 
-    print(f"Unpivoted occupancy/flood table with {len(result_df)} rows")
-    print(result_df.head(10))
-    
-    # Show examples of parsed story information
-    print("\nSample rows with story information:")
-    story_info = result_df[result_df['Story_Min'].notna()][['Occupancy_Type', 'Story_Min', 'Story_Max', 'Foundation_Type', 'Flood_Peril_Type', 'Damage_Function_ID']].head(10)
-    if not story_info.empty:
-        print(story_info)
-    
-    return result_df
+    # expand the RES3 rows to the set {'RES3A', 'RES3E', 'RES3C', 'RES3B', 'RES3F', 'RES3D'}
+    _expanded = []
+    for _, row in df.iterrows():
+        if row['occupancy_type'] == 'RES3':
+            for suffix in ['A', 'E', 'C', 'B', 'F', 'D']:
+                new_row = row.copy()
+                new_row['occupancy_type'] = f'RES3{suffix}'
+                _expanded.append(new_row)
+        else:
+            _expanded.append(row)
 
+    df_expanded = pd.DataFrame(_expanded)
+    df_expanded = df_expanded[df_expanded['occupancy_type']!='RES3'].reset_index(drop=True)
 
-# Generate and display the lookup table
-def create_complete_lookup_table(foundation_flood_csv_path, occupancy_flood_csv_path):
-    """
-    Create a completely flattened lookup table for contents that combines:
-    1. FLSBT assignment rules (Construction + Occupancy + Stories + SQFT → FLSBT)
-    2. Foundation/Flood damage functions (FLSBT + Foundation + Flood Peril → Damage ID)
-    
-    Parameters:
-    -----------
-    foundation_flood_csv_path : str
-        Path to the CSV file containing foundation/flood peril damage functions. This is flood
-            specific building type (FLSBT) based DF lookup approach.
-    occupancy_flood_csv_path : str
-        Path to the CSV file containing secondary occupancy-based damage lookup table (specified for
-            for various flood specific building types as DF lookup approach)
+    return df_expanded
+
+def expand_construction_types(df):
+    """Expand construction types in the DataFrame by duplicating rows for each construction type.
+
+    NOTE: Besides RES2 (which will have either H or MH construction types), all other occupancy types
+    will have C, M, S, and W construction types.
+
+    Args:
+        df (pd.DataFrame): Input DataFrame
     
     Returns:
-    --------
-    DataFrame with columns:
-        - Construction_Type
-        - Occupancy_Type
-        - Story_Min
-        - Story_Max
-        - SQFT_Min
-        - SQFT_Max
-        - FLSBT_Range
-        - Foundation_Type
-        - Flood_Peril_Type
-        - Damage_Function_ID
+        pd.DataFrame: Expanded DataFrame with separate rows for each construction type
     """
+    # generate a construction map and dataframe
+    construction_map = []
+    for occ_type in df['occupancy_type'].unique():
+        if occ_type == 'RES2':
+            construction_map.append((occ_type, 'H'))
+            construction_map.append((occ_type, 'MH'))
+        else:
+            for ctype in ['C', 'M', 'S', 'W']:
+                construction_map.append((occ_type, ctype))
+
+    df_construction = pd.DataFrame(construction_map, columns=["occupancy_type", "construction_type"])
+
+    # outer join to duplicate rows for each construction type
+    df_expanded = df.merge(df_construction, on="occupancy_type", how="outer")
+
+    return df_expanded
+
+def prepare_for_export(df):
+    """Rename fields and reorganize columns in the DataFrame before exporting.
     
-    # Generate FLSBT lookup table (contents version)
-    print("Generating FLSBT lookup table for contents...")
-    flsbt_lookup = generate_flsbt_lookup_table()
-    
-    # Load and unpivot foundation/flood DF table
-    print(f"Loading foundation/flood table from {foundation_flood_csv_path}...")
-    foundation_flood = unpivot_foundation_flood_table_cont(foundation_flood_csv_path)
+    Args:
+        df (pd.DataFrame): Input DataFrame
+    Returns:
+        pd.DataFrame: Reorganized DataFrame
+    """
+    # rename columns
+    df = df.rename(columns={
+        "DDF Value": "damage_function_id",
+        "Foundation Type": "foundation_type",
+    })
 
-    # Load and unpivot the occupancy-based DF table
-    print(f"Loading occupancy/flood table from {occupancy_flood_csv_path}...")
-    occupancy_flood = unpivot_occupancy_flood_table_cont(
-        # 'data/foundation_flood_table_cont2.csv'
-        occupancy_flood_csv_path
-    )
-    
-    # Join flsbt_lookup with foundation_flood on FLSBT_Range
-    print("\nMerging with FLSBT-based damage functions...")
-    complete_table = flsbt_lookup.merge(
-        foundation_flood,
-        on='FLSBT_Range',
-        how='left'
-    )
-    
-    # For rows with Damage_Function_ID = -9999, try to get values from occupancy flood table
-    mask_needs_replacement = complete_table['Damage_Function_ID'] == -9999
-    print(f"\nFilling -9999 damage function IDs with occupancy-based lookups (n={mask_needs_replacement.sum()})...")
+    # add sqft min/max columns (to match previous schema) and set to null
+    df['sqft_min'] = np.nan
+    df['sqft_max'] = np.nan
 
-    if mask_needs_replacement.any():
-        
-        # Get rows that need replacement, keeping the index
-        rows_to_update = complete_table[mask_needs_replacement].copy()
-        rows_to_update = rows_to_update.reset_index()
+    # define the desired column order (and omit unneeded columns)
+    desired_order = [
+        "construction_type",
+        "occupancy_type",
+        "story_min",
+        "story_max",
+        "sqft_min",
+        "sqft_max",
+        "foundation_type",
+        "flood_peril_type",
+        "damage_function_id",
+        "Duration",
+        "Base Type",
+    ]
 
-        complete_table.to_csv('outputs/complete_table_before_occupancy_lookup.csv', index=False)
-        rows_to_update.to_csv('outputs/join_left.csv', index=False)
-        occupancy_flood.to_csv('outputs/join_right.csv', index=False)
+    # reorder the columns
+    df_reordered = df[desired_order]
 
-        # Step 1: Merge on Occupancy_Type, Foundation_Type, Flood_Peril_Type, Story_Min, Story_Max 
-        # This handles Flood Specific Building Types that vary by story count (e.g., "COM4 1 Story", "COM4 2 Story+")
-
-        updated_rows = rows_to_update.drop(columns=['Damage_Function_ID']).merge(
-            occupancy_flood,
-            # on=['Occupancy_Type', 'Foundation_Type', 'Flood_Peril_Type', 'Story_Min', 'Story_Max'],
-            on=['Occupancy_Type', 'Foundation_Type', 'Flood_Peril_Type', 'Story_Min'], # Story_Max varies among FSBLT and OccTypes
-            how='left'
-        )
-
-        # Step 2: For any remaining missing, merge on Occupancy_Type, Foundation_Type, Flood_Peril_Type only
-        mask_needs_replacement2 = updated_rows['Damage_Function_ID'].isna()
-        if mask_needs_replacement2.any():
-            rows_to_update2 = updated_rows[mask_needs_replacement2].copy()
-            rows_to_update2 = rows_to_update2.drop(columns=['Damage_Function_ID'])
-
-            updated_rows2 = rows_to_update2.merge(
-                occupancy_flood[['Occupancy_Type', 'Foundation_Type', 'Flood_Peril_Type', 'Damage_Function_ID']].drop_duplicates(
-                    subset=['Occupancy_Type', 'Foundation_Type', 'Flood_Peril_Type']
-                ),
-                on=['Occupancy_Type', 'Foundation_Type', 'Flood_Peril_Type'],
-                how='left'
-            )
-
-            # Update the original updated_rows with these new values
-            updated_rows.loc[mask_needs_replacement2, 'Damage_Function_ID'] = updated_rows2['Damage_Function_ID'].values
-
-        # Set the index back and update the complete_table
-        updated_rows = updated_rows.set_index('index')
-        complete_table.loc[updated_rows.index, 'Damage_Function_ID'] = updated_rows['Damage_Function_ID']
-        
-        # Report results
-        still_missing = (complete_table['Damage_Function_ID'] == -9999).sum()
-        replaced_count = mask_needs_replacement.sum() - still_missing
-        print(f"  Successfully replaced {replaced_count} values using occupancy-based lookups")
-        if still_missing > 0:
-            print(f"  WARNING: {still_missing} rows still have Damage_Function_ID = -9999")
-    
-    # Sort for readability
-    complete_table = complete_table.sort_values([
-        'Construction_Type', 
-        'Occupancy_Type', 
-        'Story_Min',
-        'Foundation_Type',
-        'Flood_Peril_Type'
-    ])
-    complete_table = complete_table.reset_index(drop=True)
-    
-    print(f"\nComplete! Generated {len(complete_table)} total lookup rules")
-    print(f"  - {len(flsbt_lookup)} unique FLSBT ranges")
-    print(f"  - {len(foundation_flood['Foundation_Type'].unique())} foundation types")
-    print(f"  - {len(foundation_flood['Flood_Peril_Type'].unique())} flood peril types")
-    print(f"  - {complete_table['Damage_Function_ID'].notna().sum()} rules with damage functions")
-    print(f"  - {(complete_table['Damage_Function_ID'] != -9999).sum()} rules with valid damage functions (excluding -9999)")
-
-    # cast all columns to lowercase
-    complete_table.columns = [col.lower() for col in complete_table.columns]
-
-    # Remove flsbt_range from output (used only for internal merge)
-    complete_table = complete_table.drop(columns=['flsbt_range'])
-
-    # Update foundation types to full names (SHAL->SHALLOW, BASE->BASEMENT)
-    complete_table = update_foundation_types(complete_table)
-    
-    return complete_table
+    return df_reordered
 
 
 if __name__ == "__main__":
-
-    lookup_table = generate_flsbt_lookup_table()
-    lookup_table.to_csv('outputs/flsbt_lookup_table_contents.csv', index=False)
-    
-    print(f"Generated {len(lookup_table)} lookup rules")
-    print("\nSample rows:")
-    print(lookup_table.head(3))
-
-    foundation_df = unpivot_foundation_flood_table_cont(
-        'data/foundation_flood_table_cont1.csv'
-    )
-
-    foundation_df.to_csv('outputs/unpivoted_foundation_flood_table_contents.csv', index=False)
-
-    # Unpivot the occupancy-based table
-    print("\n" + "="*60)
-    print("UNPIVOTING OCCUPANCY-BASED TABLE:")
     print("="*60)
-    
-    occupancy_df = unpivot_occupancy_flood_table_cont(
-        'data/foundation_flood_table_cont2.csv'
-    )
-    
-    occupancy_df.to_csv('outputs/unpivoted_occupancy_flood_table_contents.csv', index=False)
-    
-    # print("\nSample unpivoted occupancy/flood table, COM entries:")
-    # print(occupancy_df[occupancy_df['Occupancy_Type'].str.contains('COM')])
 
-    # Generate complete lookup table
-    print("\n" + "="*60)
-    print("GENERATING COMPLETE LOOKUP TABLE FOR CONTENTS:")
+    # read the riverine content data from the Excel file
+    excel_path = "data/source_data/OpenHazusDDFUpdates_2025.xlsx"
+    sheet_name = "Proposed Contents DDF"
+    contents_df = read_riverine_content_excel_table(excel_path, sheet_name)
+
+    # expand foundation types
+    length_before = len(contents_df)
+    contents_df2 = expand_foundation_types(contents_df)
+    length_after = len(contents_df2)
+    print(contents_df2)
+    print(f"Length before expansion: {length_before}")
+    print(f"Length after expansion: {length_after}")
     print("="*60)
-    
-    os.makedirs('outputs', exist_ok=True)
-    complete_table = create_complete_lookup_table(
-        'data/foundation_flood_table_cont1.csv',
-        'data/foundation_flood_table_cont2.csv'
-    )
-    
-    print("\nSample from complete table:")
-    print(complete_table.sample(min(30, len(complete_table))))
-    
-    complete_table.to_csv('outputs/df_lookup_contents.csv', index=False)
-    print("\nSaved complete lookup table to outputs/df_lookup_contents.csv")
+
+    # expand peril types
+    length_before = len(contents_df2)
+    contents_df3 = expand_peril_type(contents_df2)
+    length_after = len(contents_df3)
+    print(contents_df3)
+    print(f"Length before expansion: {length_before}")
+    print(f"Length after expansion: {length_after}")
+    print("="*60)
+
+    # expand story ranges to min/max stories
+    length_before = len(contents_df3)
+    contents_df4 = expand_occupancy_story_ranges(contents_df3)
+    length_after = len(contents_df4)
+    print(contents_df4)
+    print(f"Length before expansion: {length_before}")
+    print(f"Length after expansion: {length_after}")
+    print("="*60)
+
+    # expand with contstruction types
+    contents_df5 = expand_construction_types(contents_df4)
+    length_before = len(contents_df4)
+    length_after = len(contents_df5)
+    print(contents_df5)
+    print(f"Length before expansion: {length_before}")
+    print(f"Length after expansion: {length_after}")
+    print("="*60)
+
+    # reorganzie columns before exporting
+    final_contents_df = prepare_for_export(contents_df5)
+    print(final_contents_df)
+
+    print(f"Count of damage functions: {final_contents_df['damage_function_id'].nunique()}")
+
+    # export to CSV
+    output_path = "outputs/df_lookup_contents.csv"
+    final_contents_df.to_csv(output_path, index=False)
+    print(f"Exported final contents DataFrame to: {output_path}")
+
+
+
+    # #  TEMP - ensure the new DFs have all the same occupancy types (passed)
+    # df_original = pd.read_csv('src/inland_consequences/data/df_lookup_contents.csv')
+    # original_occupancy_types = set(df_original['occupancy_type'].unique())
+    # new_occupancy_types = set(contents_df4['occupancy_type'].unique())
+    # missing_occupancy_types = original_occupancy_types - new_occupancy_types
+    # if len(missing_occupancy_types) > 0:
+    #     print("MISSING OCCUPANCY TYPES IN NEW DF:")
+    #     print(missing_occupancy_types)
+    # else:
+    #     print("ALL OCCUPANCY TYPES PRESENT IN NEW DF.")
+
+

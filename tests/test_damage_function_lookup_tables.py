@@ -27,7 +27,7 @@ def sample_structures():
             'foundation_type': 'BASEMENT',
             'flood_peril_type': 'RLL',
             'validated_building_damage_function_id': 669,
-            'validated_contents_damage_function_id': 400,
+            'validated_contents_damage_function_id': 35,
             'validated_inventory_damage_function_id': None # undefined for residential
         },
         {
@@ -49,8 +49,8 @@ def sample_structures():
             'num_stories': 2,
             'sqft': None,
             'foundation_type': 'SLAB',  # 4-letter code
-            'flood_peril_type': 'CMV',
-            'validated_building_damage_function_id': 214,
+            'flood_peril_type': 'RLS',
+            'validated_building_damage_function_id': 213,
             'validated_contents_damage_function_id': 883,
             'validated_inventory_damage_function_id': 111
         },
@@ -99,7 +99,7 @@ def sample_structures():
             'foundation_type': 'PILE',  # 4-letter code
             'flood_peril_type': 'RLL',
             'validated_building_damage_function_id': 630,
-            'validated_contents_damage_function_id': 421,
+            'validated_contents_damage_function_id': 1383,
             'validated_inventory_damage_function_id': None # undefined for residential
         },
         {
@@ -111,7 +111,7 @@ def sample_structures():
             'foundation_type': 'PILE',  # 4-letter code
             'flood_peril_type': 'RLL',
             'validated_building_damage_function_id': 634,
-            'validated_contents_damage_function_id': 422,
+            'validated_contents_damage_function_id': 1383,
             'validated_inventory_damage_function_id': None # undefined for residential
         },
         {
@@ -123,7 +123,7 @@ def sample_structures():
             'foundation_type': 'PILE',  # 4-letter code
             'flood_peril_type': 'RLL',
             'validated_building_damage_function_id': 218,
-            'validated_contents_damage_function_id': 406,
+            'validated_contents_damage_function_id': 1383,
             'validated_inventory_damage_function_id': None # undefined for residential
         },
         {
@@ -133,9 +133,9 @@ def sample_structures():
             'num_stories': 3,
             'sqft': None,
             'foundation_type': 'SHALLOW',
-            'flood_peril_type': 'CHW',
-            'validated_building_damage_function_id': 214,
-            'validated_contents_damage_function_id': 887,
+            'flood_peril_type': 'RLL',
+            'validated_building_damage_function_id': 213,
+            'validated_contents_damage_function_id': 888,
             'validated_inventory_damage_function_id': None # undefined for educational
         },
         {
@@ -145,8 +145,8 @@ def sample_structures():
             'num_stories': 10,
             'sqft': None,
             'foundation_type': 'SHALLOW',
-            'flood_peril_type': 'CHW',
-            'validated_building_damage_function_id': 219,
+            'flood_peril_type': 'RHS',
+            'validated_building_damage_function_id': 218,
             'validated_contents_damage_function_id': 887,
             'validated_inventory_damage_function_id': None # undefined for educational
         },
@@ -159,7 +159,7 @@ def sample_structures():
             'foundation_type': 'PILE',  # 4-letter code
             'flood_peril_type': 'RLS',
             'validated_building_damage_function_id': 597,
-            'validated_contents_damage_function_id': 421,
+            'validated_contents_damage_function_id': 1381,
             'validated_inventory_damage_function_id': None # undefined for residential
         },
         {
@@ -171,7 +171,7 @@ def sample_structures():
             'foundation_type': 'PILE',  # 4-letter code
             'flood_peril_type': 'RLS',
             'validated_building_damage_function_id': 601,
-            'validated_contents_damage_function_id': 422,
+            'validated_contents_damage_function_id': 1381,
             'validated_inventory_damage_function_id': None # undefined for residential
         },
         {
@@ -183,7 +183,7 @@ def sample_structures():
             'foundation_type': 'PILE',  # 4-letter code
             'flood_peril_type': 'RLS',
             'validated_building_damage_function_id': 218,
-            'validated_contents_damage_function_id': 406,
+            'validated_contents_damage_function_id': 1381,
             'validated_inventory_damage_function_id': None # undefined for residential
         },
         {
@@ -192,24 +192,36 @@ def sample_structures():
             'occupancy_type': 'RES2',
             'num_stories': 1,
             'sqft': None,
+            'foundation_type': 'SLAB', # 4-letter code
+            'flood_peril_type': 'RHS',
+            'validated_building_damage_function_id': 262,
+            'validated_contents_damage_function_id': 1363,
+            'validated_inventory_damage_function_id': None # undefined for residential
+        },
+        {
+            'flood_specific_bldg_type': 'MH', # reference only
+            'construction_type': 'MH',
+            'occupancy_type': 'RES2',
+            'num_stories': 1,
+            'sqft': None,
+            'foundation_type': 'SLAB',  # 4-letter code
+            'flood_peril_type': 'RHL',
+            'validated_building_damage_function_id': 264,
+            'validated_contents_damage_function_id': 1365,
+            'validated_inventory_damage_function_id': None # undefined for residential
+        },
+        {
+            'flood_specific_bldg_type': 'WSF001', # reference only
+            'construction_type': 'W',
+            'occupancy_type': 'RES1',
+            'num_stories': 1,
+            'sqft': 1500,
             'foundation_type': 'SLAB',  # 4-letter code
             'flood_peril_type': 'RHS',
-            'validated_building_damage_function_id': 699,
-            'validated_contents_damage_function_id': 446,
+            'validated_building_damage_function_id': 639, # updated per 2025 Hazus DDFs
+            'validated_contents_damage_function_id': 1373,
             'validated_inventory_damage_function_id': None # undefined for residential
-        },
-        {
-            'flood_specific_bldg_type': 'MH', # reference only
-            'construction_type': 'MH',
-            'occupancy_type': 'RES2',
-            'num_stories': 1,
-            'sqft': None,
-            'foundation_type': 'SLAB',  # 4-letter code
-            'flood_peril_type': 'CHW',
-            'validated_building_damage_function_id': 680,
-            'validated_contents_damage_function_id': 427,
-            'validated_inventory_damage_function_id': None # undefined for residential
-        },
+        }
     ]
     
     return pd.DataFrame(sample_data)
@@ -261,8 +273,8 @@ def test_lookup_table_generation_contents(sample_structures):
         mask = (
             (df_lookup['construction_type'] == row['construction_type']) &
             (df_lookup['occupancy_type'] == row['occupancy_type']) &
-            (df_lookup['story_min'] <= row['num_stories']) &
-            (df_lookup['story_max'] >= row['num_stories']) &
+            ((df_lookup['story_min'].isna()) | (df_lookup['story_min'] <= row['num_stories'])) &
+            ((df_lookup['story_max'].isna()) | (df_lookup['story_max'] >= row['num_stories'])) &
             ((df_lookup['sqft_min'].isna()) | (df_lookup['sqft_min'] <= row['sqft'])) &
             ((df_lookup['sqft_max'].isna()) | (df_lookup['sqft_max'] >= row['sqft'])) &
             (df_lookup['foundation_type'] == row['foundation_type']) &
