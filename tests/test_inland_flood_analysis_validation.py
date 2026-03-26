@@ -424,14 +424,9 @@ def raster_collection_normal():
 
 @pytest.fixture(scope="module")
 def mock_vulnerability():
-    """Mocks the vulnerability function to return low damage ratios."""
-    mock = MagicMock(spec=AbstractVulnerabilityFunction)
-    
-    def mock_calculate_vulnerability(exposure_df):
-        return pd.DataFrame({'damage_ratio': [0.1] * len(exposure_df)})
-
-    mock.calculate_vulnerability.side_effect = mock_calculate_vulnerability
-    return mock
+    """Real InlandFloodVulnerability for integration tests."""
+    from inland_consequences.inland_vulnerability import InlandFloodVulnerability
+    return InlandFloodVulnerability()
 
 
 # --- Test Suite 1: Building Validation Rules ---
@@ -715,18 +710,11 @@ def test_loss_unusual_hazard_data(
         "inland_consequences.inland_flood_analysis.InlandFloodAnalysis._get_db_identifier",
         return_value=str(tmp_path / "test_loss.duckdb")
     ):
-        # Use higher damage ratio for this scenario to trigger loss warnings
-        mock_high_vuln = MagicMock(spec=AbstractVulnerabilityFunction)
-        
-        def mock_high_vuln_calc(exposure_df):
-            return pd.DataFrame({'damage_ratio': [0.6] * len(exposure_df)})
-        
-        mock_high_vuln.calculate_vulnerability.side_effect = mock_high_vuln_calc
-        
+        from inland_consequences.inland_vulnerability import InlandFloodVulnerability
         analysis = InlandFloodAnalysis(
             raster_collection=raster_collection_hazard_anomalies,
             buildings=buildings_hazard_anomalies,
-            vulnerability=mock_high_vuln,
+            vulnerability=InlandFloodVulnerability(),
             calculate_aal=False
         )
         

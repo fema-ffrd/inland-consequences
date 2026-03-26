@@ -163,15 +163,9 @@ def mock_raster_collection():
 
 @pytest.fixture(scope="module")
 def mock_vulnerability():
-    """Mocks the vulnerability function to return a fixed damage ratio."""
-    mock = MagicMock(spec=AbstractVulnerabilityFunction)
-    
-    def mock_calculate_vulnerability(exposure_df):
-        # Always return a fixed 50% damage ratio for simplicity in tests
-        return pd.DataFrame({'damage_ratio': [0.5] * len(exposure_df)})
-
-    mock.calculate_vulnerability.side_effect = mock_calculate_vulnerability
-    return mock
+    """Real InlandFloodVulnerability for integration tests."""
+    from inland_consequences.inland_vulnerability import InlandFloodVulnerability
+    return InlandFloodVulnerability()
 
 @pytest.fixture(scope="module") # Run once for all tests in this file
 def flood_analysis_results(mock_raster_collection, mock_buildings, mock_vulnerability, tmp_path_factory):

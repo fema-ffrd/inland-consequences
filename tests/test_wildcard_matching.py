@@ -12,6 +12,7 @@ import geopandas as gpd
 from unittest.mock import MagicMock
 
 from inland_consequences.inland_flood_analysis import InlandFloodAnalysis
+from inland_consequences.inland_vulnerability import InlandFloodVulnerability
 from inland_consequences.nsi_buildings import NsiBuildings
 from inland_consequences.raster_collection import RasterCollection
 from sphere.core.schemas.abstract_raster_reader import AbstractRasterReader
@@ -97,9 +98,8 @@ def test_default_matching_all_attributes(sample_buildings, mock_raster_collectio
         analysis = InlandFloodAnalysis(
             raster_collection=mock_raster_collection,
             buildings=sample_buildings,
-            vulnerability=mock_vulnerability,
+            vulnerability=InlandFloodVulnerability(wildcard_fields=[]),
             calculate_aal=False,
-            wildcard_fields=[]  # No wildcards - match on all attributes
         )
         
         with analysis:
@@ -131,9 +131,8 @@ def test_wildcard_construction_type(sample_buildings, mock_raster_collection, mo
         analysis = InlandFloodAnalysis(
             raster_collection=mock_raster_collection,
             buildings=sample_buildings,
-            vulnerability=mock_vulnerability,
+            vulnerability=InlandFloodVulnerability(wildcard_fields=['general_building_type']),
             calculate_aal=False,
-            wildcard_fields=['general_building_type']  # Ignore construction type
         )
         
         with analysis:
@@ -163,9 +162,8 @@ def test_wildcard_all_optional(sample_buildings, mock_raster_collection, mock_vu
         analysis = InlandFloodAnalysis(
             raster_collection=mock_raster_collection,
             buildings=sample_buildings,
-            vulnerability=mock_vulnerability,
+            vulnerability=InlandFloodVulnerability(wildcard_fields=['foundation_type', 'number_stories', 'general_building_type']),
             calculate_aal=False,
-            wildcard_fields=['foundation_type', 'number_stories', 'general_building_type']
         )
         
         with analysis:
@@ -201,9 +199,8 @@ def test_wildcard_occupancy_type(sample_buildings, mock_raster_collection, mock_
         analysis = InlandFloodAnalysis(
             raster_collection=mock_raster_collection,
             buildings=sample_buildings,
-            vulnerability=mock_vulnerability,
+            vulnerability=InlandFloodVulnerability(wildcard_fields=['occupancy_type']),
             calculate_aal=False,
-            wildcard_fields=['occupancy_type']  # Wildcard occupancy, still match on other attributes
         )
         
         with analysis:

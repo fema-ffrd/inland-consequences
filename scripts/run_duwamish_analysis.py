@@ -348,7 +348,7 @@ def main():
     print("Building raster collection ...")
     raster_collection = build_raster_collection()
 
-    vulnerability = InlandFloodVulnerability(buildings=buildings)
+    vulnerability = InlandFloodVulnerability()
 
     print("Running InlandFloodAnalysis ...")
     analysis = InlandFloodAnalysis(
