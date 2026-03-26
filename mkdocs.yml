@@ -117,8 +117,8 @@ nav:
       - api/inland_consequences/results_aggregation.md
       - api/inland_consequences/nsi_buildings.md
       - api/inland_consequences/milliman_buildings.md
-      - Coastal:
-        - api/inland_consequences/coastal/pfracoastal.md
+    - coastal_consequences:
+      - api/inland_consequences/coastal/pfracoastal.md
     - sphere.core.schemas:
       - api/sphere_core/buildings.md
       - api/sphere_core/field_mapping.md
