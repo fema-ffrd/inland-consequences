@@ -99,13 +99,13 @@ def in_memory_conn(xref_dir: Path) -> duckdb.DuckDBPyConnection:
     """)
 
     # aal_losses ----------------------------------------------------------
-    # Building 1: aal_mean=200, Building 2: aal_mean=800
+    # Building 1: baal_mean=200, Building 2: baal_mean=800
     conn.execute("""
         CREATE TABLE aal_losses AS
         SELECT * FROM (VALUES
-            (1, 180.0, 200.0, 10.0, 220.0),
-            (2, 720.0, 800.0, 40.0, 880.0)
-        ) t(id, aal_min, aal_mean, aal_std, aal_max)
+            (1, 180.0, 200.0, 10.0, 220.0, 190.0, 210.0, 230.0),
+            (2, 720.0, 800.0, 40.0, 880.0, 760.0, 840.0, 920.0)
+        ) t(id, baal_min, baal_mean, baal_std, baal_max, taal_min, taal_mean, taal_max)
     """)
 
     yield conn
@@ -403,8 +403,9 @@ class TestContextManager:
             """)
             setup_conn.execute("""
                 CREATE TABLE aal_losses AS
-                SELECT 1 AS id, 45.0 AS aal_min, 50.0 AS aal_mean,
-                       2.5 AS aal_std, 55.0 AS aal_max
+                SELECT 1 AS id, 45.0 AS baal_min, 50.0 AS baal_mean,
+                       2.5 AS baal_std, 55.0 AS baal_max,
+                       48.0 AS taal_min, 53.0 AS taal_mean, 58.0 AS taal_max
             """)
 
         with FloodResultsAggregator(

@@ -162,7 +162,88 @@ COPY (
             MAX(loss_mean_adjusted) FILTER (WHERE return_period =  200) AS loss_mean_adjusted_rp200,
             MAX(loss_mean_adjusted) FILTER (WHERE return_period =  500) AS loss_mean_adjusted_rp500,
             MAX(loss_mean_adjusted) FILTER (WHERE return_period = 1000) AS loss_mean_adjusted_rp1000,
-            MAX(loss_mean_adjusted) FILTER (WHERE return_period = 2000) AS loss_mean_adjusted_rp2000
+            MAX(loss_mean_adjusted) FILTER (WHERE return_period = 2000) AS loss_mean_adjusted_rp2000,
+
+            MAX(content_loss_min)   FILTER (WHERE return_period =   10) AS content_loss_min_rp10,
+            MAX(content_loss_min)   FILTER (WHERE return_period =   20) AS content_loss_min_rp20,
+            MAX(content_loss_min)   FILTER (WHERE return_period =   50) AS content_loss_min_rp50,
+            MAX(content_loss_min)   FILTER (WHERE return_period =  100) AS content_loss_min_rp100,
+            MAX(content_loss_min)   FILTER (WHERE return_period =  200) AS content_loss_min_rp200,
+            MAX(content_loss_min)   FILTER (WHERE return_period =  500) AS content_loss_min_rp500,
+            MAX(content_loss_min)   FILTER (WHERE return_period = 1000) AS content_loss_min_rp1000,
+            MAX(content_loss_min)   FILTER (WHERE return_period = 2000) AS content_loss_min_rp2000,
+
+            MAX(content_loss_mean)  FILTER (WHERE return_period =   10) AS content_loss_mean_rp10,
+            MAX(content_loss_mean)  FILTER (WHERE return_period =   20) AS content_loss_mean_rp20,
+            MAX(content_loss_mean)  FILTER (WHERE return_period =   50) AS content_loss_mean_rp50,
+            MAX(content_loss_mean)  FILTER (WHERE return_period =  100) AS content_loss_mean_rp100,
+            MAX(content_loss_mean)  FILTER (WHERE return_period =  200) AS content_loss_mean_rp200,
+            MAX(content_loss_mean)  FILTER (WHERE return_period =  500) AS content_loss_mean_rp500,
+            MAX(content_loss_mean)  FILTER (WHERE return_period = 1000) AS content_loss_mean_rp1000,
+            MAX(content_loss_mean)  FILTER (WHERE return_period = 2000) AS content_loss_mean_rp2000,
+
+            MAX(content_loss_max)   FILTER (WHERE return_period =   10) AS content_loss_max_rp10,
+            MAX(content_loss_max)   FILTER (WHERE return_period =   20) AS content_loss_max_rp20,
+            MAX(content_loss_max)   FILTER (WHERE return_period =   50) AS content_loss_max_rp50,
+            MAX(content_loss_max)   FILTER (WHERE return_period =  100) AS content_loss_max_rp100,
+            MAX(content_loss_max)   FILTER (WHERE return_period =  200) AS content_loss_max_rp200,
+            MAX(content_loss_max)   FILTER (WHERE return_period =  500) AS content_loss_max_rp500,
+            MAX(content_loss_max)   FILTER (WHERE return_period = 1000) AS content_loss_max_rp1000,
+            MAX(content_loss_max)   FILTER (WHERE return_period = 2000) AS content_loss_max_rp2000,
+
+            MAX(inventory_loss_min)  FILTER (WHERE return_period =   10) AS inventory_loss_min_rp10,
+            MAX(inventory_loss_min)  FILTER (WHERE return_period =   20) AS inventory_loss_min_rp20,
+            MAX(inventory_loss_min)  FILTER (WHERE return_period =   50) AS inventory_loss_min_rp50,
+            MAX(inventory_loss_min)  FILTER (WHERE return_period =  100) AS inventory_loss_min_rp100,
+            MAX(inventory_loss_min)  FILTER (WHERE return_period =  200) AS inventory_loss_min_rp200,
+            MAX(inventory_loss_min)  FILTER (WHERE return_period =  500) AS inventory_loss_min_rp500,
+            MAX(inventory_loss_min)  FILTER (WHERE return_period = 1000) AS inventory_loss_min_rp1000,
+            MAX(inventory_loss_min)  FILTER (WHERE return_period = 2000) AS inventory_loss_min_rp2000,
+
+            MAX(inventory_loss_mean) FILTER (WHERE return_period =   10) AS inventory_loss_mean_rp10,
+            MAX(inventory_loss_mean) FILTER (WHERE return_period =   20) AS inventory_loss_mean_rp20,
+            MAX(inventory_loss_mean) FILTER (WHERE return_period =   50) AS inventory_loss_mean_rp50,
+            MAX(inventory_loss_mean) FILTER (WHERE return_period =  100) AS inventory_loss_mean_rp100,
+            MAX(inventory_loss_mean) FILTER (WHERE return_period =  200) AS inventory_loss_mean_rp200,
+            MAX(inventory_loss_mean) FILTER (WHERE return_period =  500) AS inventory_loss_mean_rp500,
+            MAX(inventory_loss_mean) FILTER (WHERE return_period = 1000) AS inventory_loss_mean_rp1000,
+            MAX(inventory_loss_mean) FILTER (WHERE return_period = 2000) AS inventory_loss_mean_rp2000,
+
+            MAX(inventory_loss_max)  FILTER (WHERE return_period =   10) AS inventory_loss_max_rp10,
+            MAX(inventory_loss_max)  FILTER (WHERE return_period =   20) AS inventory_loss_max_rp20,
+            MAX(inventory_loss_max)  FILTER (WHERE return_period =   50) AS inventory_loss_max_rp50,
+            MAX(inventory_loss_max)  FILTER (WHERE return_period =  100) AS inventory_loss_max_rp100,
+            MAX(inventory_loss_max)  FILTER (WHERE return_period =  200) AS inventory_loss_max_rp200,
+            MAX(inventory_loss_max)  FILTER (WHERE return_period =  500) AS inventory_loss_max_rp500,
+            MAX(inventory_loss_max)  FILTER (WHERE return_period = 1000) AS inventory_loss_max_rp1000,
+            MAX(inventory_loss_max)  FILTER (WHERE return_period = 2000) AS inventory_loss_max_rp2000,
+
+            MAX(total_loss_min)      FILTER (WHERE return_period =   10) AS total_loss_min_rp10,
+            MAX(total_loss_min)      FILTER (WHERE return_period =   20) AS total_loss_min_rp20,
+            MAX(total_loss_min)      FILTER (WHERE return_period =   50) AS total_loss_min_rp50,
+            MAX(total_loss_min)      FILTER (WHERE return_period =  100) AS total_loss_min_rp100,
+            MAX(total_loss_min)      FILTER (WHERE return_period =  200) AS total_loss_min_rp200,
+            MAX(total_loss_min)      FILTER (WHERE return_period =  500) AS total_loss_min_rp500,
+            MAX(total_loss_min)      FILTER (WHERE return_period = 1000) AS total_loss_min_rp1000,
+            MAX(total_loss_min)      FILTER (WHERE return_period = 2000) AS total_loss_min_rp2000,
+
+            MAX(total_loss_mean)     FILTER (WHERE return_period =   10) AS total_loss_mean_rp10,
+            MAX(total_loss_mean)     FILTER (WHERE return_period =   20) AS total_loss_mean_rp20,
+            MAX(total_loss_mean)     FILTER (WHERE return_period =   50) AS total_loss_mean_rp50,
+            MAX(total_loss_mean)     FILTER (WHERE return_period =  100) AS total_loss_mean_rp100,
+            MAX(total_loss_mean)     FILTER (WHERE return_period =  200) AS total_loss_mean_rp200,
+            MAX(total_loss_mean)     FILTER (WHERE return_period =  500) AS total_loss_mean_rp500,
+            MAX(total_loss_mean)     FILTER (WHERE return_period = 1000) AS total_loss_mean_rp1000,
+            MAX(total_loss_mean)     FILTER (WHERE return_period = 2000) AS total_loss_mean_rp2000,
+
+            MAX(total_loss_max)      FILTER (WHERE return_period =   10) AS total_loss_max_rp10,
+            MAX(total_loss_max)      FILTER (WHERE return_period =   20) AS total_loss_max_rp20,
+            MAX(total_loss_max)      FILTER (WHERE return_period =   50) AS total_loss_max_rp50,
+            MAX(total_loss_max)      FILTER (WHERE return_period =  100) AS total_loss_max_rp100,
+            MAX(total_loss_max)      FILTER (WHERE return_period =  200) AS total_loss_max_rp200,
+            MAX(total_loss_max)      FILTER (WHERE return_period =  500) AS total_loss_max_rp500,
+            MAX(total_loss_max)      FILTER (WHERE return_period = 1000) AS total_loss_max_rp1000,
+            MAX(total_loss_max)      FILTER (WHERE return_period = 2000) AS total_loss_max_rp2000
         FROM losses
         GROUP BY id
     ),
@@ -305,7 +386,23 @@ COPY (
         lw.loss_mode_clamped_rp10, lw.loss_mode_clamped_rp20, lw.loss_mode_clamped_rp50, lw.loss_mode_clamped_rp100, lw.loss_mode_clamped_rp200, lw.loss_mode_clamped_rp500, lw.loss_mode_clamped_rp1000, lw.loss_mode_clamped_rp2000,
         lw.loss_mean_adjusted_rp10, lw.loss_mean_adjusted_rp20, lw.loss_mean_adjusted_rp50, lw.loss_mean_adjusted_rp100, lw.loss_mean_adjusted_rp200, lw.loss_mean_adjusted_rp500, lw.loss_mean_adjusted_rp1000, lw.loss_mean_adjusted_rp2000,
 
-        al.aal_min, al.aal_mean, al.aal_std, al.aal_max,
+        lw.content_loss_min_rp10, lw.content_loss_min_rp20, lw.content_loss_min_rp50, lw.content_loss_min_rp100, lw.content_loss_min_rp200, lw.content_loss_min_rp500, lw.content_loss_min_rp1000, lw.content_loss_min_rp2000,
+        lw.content_loss_mean_rp10, lw.content_loss_mean_rp20, lw.content_loss_mean_rp50, lw.content_loss_mean_rp100, lw.content_loss_mean_rp200, lw.content_loss_mean_rp500, lw.content_loss_mean_rp1000, lw.content_loss_mean_rp2000,
+        lw.content_loss_max_rp10, lw.content_loss_max_rp20, lw.content_loss_max_rp50, lw.content_loss_max_rp100, lw.content_loss_max_rp200, lw.content_loss_max_rp500, lw.content_loss_max_rp1000, lw.content_loss_max_rp2000,
+
+        lw.inventory_loss_min_rp10, lw.inventory_loss_min_rp20, lw.inventory_loss_min_rp50, lw.inventory_loss_min_rp100, lw.inventory_loss_min_rp200, lw.inventory_loss_min_rp500, lw.inventory_loss_min_rp1000, lw.inventory_loss_min_rp2000,
+        lw.inventory_loss_mean_rp10, lw.inventory_loss_mean_rp20, lw.inventory_loss_mean_rp50, lw.inventory_loss_mean_rp100, lw.inventory_loss_mean_rp200, lw.inventory_loss_mean_rp500, lw.inventory_loss_mean_rp1000, lw.inventory_loss_mean_rp2000,
+        lw.inventory_loss_max_rp10, lw.inventory_loss_max_rp20, lw.inventory_loss_max_rp50, lw.inventory_loss_max_rp100, lw.inventory_loss_max_rp200, lw.inventory_loss_max_rp500, lw.inventory_loss_max_rp1000, lw.inventory_loss_max_rp2000,
+
+        lw.total_loss_min_rp10, lw.total_loss_min_rp20, lw.total_loss_min_rp50, lw.total_loss_min_rp100, lw.total_loss_min_rp200, lw.total_loss_min_rp500, lw.total_loss_min_rp1000, lw.total_loss_min_rp2000,
+        lw.total_loss_mean_rp10, lw.total_loss_mean_rp20, lw.total_loss_mean_rp50, lw.total_loss_mean_rp100, lw.total_loss_mean_rp200, lw.total_loss_mean_rp500, lw.total_loss_mean_rp1000, lw.total_loss_mean_rp2000,
+        lw.total_loss_max_rp10, lw.total_loss_max_rp20, lw.total_loss_max_rp50, lw.total_loss_max_rp100, lw.total_loss_max_rp200, lw.total_loss_max_rp500, lw.total_loss_max_rp1000, lw.total_loss_max_rp2000,
+
+        al.baal_min, al.baal_mean, al.baal_std, al.baal_max,
+        al.caal_min, al.caal_mean, al.caal_max,
+        al.iaal_min, al.iaal_mean, al.iaal_max,
+        al.taal_min, al.taal_mean, al.taal_max,
+        al.baalr, al.caalr, al.iaalr, al.taalr,
 
         b.geometry
 
@@ -318,7 +415,7 @@ COPY (
     LEFT JOIN losses_wide   lw  ON b.id = lw.id
     LEFT JOIN aal_losses    al  ON b.id = al.id
 
-    WHERE al.aal_mean > 0
+    WHERE al.baal_mean > 0
 
 )TO '{output_path}'
 (FORMAT PARQUET, COMPRESSION ZSTD);
