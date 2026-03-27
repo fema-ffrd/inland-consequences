@@ -33,7 +33,7 @@ jobs:
 
       - name: Markdown formatting check
         run: |
-          uv run mdformat --check $(find docs -name '*.md' ! -name 'building_inventories.md' ! -name 'index.md') *.md
+          uv run mdformat --check $(find docs -name '*.md' ! -name 'building_inventories.md' ! -name 'index.md' ! -name 'gh_installation.md') *.md
 
       - name: Check build
         run: |

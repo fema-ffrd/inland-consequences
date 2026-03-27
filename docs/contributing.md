@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to the Consequences Solution! This guide covers everything you need to get started — from setting up your environment to building and releasing the package.
 
----
+______________________________________________________________________
 
 ## Getting Started
 
@@ -27,7 +27,7 @@ uv sync --dev
 
 This installs all project and development dependencies (including `pytest`, `build`, etc.) into an isolated virtual environment managed by `uv`.
 
----
+______________________________________________________________________
 
 ## Development Workflow
 
@@ -35,11 +35,11 @@ This installs all project and development dependencies (including `pytest`, `bui
 
 Follow this branching convention:
 
-| Branch type | Pattern | Example |
-|---|---|---|
-| Feature | `feature/<description>` | `feature/add-coastal-validation` |
-| Bug fix | `fix/<description>` | `fix/depth-raster-parsing` |
-| Release | `release/<version>` | `release/0.2.0` |
+| Branch type | Pattern                 | Example                          |
+| ----------- | ----------------------- | -------------------------------- |
+| Feature     | `feature/<description>` | `feature/add-coastal-validation` |
+| Bug fix     | `fix/<description>`     | `fix/depth-raster-parsing`       |
+| Release     | `release/<version>`     | `release/0.2.0`                  |
 
 Always branch from `main`:
 
@@ -69,19 +69,19 @@ uv run pytest -m "not manual"
 
 ### Code Style
 
-This project uses [`pre-commit`](https://pre-commit.com/) hooks for code formatting and linting. Install the hooks after cloning:
+Markdown files are formatted with [`mdformat`](https://mdformat.readthedocs.io/) and checked in CI on every PR and push to `main`. Run it locally before pushing to avoid CI failures:
 
 ```bash
-uv run pre-commit install
+uv run mdformat $(find docs -name '*.md' ! -name 'building_inventories.md' ! -name 'index.md' ! -name 'gh_installation.md') *.md
 ```
 
-Hooks will run automatically on `git commit`. To run them manually:
+To only check without modifying:
 
 ```bash
-uv run pre-commit run --all-files
+uv run mdformat --check $(find docs -name '*.md' ! -name 'building_inventories.md' ! -name 'index.md' ! -name 'gh_installation.md') *.md
 ```
 
----
+______________________________________________________________________
 
 ## Building the Package
 
@@ -123,7 +123,7 @@ rm -rf /tmp/test_whl_env
 
 The `inland-consequences-check` CLI entry point runs a smoke test that validates all public modules and classes are importable.
 
----
+______________________________________________________________________
 
 ## Releasing
 
@@ -149,7 +149,7 @@ git tag -d v0.1.0-rc.1
 
 Also delete the corresponding release on the [Releases page](https://github.com/fema-ffrd/inland-consequences/releases).
 
----
+______________________________________________________________________
 
 ### Full Release
 
@@ -185,17 +185,17 @@ git push origin main
 !!! note
     The wheel binary should **not** be committed to version control. The workflow attaches it as a GitHub Release asset automatically.
 
----
+______________________________________________________________________
 
 ## Submitting Changes
 
 1. Ensure all tests pass: `uv run pytest`
-2. Ensure pre-commit hooks pass: `uv run pre-commit run --all-files`
-3. Push your branch and open a Pull Request against `main`.
-4. Provide a clear description of the change and any relevant context.
-5. A maintainer will review and merge your PR.
+1. Ensure pre-commit hooks pass: `uv run pre-commit run --all-files`
+1. Push your branch and open a Pull Request against `main`.
+1. Provide a clear description of the change and any relevant context.
+1. A maintainer will review and merge your PR.
 
----
+______________________________________________________________________
 
 ## Reporting Issues
 
