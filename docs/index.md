@@ -80,3 +80,18 @@ ______________________________________________________________________
 : Modernized Python implementation reduces manual processing time and enables integration with cloud-based workflows.
 
 </div>
+______________________________________________________________________
+
+## Prototype Notebooks
+
+The **Consequence Solution** includes **prototype example Python notebooks** that allow users to interact with the python consequence solution library. A **How to Guide** (see examples\\ConsequenceSolution_HowToDownloadLaunchPrototypeNotebook.pdf) is provided to walk users through downloading the repository and running the prototype notebook *`run_inland_consequences.py`*.
+
+Three primary example notebooks provide a simplified graphical user interface:
+
+- *`run_inland_consequences.py`*: Walks users through running the inland consequence solution using sample data provided with this GitHub repository.
+
+- *`flood_results_explorer.py`*: Used after running *`run_inland_consequences.py`* to explore results. This notebook provides additional aggregation, download, and visualization options.
+
+- *`run_coastal_consequences.py`*: Walks users through running the coastal consequence solution using sample data provided with this GitHub repository.
+
+Additional examples are also provided for advanced users, offering more detailed insight from a developer perspective.

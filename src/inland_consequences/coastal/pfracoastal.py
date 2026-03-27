@@ -349,17 +349,12 @@ class PFRACoastal:
         if inputs.blabfile:
             fh = logging.FileHandler(inputs.blabfile, mode='w')
             fh.setLevel("INFO")
-        else:
-            fh = logging.NullHandler()
+            logger.addHandler(fh)
         
         if inputs.blabber:
             ch = logging.StreamHandler()
             ch.setLevel("INFO")
-        else:
-            ch = logging.NullHandler()
-        
-        logger.addHandler(fh)
-        logger.addHandler(ch)
+            logger.addHandler(ch)
         
     	##############
         #  	STEP 0 - initiate parallel processing
@@ -679,9 +674,9 @@ class PFRACoastal:
                 PWAVE84_SPDF = gpd.GeoDataFrame(data=PWAVE84_DF, geometry=pwave84_geom, crs=pwave84_geom.crs)
                 PWAVERR_SPDF = gpd.GeoDataFrame(data=PWAVERR_DF, geometry=pwaverr_geom, crs=pwaverr_geom.crs)
                 
-                lib.write_log('END STEP 2b.')
-                step2b_elapsed = math.ceil(monotonic() - step2b_start)
-                lib.write_log(f'Step 2b: {step2b_elapsed} sec elapsed')
+            lib.write_log('END STEP 2b.')
+            step2b_elapsed = math.ceil(monotonic() - step2b_start)
+            lib.write_log(f'Step 2b: {step2b_elapsed} sec elapsed')
                 
 		##############
 		#  	STEP 2c - Attach surge to buildings

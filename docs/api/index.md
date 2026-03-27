@@ -15,7 +15,7 @@ The main package containing flood analysis orchestration, vulnerability calculat
 - [nsi_buildings](inland_consequences/nsi_buildings.md) - NSI (National Structure Inventory) building data handling
 - [milliman_buildings](inland_consequences/milliman_buildings.md) - Milliman building data handling
 
-#### Coastal Submodule
+### Coastal Submodule
 
 - [pfracoastal](inland_consequences/coastal/pfracoastal.md) - PFRA coastal flood analysis
 
