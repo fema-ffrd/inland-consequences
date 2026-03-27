@@ -296,9 +296,12 @@ class FloodResultsAggregator:
         aal_agg AS (
             SELECT
                 {geo_id_expr} AS {geo_id_col}{breakdown_select},
-                SUM(a.aal_min) AS aal_min,
-                SUM(a.aal_mean) AS aal_mean,
-                SUM(a.aal_max) AS aal_max
+                SUM(a.baal_min) AS aal_min,
+                SUM(a.baal_mean) AS aal_mean,
+                SUM(a.baal_max) AS aal_max,
+                SUM(a.taal_min) AS taal_min,
+                SUM(a.taal_mean) AS taal_mean,
+                SUM(a.taal_max) AS taal_max
             FROM buildings b
             LEFT JOIN aal_losses a ON b.id = a.id
             GROUP BY {geo_id_expr}{breakdown_group}
@@ -314,7 +317,11 @@ class FloodResultsAggregator:
             aa.aal_min,
             aa.aal_mean,
             aa.aal_max,
-            {self._build_aal_ratio_sql()}
+            {self._build_aal_ratio_sql()},
+            aa.taal_min,
+            aa.taal_mean,
+            aa.taal_max,
+            ROUND(aa.taal_mean / NULLIF(bs.total_building_exposure, 0) * 1000000.0, 2) AS taal_ratio
         FROM building_stats bs
         LEFT JOIN loss_agg la ON bs.{geo_id_col} = la.{geo_id_col}{self._join_breakdown_clause('bs', 'la', breakdown)}
         LEFT JOIN aal_agg aa ON bs.{geo_id_col} = aa.{geo_id_col}{self._join_breakdown_clause('bs', 'aa', breakdown)}
@@ -447,9 +454,12 @@ class FloodResultsAggregator:
                 b.id,
                 b.building_cost,
                 b.content_cost,
-                a.aal_min,
-                a.aal_mean,
-                a.aal_max
+                a.baal_min AS aal_min,
+                a.baal_mean AS aal_mean,
+                a.baal_max AS aal_max,
+                a.taal_min,
+                a.taal_mean,
+                a.taal_max
             FROM buildings b
             JOIN {self._community_xref_sql} cx ON b.cbfips = cx.cbfips
             LEFT JOIN aal_losses a ON b.id = a.id
@@ -471,6 +481,9 @@ class FloodResultsAggregator:
                 base.aal_min,
                 base.aal_mean,
                 base.aal_max,
+                base.taal_min,
+                base.taal_mean,
+                base.taal_max,
                 lw.*
             FROM base
             LEFT JOIN losses_wide lw ON base.id = lw.id
@@ -486,7 +499,11 @@ class FloodResultsAggregator:
             SUM(ratio * COALESCE(aal_mean, 0)) AS aal_mean,
             SUM(ratio * COALESCE(aal_min, 0)) AS aal_min,
             SUM(ratio * COALESCE(aal_max, 0)) AS aal_max,
-            ROUND(SUM(ratio * COALESCE(aal_mean, 0)) / NULLIF(SUM(ratio * building_cost), 0) * 1000000.0, 2) AS aal_ratio
+            ROUND(SUM(ratio * COALESCE(aal_mean, 0)) / NULLIF(SUM(ratio * building_cost), 0) * 1000000.0, 2) AS aal_ratio,
+            SUM(ratio * COALESCE(taal_mean, 0)) AS taal_mean,
+            SUM(ratio * COALESCE(taal_min, 0)) AS taal_min,
+            SUM(ratio * COALESCE(taal_max, 0)) AS taal_max,
+            ROUND(SUM(ratio * COALESCE(taal_mean, 0)) / NULLIF(SUM(ratio * building_cost), 0) * 1000000.0, 2) AS taal_ratio
         FROM joined
         GROUP BY community_id{breakdown_group.replace('b.', '')}
         ORDER BY community_id
@@ -557,9 +574,12 @@ class FloodResultsAggregator:
         aal_agg AS (
             SELECT
                 {huc_expr} AS {geo_id_col}{breakdown_select},
-                SUM(a.aal_min) AS aal_min,
-                SUM(a.aal_mean) AS aal_mean,
-                SUM(a.aal_max) AS aal_max
+                SUM(a.baal_min) AS aal_min,
+                SUM(a.baal_mean) AS aal_mean,
+                SUM(a.baal_max) AS aal_max,
+                SUM(a.taal_min) AS taal_min,
+                SUM(a.taal_mean) AS taal_mean,
+                SUM(a.taal_max) AS taal_max
             FROM buildings b
             JOIN {self._watershed_xref_sql} wx ON b.cbfips = wx.cbfips
             LEFT JOIN aal_losses a ON b.id = a.id
@@ -576,7 +596,11 @@ class FloodResultsAggregator:
             aa.aal_min,
             aa.aal_mean,
             aa.aal_max,
-            {self._build_aal_ratio_sql()}
+            {self._build_aal_ratio_sql()},
+            aa.taal_min,
+            aa.taal_mean,
+            aa.taal_max,
+            ROUND(aa.taal_mean / NULLIF(bs.total_building_exposure, 0) * 1000000.0, 2) AS taal_ratio
         FROM building_stats bs
         LEFT JOIN loss_agg la ON bs.{geo_id_col} = la.{geo_id_col}{self._join_breakdown_clause('bs', 'la', breakdown)}
         LEFT JOIN aal_agg aa ON bs.{geo_id_col} = aa.{geo_id_col}{self._join_breakdown_clause('bs', 'aa', breakdown)}
