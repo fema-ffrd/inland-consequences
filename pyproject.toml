@@ -1,6 +1,6 @@
 [project]
 name = "inland-consequences"
-version = "0.0.1"
+version = "0.1.0"
 description = "Inland Consequences Estimation Methodology"
 dependencies = [
   "mkdocs-material",
@@ -44,6 +44,13 @@ sphere-flood = { workspace = true }
 sphere-core = { workspace = true }
 sphere-data = { workspace = true }
 
+[project.urls]
+Homepage = "https://fema-ffrd.github.io/inland-consequences/"
+Repository = "https://github.com/fema-ffrd/inland-consequences"
+
+[project.scripts]
+inland-consequences-check = "inland_consequences._smoke:verify"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -66,6 +73,17 @@ packages = [
     "packages/flood/src/sphere",
 ]
 
+[tool.hatch.build]
+include = [
+    "src/inland_consequences/**",
+    "packages/core/src/sphere/**",
+    "packages/data/src/sphere/**",
+    "packages/flood/src/sphere/**"
+]
+exclude = [
+    "src/inland_consequences/coastal/tests/**"
+]
+
 [dependency-groups]
 dev = [
     "pyarrow>=22.0.0",
@@ -73,6 +91,7 @@ dev = [
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
     "pytest-mock>=3.15.1",
+    "build",
 ]
 
 [tool.mdformat]
