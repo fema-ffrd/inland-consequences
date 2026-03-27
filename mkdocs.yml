@@ -72,7 +72,8 @@ theme:
 plugins:
   - search
   - include-markdown
-  - macros
+  - macros:
+      include_dir: .
   - mkdocstrings:
       handlers:
         python:

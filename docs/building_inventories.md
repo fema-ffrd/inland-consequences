@@ -74,7 +74,7 @@ The following schema defines all target fields used by the Consequence Modeling 
     ````
     ```json
     {%
-       include "schemas/buildings_schema.json"
+       include "../src/inland_consequences/data/schemas/buildings_schema.json"
     %}
     ```
     ````
@@ -158,7 +158,7 @@ Although the current Coastal Consequences Solution is compatible only with the M
     ````
     ```json
     {%
-       include "schemas/nsi_schema.json"
+       include "../src/inland_consequences/data/schemas/nsi_schema.json"
     %}
     ```
     ````
@@ -319,7 +319,7 @@ The original Coastal Future of Flood Risk Data Analysis Average Annualized Losse
     ````
     ```json
     {%
-       include "schemas/milliman_schema.json"
+       include "../src/inland_consequences/data/schemas/milliman_schema.json"
     %}
     ```
     ````
