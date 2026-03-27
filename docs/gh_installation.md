@@ -81,7 +81,7 @@ It is recommended to install into an isolated environment. Select your preferred
 === "conda"
 
     ```bash
-    conda create -n consequences python=3.10
+    conda create -n consequences python=3.12
     conda activate consequences
     pip install inland_consequences-0.1.0-py2.py3-none-any.whl
     ```
@@ -115,7 +115,7 @@ To pin the package in a reproducible environment, reference the wheel URL direct
     channels:
       - defaults
     dependencies:
-      - python=3.10
+      - python=3.12
       - pip
       - pip:
         - https://github.com/fema-ffrd/inland-consequences/releases/download/v0.1.0/inland_consequences-0.1.0-py2.py3-none-any.whl
@@ -133,7 +133,11 @@ To pin the package in a reproducible environment, reference the wheel URL direct
     Copy the wheel into the image and install it at build time:
 
     ```dockerfile title="Dockerfile"
-    FROM python:3.10-slim
+    FROM python:3.12-slim
+
+    # libexpat1 is stripped from slim images but required at runtime
+    RUN apt-get update && apt-get install -y --no-install-recommends libexpat1 \
+        && rm -rf /var/lib/apt/lists/*
 
     WORKDIR /app
 
@@ -149,7 +153,11 @@ To pin the package in a reproducible environment, reference the wheel URL direct
     Alternatively, install directly from the release URL without a local copy:
 
     ```dockerfile title="Dockerfile (remote)"
-    FROM python:3.10-slim
+    FROM python:3.12-slim
+
+    # libexpat1 is stripped from slim images but required at runtime
+    RUN apt-get update && apt-get install -y --no-install-recommends libexpat1 \
+        && rm -rf /var/lib/apt/lists/*
 
     RUN pip install --no-cache-dir \
         https://github.com/fema-ffrd/inland-consequences/releases/download/v0.1.0/inland_consequences-0.1.0-py2.py3-none-any.whl
