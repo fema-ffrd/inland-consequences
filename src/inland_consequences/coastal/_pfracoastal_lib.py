@@ -144,7 +144,7 @@ class _PFRACoastal_Lib:
         sel = inputs.bldg_attr_map.query("CHECK == 1 and (TYPE == 'int32' or TYPE == 'float64')").index.to_list()
         for i in sel:
             intab.iloc[:,i] = intab.iloc[:,i].astype(inputs.bldg_attr_map.at[i,"TYPE"])
-            self.write_log(f".Check {inputs.bldg_attr_map.at[i,"IN"]}.")
+            self.write_log(f".Check {inputs.bldg_attr_map.at[i,'IN']}.")
             
             pre_mask_col = intab.iloc[:,i]
             intab.iloc[:,i] = intab.iloc[:,i].mask(intab.iloc[:,i].isna(), inputs.bldg_attr_map["DEF"].astype(inputs.bldg_attr_map.at[i,"TYPE"]).at[i])
@@ -157,7 +157,7 @@ class _PFRACoastal_Lib:
         # Fix Domained Variables
         sel = inputs.bldg_attr_map[inputs.bldg_attr_map["DOM"].notna()].index.to_list()
         for i in sel:
-            self.write_log(f".Check {inputs.bldg_attr_map.at[i,"IN"]}.")
+            self.write_log(f".Check {inputs.bldg_attr_map.at[i,'IN']}.")
 
             domain_val_list = [int(char) if char.isnumeric() else '' for char in list(inputs.bldg_attr_map.at[i,"DOM"]) if char.isnumeric()]
 
@@ -187,7 +187,7 @@ class _PFRACoastal_Lib:
         self.write_log(".snitching on b.")
         for i in range(len(val_flag)):
             if val_flag[i]:
-                self.write_log(f"Invalid values of building attribute {inputs.bldg_attr_map.at[i,"IN"]} found. Replaced with value {inputs.bldg_attr_map.at[i,"DEF"]}")
+                self.write_log(f"Invalid values of building attribute {inputs.bldg_attr_map.at[i,'IN']} found. Replaced with value {inputs.bldg_attr_map.at[i,'DEF']}")
         
         self.write_log(".finish b validation.")
         return intab
@@ -1104,7 +1104,7 @@ class _PFRACoastal_Lib:
         temp['ddf4'] = this_bldg_attr['DDF4'].iat[0]
         
         # get simulated damage range (min, best estimate, max) from each curve
-        DamCurve = self.simulateDamageError6(FBtab[["BFD","BFDe","PWL1","PW13","PWG3",f'df{temp['ddf2'][0]}',f'df{temp['ddf3'][0]}',f'df{temp['ddf4'][0]}']])
+        DamCurve = self.simulateDamageError6(FBtab[["BFD","BFDe","PWL1","PW13","PWG3",f"df{temp['ddf2'][0]}",f"df{temp['ddf3'][0]}",f"df{temp['ddf4'][0]}"]])
         
         FBtab['DAMLw'] = DamCurve['DL']
         FBtab['DAMPr'] = DamCurve['DB']
