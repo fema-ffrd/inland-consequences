@@ -17,6 +17,7 @@ theme:
     - navigation.tabs
     - navigation.tabs.sticky
     - navigation.sections
+    - navigation.indexes
     - navigation.expand
     - navigation.path
     - navigation.top
@@ -71,7 +72,8 @@ theme:
 plugins:
   - search
   - include-markdown
-  - macros
+  - macros:
+      include_dir: .
   - mkdocstrings:
       handlers:
         python:
@@ -96,8 +98,11 @@ plugins:
 nav:
   - Overview:
     - index.md
-    - user-requirements.md
-    - tasks.md
+  - Quick Start:
+    - placeholder.md
+    - prototype_notebooks.md
+    - gh_installation.md
+    - contributing.md
   - Methodology:
     - inventory_methodology.md
     - buildingvalidation_techapproach.md

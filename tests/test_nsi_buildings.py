@@ -265,6 +265,23 @@ def test_nsi_required_fields_with_nans(nsi_sample_gdf_required_with_nans):
         nb = NsiBuildings(nsi_sample_gdf_required_with_nans)
 
 
+def test_nsi_load_required_fields_from_schema():
+    """Test that the schema resource is accessible and returns the expected required fields."""
+    required_fields = NsiBuildings._load_required_fields_from_schema()
+
+    assert isinstance(required_fields, list)
+    assert len(required_fields) > 0
+
+    # These fields are marked required=true in nsi_schema.json
+    assert "id" in required_fields
+    assert "number_stories" in required_fields
+    assert "building_cost" in required_fields
+
+    # These fields are optional in nsi_schema.json
+    assert "occupancy_type" not in required_fields
+    assert "first_floor_height" not in required_fields
+
+
 def test_nsi_all_fields_accessible(nsi_sample_gdf):
     """Test that all NSI fields can be accessed through properties."""
     nb = NsiBuildings(nsi_sample_gdf)

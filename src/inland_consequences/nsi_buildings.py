@@ -1,6 +1,6 @@
 from typing import Dict, Optional, List
 import json
-from pathlib import Path
+from importlib.resources import files
 import geopandas as gpd
 import pandas as pd
 
@@ -15,9 +15,6 @@ class NsiBuildings(Buildings):
     to the standard Buildings fields, leveraging the existing alias system.
     Includes preprocessing for occupancy and foundation types.
     """
-    
-    # Class-level schema path
-    SCHEMA_PATH = Path(__file__).parent.parent.parent / "docs" / "schemas" / "nsi_schema.json"
 
     def __init__(self, gdf: gpd.GeoDataFrame, overrides: Optional[Dict[str, str]] = None):
         """
@@ -67,11 +64,8 @@ class NsiBuildings(Buildings):
         Returns:
             List of required target field names
         """
-        if not cls.SCHEMA_PATH.exists():
-            raise FileNotFoundError(f"Schema file not found at {cls.SCHEMA_PATH}")
-        
-        with open(cls.SCHEMA_PATH, 'r') as f:
-            schema = json.load(f)
+        schema_text = files("inland_consequences").joinpath("data/schemas/nsi_schema.json").read_text(encoding="utf-8")
+        schema = json.loads(schema_text)
         
         required_fields = []
         for field_name, field_spec in schema.get("default fields", {}).items():

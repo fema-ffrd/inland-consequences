@@ -172,8 +172,27 @@ def test_milliman_missing_required_fields(milliman_sample_gdf_missing_required_f
     with pytest.raises(ValueError):
         mb = MillimanBuildings(milliman_sample_gdf_missing_required_fields)
 
+
 def test_milliman_required_fields_nans(milliman_sample_gdf_missing_values):
     """Test that having missing values in required fields raises an error."""
     with pytest.raises(ValueError):
         mb = MillimanBuildings(milliman_sample_gdf_missing_values)
+
+
+def test_milliman_load_required_fields_from_schema():
+    """Test that the schema resource is accessible and returns the expected required fields."""
+    required_fields = MillimanBuildings._load_required_fields_from_schema()
+
+    assert isinstance(required_fields, list)
+    assert len(required_fields) > 0
+
+    # These fields are marked required=true in milliman_schema.json
+    assert "id" in required_fields
+    assert "building_cost" in required_fields
+
+    # occupancy_type and area are not in the Milliman source schema (they are
+    # generated via IMPUTED_REQUIRED_FIELDS), so the schema loader should not
+    # return them
+    assert "occupancy_type" not in required_fields
+    assert "area" not in required_fields
 
