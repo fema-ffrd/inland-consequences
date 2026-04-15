@@ -1,0 +1,2824 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Consequence modeling framework for flood damage assessments">
+      
+      
+      
+      
+        <link rel="prev" href="../inland_methodology/">
+      
+      
+        <link rel="next" href="../building_inventories/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../images/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Coastal Consequences Methodology - Consequences Solution</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+  
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+  
+  <style>:root{--md-admonition-icon--note:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M1%207.775V2.75C1%201.784%201.784%201%202.75%201h5.025c.464%200%20.91.184%201.238.513l6.25%206.25a1.75%201.75%200%200%201%200%202.474l-5.026%205.026a1.75%201.75%200%200%201-2.474%200l-6.25-6.25A1.75%201.75%200%200%201%201%207.775m1.5%200c0%20.066.026.13.073.177l6.25%206.25a.25.25%200%200%200%20.354%200l5.025-5.025a.25.25%200%200%200%200-.354l-6.25-6.25a.25.25%200%200%200-.177-.073H2.75a.25.25%200%200%200-.25.25ZM6%205a1%201%200%201%201%200%202%201%201%200%200%201%200-2%22/%3E%3C/svg%3E');--md-admonition-icon--abstract:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M2.5%201.75v11.5c0%20.138.112.25.25.25h3.17a.75.75%200%200%201%200%201.5H2.75A1.75%201.75%200%200%201%201%2013.25V1.75C1%20.784%201.784%200%202.75%200h8.5C12.216%200%2013%20.784%2013%201.75v7.736a.75.75%200%200%201-1.5%200V1.75a.25.25%200%200%200-.25-.25h-8.5a.25.25%200%200%200-.25.25m13.274%209.537zl-4.557%204.45a.75.75%200%200%201-1.055-.008l-1.943-1.95a.75.75%200%200%201%201.062-1.058l1.419%201.425%204.026-3.932a.75.75%200%201%201%201.048%201.074M4.75%204h4.5a.75.75%200%200%201%200%201.5h-4.5a.75.75%200%200%201%200-1.5M4%207.75A.75.75%200%200%201%204.75%207h2a.75.75%200%200%201%200%201.5h-2A.75.75%200%200%201%204%207.75%22/%3E%3C/svg%3E');--md-admonition-icon--info:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M0%208a8%208%200%201%201%2016%200A8%208%200%200%201%200%208m8-6.5a6.5%206.5%200%201%200%200%2013%206.5%206.5%200%200%200%200-13M6.5%207.75A.75.75%200%200%201%207.25%207h1a.75.75%200%200%201%20.75.75v2.75h.25a.75.75%200%200%201%200%201.5h-2a.75.75%200%200%201%200-1.5h.25v-2h-.25a.75.75%200%200%201-.75-.75M8%206a1%201%200%201%201%200-2%201%201%200%200%201%200%202%22/%3E%3C/svg%3E');--md-admonition-icon--tip:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M3.499.75a.75.75%200%200%201%201.5%200v.996C5.9%202.903%206.793%203.65%207.662%204.376l.24.202c-.036-.694.055-1.422.426-2.163C9.1.873%2010.794-.045%2012.622.26%2014.408.558%2016%201.94%2016%204.25c0%201.278-.954%202.575-2.44%202.734l.146.508.065.22c.203.701.412%201.455.476%202.226.142%201.707-.4%203.03-1.487%203.898C11.714%2014.671%2010.27%2015%208.75%2015h-6a.75.75%200%200%201%200-1.5h1.376a4.5%204.5%200%200%201-.563-1.191%203.84%203.84%200%200%201-.05-2.063%204.65%204.65%200%200%201-2.025-.293.75.75%200%200%201%20.525-1.406c1.357.507%202.376-.006%202.698-.318l.009-.01a.747.747%200%200%201%201.06%200%20.75.75%200%200%201-.012%201.074c-.912.92-.992%201.835-.768%202.586.221.74.745%201.337%201.196%201.621H8.75c1.343%200%202.398-.296%203.074-.836.635-.507%201.036-1.31.928-2.602-.05-.603-.216-1.224-.422-1.93l-.064-.221c-.12-.407-.246-.84-.353-1.29a2.4%202.4%200%200%201-.507-.441%203.1%203.1%200%200%201-.633-1.248.75.75%200%200%201%201.455-.364c.046.185.144.436.31.627.146.168.353.305.712.305.738%200%201.25-.615%201.25-1.25%200-1.47-.95-2.315-2.123-2.51-1.172-.196-2.227.387-2.706%201.345-.46.92-.27%201.774.019%203.062l.042.19.01.05c.348.443.666.949.94%201.553a.75.75%200%201%201-1.365.62c-.553-1.217-1.32-1.94-2.3-2.768L6.7%205.527c-.814-.68-1.75-1.462-2.692-2.619a3.7%203.7%200%200%200-1.023.88c-.406.495-.663%201.036-.722%201.508.116.122.306.21.591.239.388.038.797-.06%201.032-.19a.75.75%200%200%201%20.728%201.31c-.515.287-1.23.439-1.906.373-.682-.067-1.473-.38-1.879-1.193L.75%205.677V5.5c0-.984.48-1.94%201.077-2.664.46-.559%201.05-1.055%201.673-1.353z%22/%3E%3C/svg%3E');--md-admonition-icon--success:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M13.78%204.22a.75.75%200%200%201%200%201.06l-7.25%207.25a.75.75%200%200%201-1.06%200L2.22%209.28a.75.75%200%200%201%20.018-1.042.75.75%200%200%201%201.042-.018L6%2010.94l6.72-6.72a.75.75%200%200%201%201.06%200%22/%3E%3C/svg%3E');--md-admonition-icon--question:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M0%208a8%208%200%201%201%2016%200A8%208%200%200%201%200%208m8-6.5a6.5%206.5%200%201%200%200%2013%206.5%206.5%200%200%200%200-13M6.92%206.085h.001a.749.749%200%201%201-1.342-.67c.169-.339.436-.701.849-.977C6.845%204.16%207.369%204%208%204a2.76%202.76%200%200%201%201.637.525c.503.377.863.965.863%201.725%200%20.448-.115.83-.329%201.15-.205.307-.47.513-.692.662-.109.072-.22.138-.313.195l-.006.004a6%206%200%200%200-.26.16%201%201%200%200%200-.276.245.75.75%200%200%201-1.248-.832c.184-.264.42-.489.692-.661q.154-.1.313-.195l.007-.004c.1-.061.182-.11.258-.161a1%201%200%200%200%20.277-.245C8.96%206.514%209%206.427%209%206.25a.61.61%200%200%200-.262-.525A1.27%201.27%200%200%200%208%205.5c-.369%200-.595.09-.74.187a1%201%200%200%200-.34.398M9%2011a1%201%200%201%201-2%200%201%201%200%200%201%202%200%22/%3E%3C/svg%3E');--md-admonition-icon--warning:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M6.457%201.047c.659-1.234%202.427-1.234%203.086%200l6.082%2011.378A1.75%201.75%200%200%201%2014.082%2015H1.918a1.75%201.75%200%200%201-1.543-2.575Zm1.763.707a.25.25%200%200%200-.44%200L1.698%2013.132a.25.25%200%200%200%20.22.368h12.164a.25.25%200%200%200%20.22-.368Zm.53%203.996v2.5a.75.75%200%200%201-1.5%200v-2.5a.75.75%200%200%201%201.5%200M9%2011a1%201%200%201%201-2%200%201%201%200%200%201%202%200%22/%3E%3C/svg%3E');--md-admonition-icon--failure:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M2.344%202.343za8%208%200%200%201%2011.314%2011.314A8.002%208.002%200%200%201%20.234%2010.089a8%208%200%200%201%202.11-7.746m1.06%2010.253a6.5%206.5%200%201%200%209.108-9.275%206.5%206.5%200%200%200-9.108%209.275M6.03%204.97%208%206.94l1.97-1.97a.749.749%200%200%201%201.275.326.75.75%200%200%201-.215.734L9.06%208l1.97%201.97a.749.749%200%200%201-.326%201.275.75.75%200%200%201-.734-.215L8%209.06l-1.97%201.97a.749.749%200%200%201-1.275-.326.75.75%200%200%201%20.215-.734L6.94%208%204.97%206.03a.75.75%200%200%201%20.018-1.042.75.75%200%200%201%201.042-.018%22/%3E%3C/svg%3E');--md-admonition-icon--danger:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M9.504.43a1.516%201.516%200%200%201%202.437%201.713L10.415%205.5h2.123c1.57%200%202.346%201.909%201.22%203.004l-7.34%207.142a1.25%201.25%200%200%201-.871.354h-.302a1.25%201.25%200%200%201-1.157-1.723L5.633%2010.5H3.462c-1.57%200-2.346-1.909-1.22-3.004zm1.047%201.074L3.286%208.571A.25.25%200%200%200%203.462%209H6.75a.75.75%200%200%201%20.694%201.034l-1.713%204.188%206.982-6.793A.25.25%200%200%200%2012.538%207H9.25a.75.75%200%200%201-.683-1.06l2.008-4.418.003-.006-.004-.009-.006-.006-.008-.001q-.005%200-.009.004%22/%3E%3C/svg%3E');--md-admonition-icon--bug:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M4.72.22a.75.75%200%200%201%201.06%200l1%20.999a3.5%203.5%200%200%201%202.441%200l.999-1a.748.748%200%200%201%201.265.332.75.75%200%200%201-.205.729l-.775.776c.616.63.995%201.493.995%202.444v.327q0%20.15-.025.292c.408.14.764.392%201.029.722l1.968-.787a.75.75%200%200%201%20.556%201.392L13%207.258V9h2.25a.75.75%200%200%201%200%201.5H13v.5q-.002.615-.141%201.186l2.17.868a.75.75%200%200%201-.557%201.392l-2.184-.873A5%205%200%200%201%208%2016a5%205%200%200%201-4.288-2.427l-2.183.873a.75.75%200%200%201-.558-1.392l2.17-.868A5%205%200%200%201%203%2011v-.5H.75a.75.75%200%200%201%200-1.5H3V7.258L.971%206.446a.75.75%200%200%201%20.558-1.392l1.967.787c.265-.33.62-.583%201.03-.722a1.7%201.7%200%200%201-.026-.292V4.5c0-.951.38-1.814.995-2.444L4.72%201.28a.75.75%200%200%201%200-1.06m.53%206.28a.75.75%200%200%200-.75.75V11a3.5%203.5%200%201%200%207%200V7.25a.75.75%200%200%200-.75-.75ZM6.173%205h3.654A.17.17%200%200%200%2010%204.827V4.5a2%202%200%201%200-4%200v.327c0%20.096.077.173.173.173%22/%3E%3C/svg%3E');--md-admonition-icon--example:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M5%205.782V2.5h-.25a.75.75%200%200%201%200-1.5h6.5a.75.75%200%200%201%200%201.5H11v3.282l3.666%205.76C15.619%2013.04%2014.543%2015%2012.767%2015H3.233c-1.776%200-2.852-1.96-1.899-3.458Zm-2.4%206.565a.75.75%200%200%200%20.633%201.153h9.534a.75.75%200%200%200%20.633-1.153L12.225%2010.5h-8.45ZM9.5%202.5h-3V6c0%20.143-.04.283-.117.403L4.73%209h6.54L9.617%206.403A.75.75%200%200%201%209.5%206Z%22/%3E%3C/svg%3E');--md-admonition-icon--quote:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M1.75%202.5h10.5a.75.75%200%200%201%200%201.5H1.75a.75.75%200%200%201%200-1.5m4%205h8.5a.75.75%200%200%201%200%201.5h-8.5a.75.75%200%200%201%200-1.5m0%205h8.5a.75.75%200%200%201%200%201.5h-8.5a.75.75%200%200%201%200-1.5M2.5%207.75v6a.75.75%200%200%201-1.5%200v-6a.75.75%200%200%201%201.5%200%22/%3E%3C/svg%3E');}</style>
+
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#coastal-consequences-methodology" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Consequences Solution" class="md-header__button md-logo" aria-label="Consequences Solution" data-md-component="logo">
+      
+  <img src="../images/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Consequences Solution
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Coastal Consequences Methodology
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/fema-ffrd/inland-consequences" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    fema-ffrd/inland-consequences
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href=".." class="md-tabs__link">
+          
+  
+  
+    
+  
+  Overview
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../placeholder/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Quick Start
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../inventory_methodology/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Methodology
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../building_inventories/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Technical Implementation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Consequences Solution" class="md-nav__button md-logo" aria-label="Consequences Solution" data-md-component="logo">
+      
+  <img src="../images/logo.svg" alt="logo">
+
+    </a>
+    Consequences Solution
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/fema-ffrd/inland-consequences" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    fema-ffrd/inland-consequences
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href=".." class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Overview
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Quick Start
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../placeholder/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Basic Install Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../prototype_notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prototype Notebooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gh_installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install from GitHub Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methodology
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Methodology
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inventory_methodology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inventory Methodology
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../buildingvalidation_techapproach/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Building Inventory Validation Flags Technical Approach
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hazardvalidation_techapproach/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hazard Validation Flag Technical Approach
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inland_methodology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inland Consquences Methodology
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coastal Consequences Methodology
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coastal Consequences Methodology
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#hazard-data-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hazard Data Inputs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hazard Data Inputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stillwater-elevation-nodal-data-swel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stillwater Elevation Nodal Data (SWEL)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#swel-uncertainty-nodal-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SWEL Uncertainty Nodal Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#controlling-wave-height-hc-nodal-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controlling Wave Height (Hc) Nodal Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wave-height-uncertainty-he-nodal-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wave Height Uncertainty (He) Nodal Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depth-damage-function-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Depth-Damage Function Assignment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#loss-calculations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Loss Calculations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Loss Calculations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#determining-depth-at-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Determining Depth at Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#determining-depth-in-structure-building-flood-depth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Determining Depth in Structure (Building Flood Depth)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#applying-the-depth-damage-function" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Applying the Depth-Damage Function
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generating-probabilistic-events-and-storm-elevations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generating Probabilistic Events and Storm Elevations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calculating-average-annualized-loss" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calculating Average Annualized Loss
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#results-shapefile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Results Shapefile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wse-shapefile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WSE Shapefile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wav-shapefile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WAV Shapefile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prep-shapefile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PREP Shapefile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#heatmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Heatmap
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-logfile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run Logfile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#building-csvs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Building .csvs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Technical Implementation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Technical Implementation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building_inventories/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Building Inventories Technical Implementation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ddf_tech_implementation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inland Consequences Depth-Damage Function Technical Implementation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AAL_tech_implementation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Average Annualized Loss (AAL) Technical Implementation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../api/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    inland_consequences
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    inland_consequences
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/inland_consequences/inland_flood_analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    inland_flood_analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/inland_consequences/inland_vulnerability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    inland_vulnerability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/inland_consequences/raster_collection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    raster_collection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/inland_consequences/results_aggregation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    results_aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/inland_consequences/nsi_buildings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nsi_buildings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/inland_consequences/milliman_buildings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    milliman_buildings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    coastal_consequences
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    coastal_consequences
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/inland_consequences/coastal/pfracoastal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pfracoastal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    sphere.core.schemas
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    sphere.core.schemas
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/sphere_core/buildings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Buildings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/sphere_core/field_mapping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FieldMapping
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/sphere_core/abstract_raster_reader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AbstractRasterReader
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/sphere_core/abstract_vulnerability_function/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AbstractVulnerabilityFunction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/sphere_core/nsi_buildings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NSIBuildings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#hazard-data-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hazard Data Inputs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hazard Data Inputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stillwater-elevation-nodal-data-swel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stillwater Elevation Nodal Data (SWEL)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#swel-uncertainty-nodal-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SWEL Uncertainty Nodal Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#controlling-wave-height-hc-nodal-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controlling Wave Height (Hc) Nodal Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wave-height-uncertainty-he-nodal-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wave Height Uncertainty (He) Nodal Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depth-damage-function-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Depth-Damage Function Assignment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#loss-calculations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Loss Calculations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Loss Calculations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#determining-depth-at-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Determining Depth at Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#determining-depth-in-structure-building-flood-depth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Determining Depth in Structure (Building Flood Depth)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#applying-the-depth-damage-function" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Applying the Depth-Damage Function
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generating-probabilistic-events-and-storm-elevations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generating Probabilistic Events and Storm Elevations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calculating-average-annualized-loss" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calculating Average Annualized Loss
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#results-shapefile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Results Shapefile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wse-shapefile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WSE Shapefile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wav-shapefile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WAV Shapefile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prep-shapefile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PREP Shapefile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#heatmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Heatmap
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-logfile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run Logfile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#building-csvs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Building .csvs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="coastal-consequences-methodology">Coastal Consequences Methodology<a class="headerlink" href="#coastal-consequences-methodology" title="Permanent link">&para;</a></h1>
+<h2 id="hazard-data-inputs">Hazard Data Inputs<a class="headerlink" href="#hazard-data-inputs" title="Permanent link">&para;</a></h2>
+<p>The coastal consequence methodology relies on a set of core hazard inputs that collectively describe the coastal flooding conditions relevant to damage and loss estimation at each structure. These inputs include water surface levels, wave heights, and associated uncertainty. While designed to ingest probabilistic coastal hazard datasets such as those from the North Atlantic Coast Comprehensive Study (NACCS) and similar probabilistic storm surge/wave products, the methodology is flexible and can operate with any valid hazard data provided in the required formats. The sections below describe the role, requirements, and assumptions associated with each hazard input.</p>
+<h3 id="stillwater-elevation-nodal-data-swel">Stillwater Elevation Nodal Data (SWEL)<a class="headerlink" href="#stillwater-elevation-nodal-data-swel" title="Permanent link">&para;</a></h3>
+<p>Stillwater elevation represents the baseline coastal water level associated with storm surge and tide, excluding direct wave effects. SWEL is a required hazard input and forms the foundation for flood depth and total water level calculations.</p>
+<p>Hazard datasets are expected as point (nodal) estimates of SWEL at multiple annual-chance exceedance levels (e.g., 1-year through 10,000-year). For each structure, SWEL values are transferred from nearby hazard nodes using a spatial nearest-neighbor averaging approach, which computes a weighted mean of the nearest SWEL values for each frequency. SWEL must be provided in consistent vertical units (feet above a common datum) and aligned with structure elevation data.</p>
+<h3 id="swel-uncertainty-nodal-data">SWEL Uncertainty Nodal Data<a class="headerlink" href="#swel-uncertainty-nodal-data" title="Permanent link">&para;</a></h3>
+<p>SWEL uncertainty quantifies the confidence bounds around the best-estimate water level. Probabilistic coastal hazard products typically include an upper confidence limit (e.g., 84<sup>th</sup> percentile) in addition to the best estimate. The difference between the upper confidence limit and the best estimate is used to approximate a one-standard-deviation uncertainty for SWEL at each frequency.</p>
+<p>When uncertainty data are supplied, the methodology propagates this variability into flood depth and total water level uncertainty, which influences damage and loss estimates. If uncertainty is not provided, the model assumes zero uncertainty (deterministic best estimate) for SWEL.</p>
+<h3 id="controlling-wave-height-hc-nodal-data">Controlling Wave Height (Hc) Nodal Data<a class="headerlink" href="#controlling-wave-height-hc-nodal-data" title="Permanent link">&para;</a></h3>
+<p>Wave effects play a critical role in coastal damage processes by contributing to runup, impact forces, and overall structural stress. Controlling wave height (Hc) is the wave metric used in damage estimation and must be supplied for each annual-chance frequency. If input data are provided as significant wave height (Hs), a user must use a conversion factor (e.g., 1.6 × Hs) to approximate controlling wave height as a preprocessing step, prior to ingestion into the Consequences Solution.</p>
+<p>Similar to SWEL, wave height values are spatially transferred to structures using a nearest-neighbor averaging scheme. Controlling wave height inputs is essential for differentiating wave exposure regimes in the damage function assignment.</p>
+<h3 id="wave-height-uncertainty-he-nodal-data">Wave Height Uncertainty (He) Nodal Data<a class="headerlink" href="#wave-height-uncertainty-he-nodal-data" title="Permanent link">&para;</a></h3>
+<p>Wave height uncertainty quantifies variability in the estimated wave conditions and is typically derived from confidence limit datasets accompanying the best-estimate wave heights. As with SWEL uncertainty, the difference between the upper confidence limit and the best estimate for wave height is used to approximate a one-standard-deviation uncertainty term.</p>
+<p>This uncertainty is propagated in coastal damage calculations by probabilistically blending depth-damage functions from multiple wave regimes based on the likelihood of different wave height intervals at a given event. For example, if wave height uncertainty indicates a 40% chance of falling within the range of V-Zone damage functions (&gt; 3 feet) and 60% chance of A-Zone (&gt;1 to 3 feet), the DDFs are weighted accordingly.</p>
+<h2 id="depth-damage-function-assignment">Depth-Damage Function Assignment<a class="headerlink" href="#depth-damage-function-assignment" title="Permanent link">&para;</a></h2>
+<p>Structural damage is estimated using coastal-specific depth-damage functions (DDFs) that relate flood depth above the first floor to percent damage. Damage is evaluated over a continuous range of building flood depths (BFDs) from -4 to +16 feet relative to the first-floor elevation (depth in-structure), consistent with the domain of the underlying DDFs.</p>
+<p>For each building, a family of four depth damage functions are chosen based on the building foundation type, number of stories, and basement finish type. Each of the four damage functions represents a different environmental scenario:</p>
+<ul>
+<li><strong>DF1: freshwater inundation</strong></li>
+</ul>
+<p>Although DF1, representing freshwater inundation, is defined for each family of building type, it is not used by this tool to calculate building damage and loss.</p>
+<ul>
+<li>
+<p><strong>DF2: saltwater inundation with waves less than 1 feet</strong></p>
+</li>
+<li>
+<p><strong>DF3: saltwater inundation with waves less than or equal to 1 foot and less than 3 feet</strong></p>
+</li>
+<li>
+<p><strong>DF4: saltwater inundation with waves greater than or equal to 3 feet</strong></p>
+</li>
+</ul>
+<p>The Coastal Consequences Methodology uses a probabilistic blending approach to combine the three wave-specific damage curves (DF2, DF3, DF4) into a single composite damage curve for each structure. At each building flood depth (BFD), the probability of realizing wave conditions in each wave category is computed using a normal cumulative distribution function (CDF), where the mean is equal to the controlling wave height (Hc) and the standard deviation is equal to the wave height uncertainty (He):</p>
+<ul>
+<li><strong>Probability of waves &lt; 1 ft</strong> = CDF evaluated at 1 ft</li>
+<li><strong>Probability of waves ≥ 3 ft</strong> = 1 − CDF evaluated at 3 ft</li>
+<li><strong>Probability of waves ≥ 1 ft and &lt; 3 ft</strong> = remainder probability</li>
+</ul>
+<p>These probabilities are used as weights to combine the three wave-dependent damage curves at each flood depth. The resulting composite damage value is calculated as:</p>
+<div class="arithmatex">\[
+D =
+\left(D_{3p} \cdot P_{3p}\right) +
+\left(D_{1\text{-}3} \cdot P_{1\text{-}3}\right) +
+\left(D_{\mathrm{lt1}} \cdot P_{\mathrm{lt1}}\right)
+\]</div>
+<p><strong>Where:</strong></p>
+<ul>
+<li><span class="arithmatex">\(D\)</span> = composite percent damage at a given building flood depth</li>
+<li><span class="arithmatex">\(D_{3p}\)</span> = percent damage from the <span class="arithmatex">\(\ge 3\)</span> ft wave depth–damage function</li>
+<li><span class="arithmatex">\(D_{1\text{-}3}\)</span> = percent damage from the 1–3 ft wave depth–damage function</li>
+<li><span class="arithmatex">\(D_{\mathrm{lt1}}\)</span> = percent damage from the <span class="arithmatex">\(&lt;1\)</span> ft wave depth–damage function</li>
+<li><span class="arithmatex">\(P_{3p}\)</span> = probability of <span class="arithmatex">\(\ge 3\)</span> ft wave conditions</li>
+<li><span class="arithmatex">\(P_{1\text{-}3}\)</span> = probability of 1–3 ft wave conditions</li>
+<li><span class="arithmatex">\(P_{\mathrm{lt1}}\)</span> = probability of <span class="arithmatex">\(&lt;1\)</span> ft wave conditions</li>
+</ul>
+<p>This process produces a single, depth-dependent damage curve that reflects both flood depth and uncertainty in wave conditions.</p>
+<p><em>Figure 1. Example of a building wave height probabilities (Top) and resultant combined damage function (Bottom).</em></p>
+<p><img alt="Figure 1. Example of building wave height probabilities (Top) and resultant combined damage function (Bottom)." src="../images/CoastalDDFMethod_WaveHeightProb.png" /></p>
+<h2 id="loss-calculations">Loss Calculations<a class="headerlink" href="#loss-calculations" title="Permanent link">&para;</a></h2>
+<p>The coastal consequence methodology calculates building losses by combining hazard inputs, depth-damage functions, and probabilistic event sampling. It translates hazard conditions (stillwater elevation and wave height) into building flood depths, applies the composite DDFs to estimate damage, and integrates across event probabilities to produce annualized loss estimates. The subsections below describe each step.</p>
+<h3 id="determining-depth-at-structure">Determining Depth at Structure<a class="headerlink" href="#determining-depth-at-structure" title="Permanent link">&para;</a></h3>
+<p>Determining flood depth at a structure involves transferring coastal hazard information to each building and converting those hazard conditions into depth relative to the building’s first floor. The primary coastal hazard inputs are stillwater elevation (SWEL) and controlling wave height, which are provided at discrete hazard node locations across a range of annual-chance frequencies.</p>
+<p>To associate these hazard values with individual structures, a nearest-neighbor spatial approach is applied, as illustrated in Figure 2. For each building, the three nearest SWEL nodes are identified, and their values are averaged to assign a mean stillwater elevation at each frequency. An identical process is applied independently to controlling wave height nodes, resulting in a mean wave height value for each structure at each frequency. Uncertainty values for both SWEL and wave height are derived from corresponding confidence-limit datasets and are carried forward for use in damage and loss calculations. Note that user interviews indicated a desire to modify this method by weighting the proximity of the nearest neighbor. Future updates may modify the existing approach where the 3 nearest values all have equal weight.</p>
+<p><em>Figure 2. Map of Example Building and Node locations.</em></p>
+<p><img alt="Figure 2. Map of Example Building and Node locations." src="../images/Building3NodeApproach.png" /></p>
+<h3 id="determining-depth-in-structure-building-flood-depth">Determining Depth in Structure (Building Flood Depth)<a class="headerlink" href="#determining-depth-in-structure-building-flood-depth" title="Permanent link">&para;</a></h3>
+<p>For each structure and annual-chance frequency, the assigned stillwater elevation and wave contribution are combined to derive the Total Water Level (TWL) at the structure. TWL represents the water surface elevation required to produce a given level of inundation and serves as the linkage between coastal hazard inputs and building-level flood depth. The building flood depth (BFD) is then calculated as the difference between the total water level and the structure’s first-floor elevation (FFE). BFD represents the depth of water relative to the first floor (depth in-structure) and is the independent variable used in the application of depth-damage functions.</p>
+<p>The assigned TWL values across annual-chance frequencies define a building-specific flood frequency curve, which relates water level to annual exceedance probability. For each value of building flood depth, the TWL required to produce that depth is identified using the structure’s first-floor elevation, and the corresponding event probability—or recurrence interval—is extracted from the flood frequency curve. At this stage, the associated hazard attributes, including stillwater elevation, wave height, and their respective uncertainty terms, are transferred to the flood-depth-based calculation table. This process establishes a consistent relationship between flood depth at the structure, the probability of the event producing that depth, and the uncertainty associated with the underlying hazard inputs.</p>
+<h4 id="total-water-level-uncertainty">Total Water Level Uncertainty<a class="headerlink" href="#total-water-level-uncertainty" title="Permanent link">&para;</a></h4>
+<p>Uncertainty in total water level reflects uncertainty in both surge and wave conditions. These uncertainty components are assumed to be independent and are combined using a root-sum-of-squares formulation.</p>
+<p>The uncertainty associated with total water level (TWLe) is calculated by combining the uncertainty in stillwater elevation (SWELe) and the uncertainty in controlling wave height (He), with a scaling factor applied to account for the conversion from controlling wave height to an equivalent breaking wave contribution consistent with the damage function formulation:</p>
+<div class="arithmatex">\[
+\mathrm{TWLe} = \sqrt{(\mathrm{SWELe})^2 + (0.7 \cdot \mathrm{He})^2}
+\]</div>
+<p>The coefficient of 0.7 represents the conversion from controlling wave height to breaking wave height used in coastal damage estimation.</p>
+<h4 id="flood-depth-uncertainty-at-the-structure">Flood Depth Uncertainty at the Structure<a class="headerlink" href="#flood-depth-uncertainty-at-the-structure" title="Permanent link">&para;</a></h4>
+<p>Flood depth uncertainty represents variability in the estimated depth of inundation relative to the structure’s first floor. This uncertainty arises from two independent sources—uncertainty in total water level and uncertainty in first-floor elevation.</p>
+<p>Flood depth uncertainty (BFDe) is calculated by combining these components using a root-sum-of-squares approach:</p>
+<div class="arithmatex">\[
+\mathrm{BFDe} = \sqrt{(\mathrm{FFEe})^2 + (\mathrm{TWLe})^2}
+\]</div>
+<p>where FFEe represents uncertainty in first-floor elevation and TWLe represents uncertainty in total water level.</p>
+<p>Flood depth uncertainty is propagated into damage calculations by evaluating depth-damage functions at flood depths offset by plus and minus one standard deviation. This approach produces low-, best-, and high-estimate damage and loss values while preserving the nonlinear relationship between flood depth and structural damage.</p>
+<h3 id="applying-the-depth-damage-function">Applying the Depth-Damage Function<a class="headerlink" href="#applying-the-depth-damage-function" title="Permanent link">&para;</a></h3>
+<p>Once the building flood depth relative to the first floor has been determined for each structure, the depth-damage functions are applied to estimate structural damage. Damage is evaluated using the composite depth-damage function developed for the structure, which integrates building attributes and probabilistic wave effects.</p>
+<p>For each flood depth, the composite depth-damage function is evaluated to estimate the percent of building damage associated with that level of inundation. To account for uncertainty in flood depth, damage is not evaluated at a single depth alone. Instead, three damage estimates are produced using the same composite damage function evaluated at different depth conditions.</p>
+<p>The best-estimate damage corresponds to the composite depth-damage function evaluated at the mean building flood depth. The low-estimate damage is obtained by evaluating the damage function at a flood depth reduced by one standard deviation of flood depth uncertainty, while the high-estimate damage is obtained by evaluating the same damage function at a flood depth increased by one standard deviation. This approach propagates flood depth uncertainty through the damage calculation while preserving the nonlinear relationship between depth and structural damage.</p>
+<p><em>Figure 3. Example of deriving a low, best- and high-estimate of damage using the combined damage curve and a single value of BFD and associated BFD error.</em></p>
+<p><img alt="Figure 3. low-, best-, and high-estimate damage." src="../images/CoastalDDFMethod_LowBestHigh.png" /></p>
+<p>Percent damage values are then converted to monetary losses by multiplying the estimated damage percentage by the structure’s replacement value. Losses are constrained to physically plausible conditions—structures that experience negligible inundation or remain effectively dry under a given event are assigned zero loss. These loss estimates are carried forward for probabilistic sampling and average annualized loss calculations.</p>
+<h3 id="generating-probabilistic-events-and-storm-elevations">Generating Probabilistic Events and Storm Elevations<a class="headerlink" href="#generating-probabilistic-events-and-storm-elevations" title="Permanent link">&para;</a></h3>
+<p>To capture the full range of possible events contributing to loss, the methodology uses Monte Carlo sampling to generate a probabilistic set of event probabilities. A user-defined number of random probabilities are sampled between 0.0001 and 1.0. Each probability is mapped to corresponding SWEL and wave values and then to a flood depth and damage estimate. This procedure enables characterization of low-probability, high-impact events that contribute significantly to annualized loss.</p>
+<p>Alternatively, a suite of predefined storm magnitudes may be used to ensure consistency across analyses.</p>
+<h3 id="calculating-average-annualized-loss">Calculating Average Annualized Loss<a class="headerlink" href="#calculating-average-annualized-loss" title="Permanent link">&para;</a></h3>
+<p>Average Annualized Loss (AAL) represents the long-term expected annual loss at a structure and is calculated by integrating event losses across the full range of event probabilities. To compute AAL, the low-, best-, and high-estimate losses corresponding to each of the N probabilistic storm events are first paired with their associated event probabilities. These loss–probability pairs are then sorted in descending order of probability to ensure consistent numerical integration across return periods.</p>
+<p>AAL is calculated by numerically integrating the loss–frequency relationship using a trapezoidal approximation. For each adjacent pair of probabilistic events, the average loss between the two events is weighted by the difference in their return periods. This approach captures the contribution of both frequent, low-loss events and rare, high-loss events to the long-term expected annual loss.</p>
+<p>The structure-level AAL is calculated as:</p>
+<!-- mdformat off -->
+
+<div class="arithmatex">\[
+\mathrm{AAL} = \sum_{i=1}^{n-1}
+\left[
+(F_i - F_{i+1}) \cdot \frac{L_i + L_{i+1}}{2}
+\right]
++ (F_n \cdot L_n)
+\]</div>
+<p><strong>Where:</strong></p>
+<ul>
+<li><span class="arithmatex">\(n = N\)</span>, the total number of probabilistic events</li>
+<li><span class="arithmatex">\(F_i = \dfrac{1}{\text{ith Probability}}\)</span>, the return period associated with event <span class="arithmatex">\(i\)</span></li>
+<li><span class="arithmatex">\(L_i\)</span> = loss associated with event <span class="arithmatex">\(i\)</span></li>
+</ul>
+<!-- mdformat on -->
+
+<p>This calculation is performed independently for the low-, best-, and high-estimate loss curves, resulting in three AAL values for each structure—a minimum estimate, a best estimate, and a maximum estimate. These values characterize the expected annual loss while explicitly accounting for uncertainty in hazard intensity, flood depth, and damage response.</p>
+<h2 id="results">Results<a class="headerlink" href="#results" title="Permanent link">&para;</a></h2>
+<p>The existing tool provides a range of results output including a results, prep, wave height and water surface shapefile of each building point. In addition, there is a TAB folder containing a .csv for each building analyzed, a run log file and a .tif heat map.</p>
+<h3 id="results-shapefile">Results Shapefile<a class="headerlink" href="#results-shapefile" title="Permanent link">&para;</a></h3>
+<p>A shapefile of all building points with the fields described below:</p>
+<table>
+<thead>
+<tr>
+<th>Field Name</th>
+<th>Description</th>
+<th>Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FID</td>
+<td>Sequential numeric ID starts at 0</td>
+<td>Object ID</td>
+</tr>
+<tr>
+<td>Shape</td>
+<td>Point geometry</td>
+<td>Geometry</td>
+</tr>
+<tr>
+<td>BID</td>
+<td>Sequential numeric ID starts at 1</td>
+<td>Long</td>
+</tr>
+<tr>
+<td>ORIG_ID</td>
+<td>Original NSI and Milliman ID</td>
+<td>Text</td>
+</tr>
+<tr>
+<td>BLDG_DED</td>
+<td>Building Deductible ($1,500 default)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>BLDG_LIM</td>
+<td>Building Limit ($200,000 default)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>BLDG_VAL</td>
+<td>Building Value (USD)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>CNT_DED</td>
+<td>Content Deductible ($1,000 default)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>CNT_LIM</td>
+<td>Content Limit ($100,000 default)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>CNT_VALUE</td>
+<td>Content Value (USD)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>STORY</td>
+<td>Number of stories</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>FOUND</td>
+<td>Foundation type (2–9)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>BASEFIN</td>
+<td>Basement Finish Flag (0 or 1)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>FFH</td>
+<td>First floor height (feet)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>DEMFT</td>
+<td>Ground surface elevation (feet)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>ANLYS</td>
+<td>Analysis flag (0=no results, 1=included in analysis)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>BAAL</td>
+<td>Building AAL "Best Estimate" (USD)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>BAALmin</td>
+<td>Building minimum AAL (USD)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>BAALmax</td>
+<td>Building maximum AAL (USD)</td>
+<td>Double</td>
+</tr>
+<tr>
+<td>FLAG_DF16</td>
+<td>Damage function flag (0 or 1)</td>
+<td>Double</td>
+</tr>
+</tbody>
+</table>
+<h3 id="wse-shapefile">WSE Shapefile<a class="headerlink" href="#wse-shapefile" title="Permanent link">&para;</a></h3>
+<p>This shapefile contains the water surface elevation and uncertainty value in feet for each return period available at each building point. Fields are also available with the three nearest surge node IDs. A Valid field with a 0 or 1 where 0 is to be excluded from analysis due to having a 95% chance of the DEMFT above the flood elevation of the max event; 1 otherwise.</p>
+<h3 id="wav-shapefile">WAV Shapefile<a class="headerlink" href="#wav-shapefile" title="Permanent link">&para;</a></h3>
+<p>This shapefile contains the wave height and uncertainty value in feet for each return period available at each building point. Fields are also available with the three nearest surge node IDs. A Valid field with a 0 or 1 flag is provided that is currently unused.</p>
+<h3 id="prep-shapefile">PREP Shapefile<a class="headerlink" href="#prep-shapefile" title="Permanent link">&para;</a></h3>
+<p>This shapefile contains both the WSE and WAV data, as well as four DDFs IDs representing riverine, saltwater, coastal A and V. A DDF ID for erosion is currently unused. A summary of the inventory attributes is also included.</p>
+<h3 id="heatmap">Heatmap<a class="headerlink" href="#heatmap" title="Permanent link">&para;</a></h3>
+<p>A .tif grid with a resolution of ~200 meters is created with symbology that provides the total AAL in each grid cell.</p>
+<h3 id="run-logfile">Run Logfile<a class="headerlink" href="#run-logfile" title="Permanent link">&para;</a></h3>
+<p>Processing notes and runtime messages are printed to both the screen and to a text file. A text file that describes the input and output locations, the parallel processing and each major analysis step including validation messages. The text file is named <code>[x]_run.log</code>, and is found in the output directory.</p>
+<h3 id="building-csvs">Building .csvs<a class="headerlink" href="#building-csvs" title="Permanent link">&para;</a></h3>
+<p>A TAB folder contains a .csv for each building analyzed with detailed information if the user chooses. It includes the SWEL and WSE, the DDF probability weighting, the DDF IDs used with the damage percent and losses for the low, best and high hazard values for all return periods. These are provided for all buildings, regardless of exposure to flooding or impacts.</p>
+<p>Each loss table is a 202 row × 32 column table (including header row) that will contain the various necessary calculated values to derive building loss at each value of building flood depth from -4 feet to +16 feet by increments of 0.1 feet. The attributes of the table are described below:</p>
+<table>
+<thead>
+<tr>
+<th>FIELD</th>
+<th>Sample VALUE</th>
+<th>DESC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BID</td>
+<td>1234</td>
+<td>Unique integer building ID generated by code</td>
+</tr>
+<tr>
+<td>BFD</td>
+<td>-1.9</td>
+<td>Depth of flood above first floor</td>
+</tr>
+<tr>
+<td>DEM</td>
+<td>10.696</td>
+<td>Elevation from DEM in feet, NAVD88</td>
+</tr>
+<tr>
+<td>FFE</td>
+<td>11.696</td>
+<td>First Floor Elevation in feet, NAVD88</td>
+</tr>
+<tr>
+<td>FFEe</td>
+<td>0</td>
+<td>Error associated with FFE</td>
+</tr>
+<tr>
+<td>TWL</td>
+<td>9.796</td>
+<td>Total Water Elevation in feet, NAVD88</td>
+</tr>
+<tr>
+<td>TWLe</td>
+<td>1.603</td>
+<td>Error associated with TWL</td>
+</tr>
+<tr>
+<td>BFDe</td>
+<td>1.603</td>
+<td>Error associated with BFD</td>
+</tr>
+<tr>
+<td>RP</td>
+<td>138.168</td>
+<td>Return Period</td>
+</tr>
+<tr>
+<td>PVAL</td>
+<td>0.007237566</td>
+<td>Probability (1/RP)</td>
+</tr>
+<tr>
+<td>SWEL</td>
+<td>9.795997218</td>
+<td>SWEL in feet, NAVD88</td>
+</tr>
+<tr>
+<td>SWELe</td>
+<td>1.60332847</td>
+<td>Error associated with SWEL</td>
+</tr>
+<tr>
+<td>WET</td>
+<td>0.287238001</td>
+<td>Probability that ground at building is flooded</td>
+</tr>
+<tr>
+<td>Hc</td>
+<td>0</td>
+<td>Conditional wave height in feet</td>
+</tr>
+<tr>
+<td>Hce</td>
+<td>0</td>
+<td>Error associated with Hc</td>
+</tr>
+<tr>
+<td>PWL1</td>
+<td>1</td>
+<td>Probability of waves less than 1 foot</td>
+</tr>
+<tr>
+<td>PW13</td>
+<td>0</td>
+<td>Probability of waves between 1 and 3 feet</td>
+</tr>
+<tr>
+<td>PWG3</td>
+<td>0</td>
+<td>Probability of waves greater than 3 feet</td>
+</tr>
+<tr>
+<td>DDFfam</td>
+<td>2400</td>
+<td>Building's Coastal FFRD Depth-damage function family</td>
+</tr>
+<tr>
+<td>dfx1</td>
+<td>0</td>
+<td>Damage from DDFx1 (%)</td>
+</tr>
+<tr>
+<td>dfx2</td>
+<td>0.015</td>
+<td>Damage from DDFx2 (%)</td>
+</tr>
+<tr>
+<td>dfx3</td>
+<td>0.031</td>
+<td>Damage from DDFx3 (%)</td>
+</tr>
+<tr>
+<td>DAMLw</td>
+<td>0</td>
+<td>Low Estimate Damage (%)</td>
+</tr>
+<tr>
+<td>DAMPr</td>
+<td>0</td>
+<td>BE Combined Damage (%)</td>
+</tr>
+<tr>
+<td>DAMUp</td>
+<td>0.05624</td>
+<td>High Estimate Damage (%)</td>
+</tr>
+<tr>
+<td>BVAL</td>
+<td>1008431</td>
+<td>Building replacement value ($)</td>
+</tr>
+<tr>
+<td>rLOSSLw</td>
+<td>0</td>
+<td>Raw Low Building Loss ($)</td>
+</tr>
+<tr>
+<td>rLOSSBE</td>
+<td>0</td>
+<td>Raw BE Building Loss ($)</td>
+</tr>
+<tr>
+<td>rLOSSUp</td>
+<td>56714</td>
+<td>Raw High Building Loss ($)</td>
+</tr>
+<tr>
+<td>Loss_Lw</td>
+<td>0</td>
+<td>Final Low Building Loss ($)</td>
+</tr>
+<tr>
+<td>Loss_BE</td>
+<td>0</td>
+<td>Final BE Building Loss ($)</td>
+</tr>
+<tr>
+<td>Loss_Up</td>
+<td>56714</td>
+<td>Final High Building Loss ($)</td>
+</tr>
+</tbody>
+</table>
+<p>Based on integration with the inland consequences framework, future development is likely to include a notebook interface where the user can highlight and select desired outputs and file types.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../inland_methodology/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Inland Consquences Methodology">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Inland Consquences Methodology
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../building_inventories/" class="md-footer__link md-footer__link--next" aria-label="Next: Building Inventories Technical Implementation">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Building Inventories Technical Implementation
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/fema-ffrd/inland-consequences" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "navigation.expand", "navigation.path", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.tooltips", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+      
+        <script src="../javascripts/katex.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,232 @@
+/* Extra styles for Inland Consequences documentation */
+
+/* ============================================
+   TABLE STYLING - Compact & Scrollable
+   ============================================ */
+
+/* Wrap tables in a scrollable container */
+.md-typeset__scrollwrap {
+  overflow-x: auto;
+  margin: 1rem 0;
+  border: none;
+  background: transparent;
+}
+
+.md-typeset__table {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  border: none;
+  background: transparent;
+}
+
+/* Compact table styling */
+.md-typeset table:not([class]) {
+  font-size: 0.65rem;
+  border-collapse: collapse;
+  white-space: nowrap;
+  width: auto;
+  display: table;
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--md-primary-fg-color);
+  color: var(--md-primary-bg-color);
+  font-weight: 600;
+  text-align: left;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.md-typeset table:not([class]) td,
+.md-typeset table:not([class]) th {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--md-typeset-table-color);
+  white-space: nowrap;
+}
+
+.md-typeset table:not([class]) tr:nth-child(even) {
+  background-color: var(--md-default-fg-color--lightest);
+}
+
+/* Hover effect for table rows */
+.md-typeset table:not([class]) tbody tr:hover {
+  background-color: rgba(var(--md-primary-fg-color--light), 0.1);
+}
+
+/* Table caption styling */
+.md-typeset table:not([class]) caption {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-align: left;
+  margin-bottom: 0.5rem;
+  color: var(--md-default-fg-color--light);
+}
+
+/* ============================================
+   JSON/CODE BLOCK STYLING - Compact & Scrollable
+   ============================================ */
+
+/* Compact code blocks with max height */
+.md-typeset pre {
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.md-typeset pre > code {
+  font-size: 0.55rem;
+  line-height: 1.3;
+}
+
+/* JSON-specific styling - extra compact */
+.md-typeset .language-json code,
+.md-typeset .highlight.language-json code {
+  font-size: 0.5rem;
+  line-height: 1.25;
+}
+
+/* Python-specific styling - extra compact */
+.md-typeset .language-python code,
+.md-typeset .highlight.language-python code {
+  font-size: 0.6rem;
+  line-height: 1.3;
+}
+
+/* Code inside collapsible details - show full content */
+.md-typeset details pre {
+  max-height: none;
+  overflow: visible;
+}
+
+.md-typeset details .highlight {
+  max-height: none;
+  overflow: visible;
+}
+
+.md-typeset details.code-block summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.5rem;
+  background-color: var(--md-code-bg-color);
+  border-radius: 0.25rem;
+}
+
+.md-typeset details.code-block pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ============================================
+   GENERAL IMPROVEMENTS
+   ============================================ */
+
+/* Make horizontal rules more subtle */
+.md-typeset hr {
+  border-color: var(--md-default-fg-color--lighter);
+  margin: 2rem 0;
+}
+
+/* Better admonition styling */
+.md-typeset .admonition,
+.md-typeset details {
+  margin-bottom: 1.25rem;
+}
+
+/* API documentation improvements */
+.md-typeset .doc-heading {
+  font-weight: 600;
+}
+
+/* Signature styling for mkdocstrings */
+.md-typeset .highlight.language-python {
+  background-color: var(--md-code-bg-color);
+}
+
+/* Better nav tab appearance */
+.md-tabs__link {
+  font-weight: 500;
+}
+
+/* Hero section styling for landing page */
+.md-typeset h1 {
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+/* KaTeX display math centering and spacing */
+.katex-display {
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* ============================================
+   WIDER CONTENT LAYOUT
+   ============================================ */
+
+/* Expand the main grid container (default is ~1220px) */
+.md-grid {
+  max-width: 1400px;
+}
+
+/* Expand content area width */
+.md-content__inner {
+  max-width: 100%;
+}
+
+/* Shrink sidebars to give more room to content */
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary {
+    width: 12rem;
+  }
+  
+  .md-sidebar--secondary {
+    width: 12rem;
+  }
+}
+
+/* Footer link styling */
+.md-footer-meta__inner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+/* Better definition list styling */
+.md-typeset dl {
+  margin-bottom: 1rem;
+}
+
+.md-typeset dd {
+  margin-left: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+@media screen and (max-width: 76.25em) {
+  .md-typeset table:not([class]) {
+    font-size: 0.7rem;
+  }
+  
+  .md-typeset table:not([class]) td,
+  .md-typeset table:not([class]) th {
+    padding: 0.35rem 0.5rem;
+  }
+  
+  .md-typeset pre > code {
+    font-size: 0.65rem;
+  }
+}
+
+/* Schema/technical docs specific: ensure code stays readable */
+@media screen and (min-width: 76.25em) {
+  .md-content__inner {
+    max-width: 1200px;
+  }
+}
