@@ -152,7 +152,12 @@ def build_losses_pivot_cte(rps: List[int]) -> str:
     cte += "    SELECT\n"
     cte += "        id,\n"
     
-    loss_cols = ['loss_min', 'loss_mean', 'loss_std', 'loss_max']
+    loss_cols = [
+    'loss_min', 'loss_mean', 'loss_std', 'loss_max',
+    'content_loss_min', 'content_loss_mean', 'content_loss_max',
+    'inventory_loss_min', 'inventory_loss_mean', 'inventory_loss_max',
+    'total_loss_min', 'total_loss_mean', 'total_loss_max',
+    ]
     loss_lines = []
     
     for col in loss_cols:
@@ -210,7 +215,12 @@ def build_select_columns(rps: List[int], db_path: str, include_geometry: bool = 
                 sql += f"    hw.velocity_rp{rp},\n"
     
     # Add loss columns
-    loss_cols = ['loss_min', 'loss_mean', 'loss_std', 'loss_max']
+    loss_cols = [
+    'loss_min', 'loss_mean', 'loss_std', 'loss_max',
+    'content_loss_min', 'content_loss_mean', 'content_loss_max',
+    'inventory_loss_min', 'inventory_loss_mean', 'inventory_loss_max',
+    'total_loss_min', 'total_loss_mean', 'total_loss_max',
+    ]
     for col in loss_cols:
         for rp in rps:
             sql += f"    lw.{col}_rp{rp},\n"
