@@ -740,7 +740,7 @@ def _(aal_df, analysis_results, has_aal, losses_df, mo, validation_df):
     warning_count = (validation_df["severity"] == "WARNING").sum()
 
     # AAL total if available
-    aal_total = aal_df["aal_mean"].sum() if has_aal and aal_df is not None and len(aal_df) > 0 else None
+    aal_total = aal_df["taal_mean"].sum() if has_aal and aal_df is not None and len(aal_df) > 0 else None
 
     # Create stat cards
     cards = [
